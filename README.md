@@ -1,69 +1,52 @@
-# HỆ THỐNG QUẢN LÝ BÃI GIỮ XE THÔNG MINH IOT 4 TẦNG (ESP32 SMART PARKING)
-> **Môn học**: Internet of Things (IoT)  
-> **Hình thức thực hiện**: Mô phỏng toàn diện trên máy tính (Pure Computer Simulation: Wokwi + HiveMQ / Mosquitto MQTT + Node-RED Dashboard)  
-> **Điểm số mục tiêu**: **100/100 Điểm Tối Đa** (Hoàn thành trọn vẹn 100% tiêu chí bắt buộc theo chuẩn rubric học phần).
+# HỆ THỐNG QUẢN LÝ BÃI GIỮ XE THÔNG MINH IOT (ESP32 SMART PARKING)
+
+Dự án bãi giữ xe thông minh ứng dụng kiến trúc IoT 4 tầng toàn diện: Nhận diện xe qua thẻ RFID, tự động đóng/mở barie với thuật toán chống kẹp xe bằng cảm biến siêu âm, quan trắc môi trường và báo cháy hầm xe qua DHT22, thanh toán tự động qua mã VietQR và quản lý giám sát thời gian thực qua Web Dashboard.
 
 ---
 
-## HỒ SƠ NGHIỆM THU ĐỒ ÁN (BÁO CÁO, SLIDE POWERPOINT & DOCKER)
-
-Thư mục `docs/` và thư mục gốc đã được chuẩn bị đầy đủ cho bạn nộp bài và bảo vệ trước hội đồng:
-
-1. **Báo cáo tiểu luận 5 chương hoàn chỉnh**: [docs/BAO_CAO_TIEU_LUAN_HOAN_CHINH.md](docs/BAO_CAO_TIEU_LUAN_HOAN_CHINH.md)
-2. **File PowerPoint thuyết trình (.pptx, 13 slides)**: [docs/SLIDE_THUYET_TRINH.pptx](docs/SLIDE_THUYET_TRINH.pptx) *(Mở trực tiếp trên Microsoft PowerPoint / Google Slides)*
-3. **Kịch bản thuyết trình chi tiết (.md)**: [docs/SLIDE_THUYET_TRINH.md](docs/SLIDE_THUYET_TRINH.md)
-4. **Hướng dẫn triển khai Docker Container**: [docs/DOCKER_DEPLOYMENT_GUIDE.md](docs/DOCKER_DEPLOYMENT_GUIDE.md)
-5. **Cơ sở dữ liệu giao dịch bền vững (JSON DB)**: [parking_database.json](parking_database.json)
-
----
-
-## TỔNG QUAN KIẾN TRÚC 4 TẦNG IOT
+## 1. Kiến Trúc 4 Tầng IoT
 
 ```mermaid
 flowchart TD
-    subgraph L4["TẦNG 4: APPLICATION & ANALYTICS LAYER"]
-        DASH["Node-RED Web Dashboard (http://localhost:1880/ui)<br/>Live 2D Slot Map | VietQR Invoice | KPI Cards | Charts"]
-        TG["Telegram Alert Bot (Thông báo khẩn cấp về smartphone)"]
+    subgraph L4["TẦNG 4: APPLICATION & DASHBOARD"]
+        DASH["Node-RED Web Dashboard (http://localhost:1880/ui)<br/>Bản đồ ô đỗ 2D | Hóa đơn VietQR | KPI Doanh thu | Charts"]
+        TG["Telegram Alert Bot (Thông báo khẩn cấp)"]
     end
 
-    subgraph L3["TẦNG 3: MIDDLEWARE & AUTOMATION LAYER"]
-        DOCKER["Docker Compose Stack (Microservices Orchestration)"]
-        FLOW["Node-RED Runtime v3.x (55 Nodes)"]
-        DB["Persistent JSON Database (parking_database.json)"]
-        R1["Rule 1: Overstay Timeout Watchdog (>30s)"]
-        R2["Rule 2: Lot Full Capacity Alert (Max 2/2)"]
-        R3["Rule 3: Repeated Invalid Cards (Spam 3 lần/60s)"]
-        R4["Rule 4: Barrier Stuck Watchdog (>10s Auto-Close)"]
-        R5["Rule 5: Fire Evacuate Protocol (Nhiệt độ >= 50°C)"]
+    subgraph L3["TẦNG 3: MIDDLEWARE & AUTOMATION"]
+        FLOW["Node-RED Flow Engine (55 Nodes)"]
+        R1["Rule 1: Cảnh báo xe đỗ quá giờ (Overstay >30s)"]
+        R2["Rule 2: Khóa cổng khi bãi đầy (Lot Full 2/2)"]
+        R3["Rule 3: Báo động dò mã thẻ lạ liên tiếp (>=3 lần)"]
+        R4["Rule 4: Tự động ép đóng barie khi kẹt (>10s)"]
+        R5["Rule 5: Tự động mở toang barie sơ tán khi cháy"]
     end
 
-    subgraph L2["TẦNG 2: NETWORK & CONNECTIVITY LAYER"]
-        BROKER["MQTT Broker: HiveMQ Cloud (1883) & Eclipse Mosquitto Docker"]
+    subgraph L2["TẦNG 2: NETWORK & CONNECTIVITY"]
+        BROKER["MQTT Broker: HiveMQ Cloud / Local Mosquitto (1883)"]
         WIFI["Wi-Fi 802.11 b/g/n (Wokwi-GUEST)"]
-        MQTT_CLIENT["PubSubClient v2.8 (Auto-reconnect Watchdog 5s)"]
+        MQTT_CLIENT["PubSubClient (Tự kết nối lại sau 5s)"]
     end
 
-    subgraph L1["TẦNG 1: SENSING / PHYSICAL LAYER"]
-        ESP["ESP32 DevKit V1 (Core 240MHz, FSM 6 trạng thái)"]
-        RFID["RFID-RC522 (SPI 13.56 MHz - Quét thẻ UID)"]
+    subgraph L1["TẦNG 1: SENSING & ACTUATION"]
+        ESP["ESP32 DevKit V1 (Core 240MHz)"]
+        RFID["RFID-RC522 (Quét thẻ UID 13.56 MHz)"]
         SONAR["HC-SR04 (Siêu âm - Chống kẹp xe Anti-Pinch)"]
-        DHT["DHT22 (Nhiệt ẩm & Báo cháy hầm đỗ xe)"]
-        SERVO["Servo SG90 (PWM - Cánh tay Barie 0° - 90°)"]
+        DHT["DHT22 (Nhiệt độ & Độ ẩm hầm xe)"]
+        SERVO["Servo SG90 (Cánh tay chắn Barie 0° - 90°)"]
         LEDS["Cụm LED Giao thông (Đỏ - STOP / Xanh - GO)"]
-        BUZZER["Active Buzzer (Còi báo động đa cấp độ)"]
+        BUZZER["Active Buzzer (Còi báo động đa âm)"]
         LCD["LCD 1602 I2C (Hiển thị biển số & cước phí)"]
-        CLI["Serial Debug CLI (Phím tắt: 1-8, fire, sonar, env)"]
     end
 
     %% Luồng truyền thông 2 chiều
-    RFID & SONAR & DHT & CLI -->|Dữ liệu cảm biến| ESP
+    RFID & SONAR & DHT -->|Dữ liệu cảm biến| ESP
     ESP -->|Điều khiển chấp hành| SERVO & BUZZER & LCD & LEDS
     ESP -->|Uplink MQTT| WIFI
-    WIFI -->|TCP Port 1883| BROKER
+    WIFI -->|TCP 1883| BROKER
     BROKER -->|Subscribes| FLOW
     FLOW --> R1 & R2 & R3 & R4 & R5
-    FLOW -->|Lưu vết giao dịch| DB
-    FLOW -->|Cập nhật giao diện & Biểu đồ| DASH
+    FLOW -->|Cập nhật giao diện| DASH
     FLOW -->|Cảnh báo khẩn| TG
     DASH -->|Downlink command| BROKER
     R4 -.->|Downlink Auto-close| BROKER
@@ -74,63 +57,84 @@ flowchart TD
 
 ---
 
-## KHỞI ĐỘNG NHANH BẰNG DOCKER COMPOSE (1-CLICK)
+## 2. Sơ Đồ Đấu Nối Chân GPIO (ESP32)
 
-Nếu máy tính đã cài đặt Docker Desktop:
-
-1. **Khởi động toàn bộ cụm Broker + Node-RED Dashboard**:
-   * Nhấp đúp chuột vào file [start_docker.bat](start_docker.bat) (hoặc gõ `docker compose up -d`).
-2. **Truy cập hệ thống**:
-   * **Node-RED Web Dashboard**: `http://localhost:1880/ui`
-   * **Node-RED Flow Editor**: `http://localhost:1880`
-   * **Mosquitto MQTT Broker**: `localhost:1883`
-3. **Dừng hệ thống an toàn**:
-   * Nhấp đúp chuột vào file [stop_docker.bat](stop_docker.bat) (hoặc gõ `docker compose down`).
+| Thiết bị | Chân linh kiện | Chân ESP32 | Điện áp | Chức năng |
+| :--- | :--- | :--- | :---: | :--- |
+| **RFID-RC522** | SDA / SCK / MOSI / MISO / RST | GPIO 5 / 18 / 23 / 19 / 4 | 3.3V | Đọc mã thẻ xe (SPI) |
+| **HC-SR04** | TRIG / ECHO | GPIO 27 / GPIO 32 | 5.0V | Cảm biến khoảng cách chống kẹp xe |
+| **DHT22** | DATA | GPIO 15 | 3.3V | Quan trắc nhiệt độ & độ ẩm hầm xe |
+| **Servo SG90** | PWM | GPIO 13 | 5.0V | Điều khiển cánh tay Barie |
+| **LED ĐỎ** | Anode (+) | GPIO 25 | 3.3V | Đèn tín hiệu Dừng (Cổng đóng / Bãi đầy) |
+| **LED XANH** | Anode (+) | GPIO 26 | 3.3V | Đèn tín hiệu Đi (Cổng mở) |
+| **Buzzer** | Signal | GPIO 14 | 3.3V | Còi chíp phản hồi & cảnh báo |
+| **LCD 1602** | SDA / SCL | GPIO 21 / GPIO 22 | 5.0V | Màn hình hiển thị I2C (0x27) |
 
 ---
 
-## DANH MỤC TOPIC MQTT CHUẨN
+## 3. Hướng Dẫn Vận Hành Hệ Thống
+
+### 3.1. Khởi chạy cụm Backend (Docker Stack)
+```bash
+# Khởi động cụm Mosquitto MQTT Broker & Node-RED Dashboard
+docker compose up -d
+
+# Hoặc nhấp đúp file: start_docker.bat
+```
+* **Node-RED Web Dashboard**: `http://localhost:1880/ui`
+* **Node-RED Flow Editor**: `http://localhost:1880`
+* **Mosquitto MQTT Broker**: `localhost:1883`
+
+### 3.2. Chạy mô phỏng trên Wokwi
+1. Mở file [diagram.json](diagram.json) trong VS Code hoặc trên [Wokwi Web](https://wokwi.com).
+2. Nhấn nút **Play (Màu xanh)** để bắt đầu mô phỏng.
+3. Nhập các phím tắt trên Serial Monitor để điều khiển nhanh:
+   * Phím `1`, `2`, `3`, `4`: Quẹt thẻ xe 1 đến 4 (Vào bãi / Ra bãi & Tính cước).
+   * Lệnh `scan <UID>`: Giả lập thẻ bất kỳ (Ví dụ: `scan 99 99 99 99`).
+   * Lệnh `open` / `close`: Mở hoặc đóng barie thủ công.
+   * Lệnh `fire` / `nofire`: Kích hoạt hoặc tắt chế độ thoát hiểm khẩn cấp.
+   * Lệnh `sonar` / `env`: Xem khoảng cách vật cản và nhiệt độ hầm xe.
+
+---
+
+## 4. Danh Mục Topic MQTT
 
 Broker: `broker.hivemq.com` / `localhost` | Cổng: `1883` | Tiền tố: `parking_n4/`
 
-| Tên Topic | Hướng luồng | Vai trò | Mẫu Payload |
+| Topic | Hướng | Vai trò | Mẫu Payload |
 | :--- | :---: | :--- | :--- |
-| `parking_n4/rfid/scan` | **Uplink** | Dữ liệu quét thẻ (Vào/Ra/Lỗi/Cước phí) | `{"uid":"01 02 03 04","action":"check_in","licensePlate":"29A-123.45","fee":0,...}` |
-| `parking_n4/barie/status` | **Uplink** | Trạng thái thực tế cánh barie | `{"state":"open"}` hoặc `{"state":"closed"}` |
-| `parking_n4/env` | **Uplink** | Telemetry nhiệt độ, độ ẩm hầm đỗ xe | `{"temp":28.5,"humidity":65.0,"fireRisk":"NORMAL"}` |
-| `parking_n4/fire` | **Uplink** | Báo động cháy khẩn cấp & sơ tán bãi xe | `{"fireAlarm":true,"msg":"HOA HOAN! DANG SO TAN!"}` |
-| `parking_n4/alert` | **Uplink** | Cảnh báo an ninh thẻ lạ | `{"type":"INVALID_CARD","uid":"99 99 99 99"}` |
-| `parking_n4/status` | **Uplink** | Trạng thái online của ESP32 | `{"clientId":"ESP32_Parking_xxxx","status":"online","ip":"10.0.1.2"}` |
-| `parking_n4/barie/cmd` | **Downlink** | Lệnh điều khiển Barie từ xa | `{"cmd":"open"}` / `{"cmd":"close"}` / `{"cmd":"fire"}` |
+| `parking_n4/rfid/scan` | **Uplink** | Dữ liệu quẹt thẻ (Check-in/Check-out/Cước) | `{"uid":"04 3B 2A 1C","action":"check_in","licensePlate":"29A-123.45",...}` |
+| `parking_n4/barie/status` | **Uplink** | Trạng thái cánh barie thực tế | `{"state":"open"}` hoặc `{"state":"closed"}` |
+| `parking_n4/env` | **Uplink** | Nhiệt độ, độ ẩm & nguy cơ cháy | `{"temp":28.5,"humidity":65.0,"fireRisk":"NORMAL"}` |
+| `parking_n4/fire` | **Uplink** | Báo động cháy khẩn cấp & sơ tán | `{"fireAlarm":true,"msg":"HOA HOAN! DANG SO TAN!"}` |
+| `parking_n4/alert` | **Uplink** | Cảnh báo thẻ không hợp lệ | `{"type":"INVALID_CARD","uid":"99 99 99 99"}` |
+| `parking_n4/barie/cmd` | **Downlink** | Lệnh điều khiển từ xa từ Dashboard | `{"cmd":"open"}` / `{"cmd":"close"}` / `{"cmd":"fire"}` |
 
 ---
 
-## CẤU TRÚC THƯ MỤC DỰ ÁN
+## 5. Cấu Trúc Thư Mục Nguồn
 
 ```text
-D:\HocHe\IOT\Project\Bai_Giu_Xe\
 ├── docker/
-│   ├── mosquitto/
-│   │   └── config/mosquitto.conf     # Cấu hình Mosquitto MQTT Broker
-│   └── nodered/
-│       ├── package.json              # Gói phụ thuộc dashboard
-│       └── flows.json                # Luồng 55 nodes Node-RED nạp sẵn
-├── docs/
-│   ├── BAO_CAO_TIEU_LUAN_HOAN_CHINH.md  # Báo cáo tiểu luận 5 chương học thuật
-│   ├── SLIDE_THUYET_TRINH.pptx          # File PowerPoint trình chiếu (13 slides)
-│   ├── SLIDE_THUYET_TRINH.md            # Kịch bản thuyết trình chi tiết
-│   ├── DOCKER_DEPLOYMENT_GUIDE.md       # Hướng dẫn chi tiết triển khai Docker
-│   └── HARDWARE_BONUS_GUIDE.md          # Hướng dẫn mở rộng phần cứng thật (Bonus)
-├── include/                             # Các thư viện header C++
-├── src/                                 # Mã nguồn C++ PlatformIO
-├── diagram.json                         # Sơ đồ mạch mô phỏng Wokwi đầy đủ cảm biến
-├── docker-compose.yml                   # Cấu hình cụm Microservices Docker
-├── nodered_flow.json                    # Luồng Node-RED chính (Dashboard + DB + VietQR)
-├── parking_database.json                # Cơ sở dữ liệu JSON bền vững (Persistent DB)
-├── parking_log.txt                      # Tệp nhật ký lưu vết sự kiện thời gian thực
-├── platformio.ini                       # Cấu hình thư viện và PlatformIO ESP32
-├── start_docker.bat                     # File kích hoạt nhanh Docker 1-click
-├── stop_docker.bat                      # File dừng cụm Docker an toàn
-├── wokwi.toml                           # Cấu hình nạp nhị phân Wokwi
-└── README.md                            # Hướng dẫn tổng quan
+│   ├── mosquitto/config/mosquitto.conf # Cấu hình Mosquitto MQTT Broker
+│   └── nodered/                        # Cấu hình container Node-RED & Dashboard
+├── include/
+│   ├── Config.h                        # Định nghĩa chân GPIO & tham số hệ thống
+│   ├── EnvironmentService.h            # Module giám sát nhiệt ẩm DHT22 & PCCC
+│   ├── GateController.h                # Module điều khiển Barie & chống kẹp xe
+│   ├── MqttService.h                   # Module kết nối Wi-Fi & truyền thông MQTT
+│   └── ParkingSystem.h                 # Module quản lý thẻ xe, cước phí & LCD
+├── src/
+│   ├── EnvironmentService.cpp
+│   ├── GateController.cpp
+│   ├── MqttService.cpp
+│   ├── ParkingSystem.cpp
+│   └── main.cpp                        # Điểm khởi chạy điều phối trung tâm
+├── diagram.json                        # Sơ đồ mạch mô phỏng phần cứng Wokwi
+├── docker-compose.yml                  # Cấu hình Microservices Docker
+├── nodered_flow.json                   # Luồng nghiệp vụ Node-RED (55 nodes)
+├── platformio.ini                      # Cấu hình biên dịch PlatformIO ESP32
+├── start_docker.bat                    # Script khởi chạy Docker 1-click
+├── stop_docker.bat                     # Script dừng Docker
+└── wokwi.toml                          # Cấu hình nạp firmware Wokwi
 ```
