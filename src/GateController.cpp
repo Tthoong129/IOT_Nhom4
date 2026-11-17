@@ -3,7 +3,7 @@
 GateController::GateController(int servoPin, int trigPin, int echoPin, int redLedPin, int greenLedPin)
     : _servoPin(servoPin), _trigPin(trigPin), _echoPin(echoPin),
       _redLedPin(redLedPin), _greenLedPin(greenLedPin),
-      _state(GATE_CLOSED), _openTimer(0), _blinkTimer(0), _blinkState(false), _lastDistance(100.0) {}
+      _state(GATE_CLOSED), _openTimer(0), _lastDistance(100.0) {}
 
 void GateController::begin() {
     pinMode(_redLedPin, OUTPUT);
@@ -26,8 +26,6 @@ void GateController::setLeds(bool red, bool green) {
 }
 
 void GateController::open(bool holdManual) {
-    if (_state == GATE_EMERGENCY) return;
-
     _servo.write(SERVO_OPEN_ANGLE);
     _state = holdManual ? GATE_HOLD_MANUAL : GATE_OPEN;
     _openTimer = millis();
@@ -35,22 +33,9 @@ void GateController::open(bool holdManual) {
 }
 
 void GateController::close() {
-    if (_state == GATE_EMERGENCY) return;
-
     _servo.write(SERVO_CLOSE_ANGLE);
     _state = GATE_CLOSED;
     setLeds(true, false);
-}
-
-void GateController::setEmergency(bool active) {
-    if (active) {
-        _state = GATE_EMERGENCY;
-        _servo.write(SERVO_OPEN_ANGLE);
-    } else {
-        _state = GATE_CLOSED;
-        _servo.write(SERVO_CLOSE_ANGLE);
-        setLeds(true, false);
-    }
 }
 
 float GateController::readObstacleDistanceCm() {
@@ -69,15 +54,6 @@ float GateController::readObstacleDistanceCm() {
 void GateController::update() {
     unsigned long now = millis();
 
-    if (_state == GATE_EMERGENCY) {
-        if (now - _blinkTimer >= 200) {
-            _blinkTimer = now;
-            _blinkState = !_blinkState;
-            setLeds(_blinkState, !_blinkState);
-        }
-        return;
-    }
-
     if (_state == GATE_OPEN) {
         if (now - _openTimer >= GATE_HOLD_MS) {
             float dist = readObstacleDistanceCm();
@@ -95,10 +71,6 @@ void GateController::update() {
 
 bool GateController::isOpen() const {
     return _state != GATE_CLOSED;
-}
-
-bool GateController::isEmergency() const {
-    return _state == GATE_EMERGENCY;
 }
 
 GateController::State GateController::getState() const {

@@ -20,8 +20,6 @@ public:
                      const String& owner, unsigned long durationSec, uint32_t fee,
                      int occupied, int capacity);
     void publishAlert(const String& type, const String& uid);
-    void publishEnvironment(float temp, float humidity, const String& risk);
-    void publishFire(bool active);
     void publishGateState(bool isOpen);
 
 private:

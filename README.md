@@ -1,6 +1,6 @@
-# HỆ THỐNG QUẢN LÝ BÃI GIỮ XE THÔNG MINH IOT (ESP32 SMART PARKING)
+# HỆ THỐNG BÃI GIỮ XE MÁY TỰ QUẢN SỬ DỤNG RFID (ESP32 SMART PARKING)
 
-Dự án bãi giữ xe thông minh ứng dụng kiến trúc IoT 4 tầng toàn diện: Nhận diện xe qua thẻ RFID, tự động đóng/mở barie với thuật toán chống kẹp xe bằng cảm biến siêu âm, quan trắc môi trường và báo cháy hầm xe qua DHT22, thanh toán tự động qua mã VietQR và quản lý giám sát thời gian thực qua Web Dashboard.
+Dự án bãi giữ xe máy tự quản ứng dụng kiến trúc IoT 4 tầng: Nhận diện và kiểm soát xe ra vào bằng thẻ RFID, tự động đóng/mở barie với thuật toán an toàn chống kẹp xe bằng cảm biến siêu âm, quản lý trạng thái đỗ xe theo thời gian thực và điều khiển từ xa qua Web Dashboard.
 
 ---
 
@@ -8,18 +8,17 @@ Dự án bãi giữ xe thông minh ứng dụng kiến trúc IoT 4 tầng toàn 
 
 ```mermaid
 flowchart TD
-    subgraph L4["TẦNG 4: APPLICATION & DASHBOARD"]
-        DASH["Node-RED Web Dashboard (http://localhost:1880/ui)<br/>Bản đồ ô đỗ 2D | Hóa đơn VietQR | KPI Doanh thu | Charts"]
-        TG["Telegram Alert Bot (Thông báo khẩn cấp)"]
+    subgraph L4["TẦNG 4: APPLICATION"]
+        DASH["Node-RED Web Dashboard (http://localhost:1880/ui)<br/>Sơ đồ ô đỗ trực quan | Bảng điều khiển từ xa Mở/Đóng Barie"]
+        EXT["Module Mở Rộng: Hóa đơn VietQR | Cảnh báo Telegram"]
     end
 
     subgraph L3["TẦNG 3: MIDDLEWARE & AUTOMATION"]
-        FLOW["Node-RED Flow Engine (55 Nodes)"]
+        FLOW["Node-RED Engine (47 Nodes)"]
         R1["Rule 1: Cảnh báo xe đỗ quá giờ (Overstay >30s)"]
         R2["Rule 2: Khóa cổng khi bãi đầy (Lot Full 2/2)"]
         R3["Rule 3: Báo động dò mã thẻ lạ liên tiếp (>=3 lần)"]
-        R4["Rule 4: Tự động ép đóng barie khi kẹt (>10s)"]
-        R5["Rule 5: Tự động mở toang barie sơ tán khi cháy"]
+        R4["Rule 4: Tự động ép đóng barie khi mở quá lâu (>10s)"]
     end
 
     subgraph L2["TẦNG 2: NETWORK & CONNECTIVITY"]
@@ -29,25 +28,23 @@ flowchart TD
     end
 
     subgraph L1["TẦNG 1: SENSING & ACTUATION"]
-        ESP["ESP32 DevKit V1 (Core 240MHz)"]
-        RFID["RFID-RC522 (Quét thẻ UID 13.56 MHz)"]
+        ESP["ESP32 DevKit V1"]
+        RFID["RFID-RC522 (Quét mã thẻ 13.56 MHz)"]
         SONAR["HC-SR04 (Siêu âm - Chống kẹp xe Anti-Pinch)"]
-        DHT["DHT22 (Nhiệt độ & Độ ẩm hầm xe)"]
-        SERVO["Servo SG90 (Cánh tay chắn Barie 0° - 90°)"]
+        SERVO["Servo SG90 (Cánh tay Barie 0° - 90°)"]
         LEDS["Cụm LED Giao thông (Đỏ - STOP / Xanh - GO)"]
-        BUZZER["Active Buzzer (Còi báo động đa âm)"]
+        BUZZER["Active Buzzer (Còi phản hồi)"]
         LCD["LCD 1602 I2C (Hiển thị biển số & cước phí)"]
     end
 
-    %% Luồng truyền thông 2 chiều
-    RFID & SONAR & DHT -->|Dữ liệu cảm biến| ESP
+    %% Luồng truyền thông
+    RFID & SONAR -->|Dữ liệu cảm biến| ESP
     ESP -->|Điều khiển chấp hành| SERVO & BUZZER & LCD & LEDS
     ESP -->|Uplink MQTT| WIFI
     WIFI -->|TCP 1883| BROKER
     BROKER -->|Subscribes| FLOW
-    FLOW --> R1 & R2 & R3 & R4 & R5
+    FLOW --> R1 & R2 & R3 & R4
     FLOW -->|Cập nhật giao diện| DASH
-    FLOW -->|Cảnh báo khẩn| TG
     DASH -->|Downlink command| BROKER
     R4 -.->|Downlink Auto-close| BROKER
     BROKER -->|parking_n4/barie/cmd| MQTT_CLIENT
@@ -63,22 +60,19 @@ flowchart TD
 | :--- | :--- | :--- | :---: | :--- |
 | **RFID-RC522** | SDA / SCK / MOSI / MISO / RST | GPIO 5 / 18 / 23 / 19 / 4 | 3.3V | Đọc mã thẻ xe (SPI) |
 | **HC-SR04** | TRIG / ECHO | GPIO 27 / GPIO 32 | 5.0V | Cảm biến khoảng cách chống kẹp xe |
-| **DHT22** | DATA | GPIO 15 | 3.3V | Quan trắc nhiệt độ & độ ẩm hầm xe |
 | **Servo SG90** | PWM | GPIO 13 | 5.0V | Điều khiển cánh tay Barie |
 | **LED ĐỎ** | Anode (+) | GPIO 25 | 3.3V | Đèn tín hiệu Dừng (Cổng đóng / Bãi đầy) |
 | **LED XANH** | Anode (+) | GPIO 26 | 3.3V | Đèn tín hiệu Đi (Cổng mở) |
-| **Buzzer** | Signal | GPIO 14 | 3.3V | Còi chíp phản hồi & cảnh báo |
+| **Buzzer** | Signal | GPIO 14 | 3.3V | Còi chíp phản hồi |
 | **LCD 1602** | SDA / SCL | GPIO 21 / GPIO 22 | 5.0V | Màn hình hiển thị I2C (0x27) |
 
 ---
 
 ## 3. Hướng Dẫn Vận Hành Hệ Thống
 
-### 3.1. Khởi chạy cụm Backend (Docker Stack)
+### 3.1. Khởi chạy Backend (Docker Stack)
 ```bash
-# Khởi động cụm Mosquitto MQTT Broker & Node-RED Dashboard
 docker compose up -d
-
 # Hoặc nhấp đúp file: start_docker.bat
 ```
 * **Node-RED Web Dashboard**: `http://localhost:1880/ui`
@@ -87,13 +81,12 @@ docker compose up -d
 
 ### 3.2. Chạy mô phỏng trên Wokwi
 1. Mở file [diagram.json](diagram.json) trong VS Code hoặc trên [Wokwi Web](https://wokwi.com).
-2. Nhấn nút **Play (Màu xanh)** để bắt đầu mô phỏng.
-3. Nhập các phím tắt trên Serial Monitor để điều khiển nhanh:
-   * Phím `1`, `2`, `3`, `4`: Quẹt thẻ xe 1 đến 4 (Vào bãi / Ra bãi & Tính cước).
+2. Nhấn nút **Play** để bắt đầu mô phỏng.
+3. Nhập các phím tắt trên Serial Monitor:
+   * Phím `1`, `2`, `3`, `4`: Quẹt thẻ xe 1 đến 4 (Vào bãi / Ra bãi).
    * Lệnh `scan <UID>`: Giả lập thẻ bất kỳ (Ví dụ: `scan 99 99 99 99`).
    * Lệnh `open` / `close`: Mở hoặc đóng barie thủ công.
-   * Lệnh `fire` / `nofire`: Kích hoạt hoặc tắt chế độ thoát hiểm khẩn cấp.
-   * Lệnh `sonar` / `env`: Xem khoảng cách vật cản và nhiệt độ hầm xe.
+   * Lệnh `sonar`: Xem khoảng cách vật cản dưới barie.
 
 ---
 
@@ -105,10 +98,8 @@ Broker: `broker.hivemq.com` / `localhost` | Cổng: `1883` | Tiền tố: `parki
 | :--- | :---: | :--- | :--- |
 | `parking_n4/rfid/scan` | **Uplink** | Dữ liệu quẹt thẻ (Check-in/Check-out/Cước) | `{"uid":"04 3B 2A 1C","action":"check_in","licensePlate":"29A-123.45",...}` |
 | `parking_n4/barie/status` | **Uplink** | Trạng thái cánh barie thực tế | `{"state":"open"}` hoặc `{"state":"closed"}` |
-| `parking_n4/env` | **Uplink** | Nhiệt độ, độ ẩm & nguy cơ cháy | `{"temp":28.5,"humidity":65.0,"fireRisk":"NORMAL"}` |
-| `parking_n4/fire` | **Uplink** | Báo động cháy khẩn cấp & sơ tán | `{"fireAlarm":true,"msg":"HOA HOAN! DANG SO TAN!"}` |
 | `parking_n4/alert` | **Uplink** | Cảnh báo thẻ không hợp lệ | `{"type":"INVALID_CARD","uid":"99 99 99 99"}` |
-| `parking_n4/barie/cmd` | **Downlink** | Lệnh điều khiển từ xa từ Dashboard | `{"cmd":"open"}` / `{"cmd":"close"}` / `{"cmd":"fire"}` |
+| `parking_n4/barie/cmd` | **Downlink** | Lệnh điều khiển từ xa từ Dashboard | `{"cmd":"open"}` / `{"cmd":"close"}` |
 
 ---
 
@@ -120,21 +111,19 @@ Broker: `broker.hivemq.com` / `localhost` | Cổng: `1883` | Tiền tố: `parki
 │   └── nodered/                        # Cấu hình container Node-RED & Dashboard
 ├── include/
 │   ├── Config.h                        # Định nghĩa chân GPIO & tham số hệ thống
-│   ├── EnvironmentService.h            # Module giám sát nhiệt ẩm DHT22 & PCCC
 │   ├── GateController.h                # Module điều khiển Barie & chống kẹp xe
 │   ├── MqttService.h                   # Module kết nối Wi-Fi & truyền thông MQTT
 │   └── ParkingSystem.h                 # Module quản lý thẻ xe, cước phí & LCD
 ├── src/
-│   ├── EnvironmentService.cpp
 │   ├── GateController.cpp
 │   ├── MqttService.cpp
 │   ├── ParkingSystem.cpp
 │   └── main.cpp                        # Điểm khởi chạy điều phối trung tâm
 ├── diagram.json                        # Sơ đồ mạch mô phỏng phần cứng Wokwi
 ├── docker-compose.yml                  # Cấu hình Microservices Docker
-├── nodered_flow.json                   # Luồng nghiệp vụ Node-RED (55 nodes)
+├── nodered_flow.json                   # Luồng nghiệp vụ Node-RED (47 nodes)
 ├── platformio.ini                      # Cấu hình biên dịch PlatformIO ESP32
-├── start_docker.bat                    # Script khởi chạy Docker 1-click
+├── start_docker.bat                    # Script khởi chạy Docker
 ├── stop_docker.bat                     # Script dừng Docker
 └── wokwi.toml                          # Cấu hình nạp firmware Wokwi
 ```

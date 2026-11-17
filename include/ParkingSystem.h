@@ -41,7 +41,6 @@ public:
     void showCheckOut(const String& plate, unsigned long durationSec, uint32_t fee);
     void showLotFull();
     void showDenied();
-    void showFireAlarm();
     void showStatus(const String& line1, const String& line2);
 
     void beep(int count, int durationMs = 80, int pauseMs = 50);

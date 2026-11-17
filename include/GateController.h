@@ -8,8 +8,7 @@ public:
     enum State {
         GATE_CLOSED,
         GATE_OPEN,
-        GATE_HOLD_MANUAL,
-        GATE_EMERGENCY
+        GATE_HOLD_MANUAL
     };
 
     GateController(int servoPin, int trigPin, int echoPin, int redLedPin, int greenLedPin);
@@ -17,11 +16,9 @@ public:
     void begin();
     void open(bool holdManual = false);
     void close();
-    void setEmergency(bool active);
     void update();
 
     bool isOpen() const;
-    bool isEmergency() const;
     State getState() const;
     float readObstacleDistanceCm();
 
@@ -35,8 +32,6 @@ private:
     Servo _servo;
     State _state;
     unsigned long _openTimer;
-    unsigned long _blinkTimer;
-    bool _blinkState;
     float _lastDistance;
 
     void setLeds(bool red, bool green);

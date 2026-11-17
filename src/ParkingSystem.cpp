@@ -131,14 +131,6 @@ void ParkingSystem::showDenied() {
     _lcd.print("Tu choi truy cap");
 }
 
-void ParkingSystem::showFireAlarm() {
-    _lcd.clear();
-    _lcd.setCursor(0, 0);
-    _lcd.print("CHAY! THOAT HIEM");
-    _lcd.setCursor(0, 1);
-    _lcd.print("MO TOANG BARIE!");
-}
-
 void ParkingSystem::showStatus(const String& line1, const String& line2) {
     _lcd.clear();
     _lcd.setCursor(0, 0);

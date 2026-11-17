@@ -12,7 +12,6 @@
 #define PIN_LED_GREEN   26
 #define PIN_TRIG        27
 #define PIN_ECHO        32
-#define PIN_DHT         15
 
 // Hardware parameters
 #define LCD_I2C_ADDR    0x27
@@ -36,5 +35,3 @@ const int         MQTT_PORT   = 1883;
 #define MQTT_TOPIC_BARIE_STAT MQTT_PREFIX "barie/status"
 #define MQTT_TOPIC_ALERT      MQTT_PREFIX "alert"
 #define MQTT_TOPIC_STATUS     MQTT_PREFIX "status"
-#define MQTT_TOPIC_ENV        MQTT_PREFIX "env"
-#define MQTT_TOPIC_FIRE       MQTT_PREFIX "fire"

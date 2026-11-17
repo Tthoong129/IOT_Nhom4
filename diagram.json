@@ -34,13 +34,6 @@
       "attrs": { "distance": "50" }
     },
     {
-      "type": "wokwi-dht22",
-      "id": "dht1",
-      "top": -120,
-      "left": -120,
-      "attrs": { "temperature": "28", "humidity": "65" }
-    },
-    {
       "type": "wokwi-led",
       "id": "led_red",
       "top": 360,
@@ -76,9 +69,6 @@
     [ "esp1:27", "us1:TRIG", "purple", [ "h0" ] ],
     [ "esp1:32", "us1:ECHO", "orange", [ "h0" ] ],
     [ "esp1:GND.2", "us1:GND", "black", [ "h0" ] ],
-    [ "esp1:3V3", "dht1:VCC", "red", [ "h0" ] ],
-    [ "esp1:15", "dht1:SDA", "yellow", [ "h0" ] ],
-    [ "esp1:GND.3", "dht1:GND", "black", [ "h0" ] ],
     [ "esp1:25", "led_red:A", "red", [ "h0" ] ],
     [ "esp1:GND.2", "led_red:C", "black", [ "h0" ] ],
     [ "esp1:26", "led_green:A", "green", [ "h0" ] ],

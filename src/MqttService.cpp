@@ -122,31 +122,6 @@ void MqttService::publishAlert(const String& type, const String& uid) {
     _mqttClient.publish(MQTT_TOPIC_ALERT, buf);
 }
 
-void MqttService::publishEnvironment(float temp, float humidity, const String& risk) {
-    if (!_mqttClient.connected()) return;
-
-    JsonDocument doc;
-    doc["temp"] = round(temp * 10) / 10.0;
-    doc["humidity"] = round(humidity * 10) / 10.0;
-    doc["fireRisk"] = risk;
-
-    char buf[128];
-    serializeJson(doc, buf);
-    _mqttClient.publish(MQTT_TOPIC_ENV, buf);
-}
-
-void MqttService::publishFire(bool active) {
-    if (!_mqttClient.connected()) return;
-
-    JsonDocument doc;
-    doc["fireAlarm"] = active;
-    doc["msg"] = active ? "HOA HOAN! DANG SO TAN!" : "HE THONG AN TOAN";
-
-    char buf[128];
-    serializeJson(doc, buf);
-    _mqttClient.publish(MQTT_TOPIC_FIRE, buf);
-}
-
 void MqttService::publishGateState(bool isOpen) {
     if (!_mqttClient.connected()) return;
     _mqttClient.publish(MQTT_TOPIC_BARIE_STAT, isOpen ? "{\"state\":\"open\"}" : "{\"state\":\"closed\"}");
