@@ -2,10 +2,15 @@
 
 ParkingSystem::ParkingSystem(uint8_t lcdAddr, int buzzerPin, int maxCapacity)
     : _lcd(lcdAddr, LCD_COLS, LCD_ROWS), _buzzerPin(buzzerPin), _maxCapacity(maxCapacity) {
-    _cards[0] = {"04 3B 2A 1C", "29A-123.45", "Nguyen Van A", false, 0};
-    _cards[1] = {"14 8C 3D 2E", "51F-999.88", "Tran Thi B",   false, 0};
-    _cards[2] = {"24 D5 4E 3F", "43C-678.90", "Le Van C",     false, 0};
-    _cards[3] = {"34 E6 5F 4A", "92B-456.78", "Pham Thi D",   false, 0};
+    // Registered cards (matching Wokwi MFRC522 default presets)
+    _cards[0] = {"01 02 03 04", "29A-123.45", "Nguyen Van A", false, 0}; // Wokwi Blue Card
+    _cards[1] = {"11 22 33 44", "51F-999.88", "Tran Thi B",   false, 0}; // Wokwi Green Card
+    _cards[2] = {"55 66 77 88", "43C-678.90", "Le Van C",     false, 0}; // Wokwi Yellow Card
+    // Backward compatibility for serial tests
+    _cards[3] = {"04 3B 2A 1C", "29A-123.45", "Nguyen Van A", false, 0};
+    _cards[4] = {"14 8C 3D 2E", "51F-999.88", "Tran Thi B",   false, 0};
+    _cards[5] = {"24 D5 4E 3F", "43C-678.90", "Le Van C",     false, 0};
+    // Note: "AA BB CC DD" (Wokwi Red Card) is deliberately unregistered to simulate unauthorized cards!
 }
 
 void ParkingSystem::begin() {

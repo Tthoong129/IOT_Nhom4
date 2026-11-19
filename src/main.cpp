@@ -92,10 +92,10 @@ void handleSerialInput() {
     line.trim();
     if (line.isEmpty()) return;
 
-    if (line == "1") handleCardScan("04 3B 2A 1C");
-    else if (line == "2") handleCardScan("14 8C 3D 2E");
-    else if (line == "3") handleCardScan("24 D5 4E 3F");
-    else if (line == "4") handleCardScan("34 E6 5F 4A");
+    if (line == "1") handleCardScan("01 02 03 04");      // Wokwi Blue Card / Xe 1
+    else if (line == "2") handleCardScan("11 22 33 44"); // Wokwi Green Card / Xe 2
+    else if (line == "3") handleCardScan("55 66 77 88"); // Wokwi Yellow Card / Xe 3 (Test bãi đầy)
+    else if (line == "4") handleCardScan("AA BB CC DD"); // Wokwi Red Card (Thẻ lạ mô phỏng)
     else if (line.startsWith("scan ")) handleCardScan(line.substring(5));
     else if (line == "open") onCommandReceived("open");
     else if (line == "close") onCommandReceived("close");

@@ -50,7 +50,7 @@ private:
     int _buzzerPin;
     int _maxCapacity;
 
-    static const int CARD_COUNT = 4;
+    static const int CARD_COUNT = 6;
     VehicleCard _cards[CARD_COUNT];
 
     int findCardIndex(const String& uid);
