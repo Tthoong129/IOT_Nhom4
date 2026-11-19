@@ -21,6 +21,7 @@
 const int SERVO_OPEN_ANGLE    = 90;
 const int SERVO_CLOSE_ANGLE   = 0;
 const unsigned long GATE_HOLD_MS = 3500;
+const unsigned long CARD_DEBOUNCE_MS = 1500;
 const float ANTI_PINCH_DIST_CM   = 15.0;
 
 // Network parameters

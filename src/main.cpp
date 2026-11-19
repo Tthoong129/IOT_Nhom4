@@ -20,7 +20,7 @@ void handleCardScan(const String& uid) {
     if (gate.isOpen()) return;
 
     unsigned long now = millis();
-    if (uid == lastScannedUid && (now - lastDebounceTime < 3000)) return;
+    if (uid == lastScannedUid && (now - lastDebounceTime < CARD_DEBOUNCE_MS)) return;
     lastScannedUid = uid;
     lastDebounceTime = now;
 
