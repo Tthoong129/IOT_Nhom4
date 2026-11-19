@@ -15,7 +15,7 @@ public:
 
     void begin();
     void open(bool holdManual = false);
-    void close();
+    bool close();
     void update();
 
     bool isOpen() const;

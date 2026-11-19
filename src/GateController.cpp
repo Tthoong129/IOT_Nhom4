@@ -32,10 +32,17 @@ void GateController::open(bool holdManual) {
     setLeds(false, true);
 }
 
-void GateController::close() {
+bool GateController::close() {
+    float dist = readObstacleDistanceCm();
+    if (dist > 0 && dist < ANTI_PINCH_DIST_CM) {
+        Serial.printf("[GATE] Cannot close: obstacle detected (dist=%.1fcm). Anti-pinch holding open.\n", dist);
+        return false;
+    }
+
     _servo.write(SERVO_CLOSE_ANGLE);
     _state = GATE_CLOSED;
     setLeds(true, false);
+    return true;
 }
 
 float GateController::readObstacleDistanceCm() {

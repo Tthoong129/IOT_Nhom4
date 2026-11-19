@@ -72,16 +72,17 @@ void handleCardScan(const String& uid) {
 void onCommandReceived(const String& cmd) {
     Serial.printf("[CMD] Received: %s\n", cmd.c_str());
 
-    if (cmd == "open") {
-        gate.open(false);
-        mqtt.publishGateState(true);
-    } else if (cmd == "open_hold") {
-        gate.open(true);
+    if (cmd == "open" || cmd == "open_hold") {
+        gate.open(true); // Remote command holds gate open until close command or rule
         mqtt.publishGateState(true);
     } else if (cmd == "close") {
-        gate.close();
-        mqtt.publishGateState(false);
-        parking.showHome();
+        if (gate.close()) {
+            mqtt.publishGateState(false);
+            parking.showHome();
+        } else {
+            Serial.println("[CMD] Close postponed: obstacle detected under barrier (anti-pinch).");
+            mqtt.publishGateState(true);
+        }
     }
 }
 
