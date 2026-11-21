@@ -65,8 +65,8 @@ void GateController::update() {
         if (now - _openTimer >= GATE_HOLD_MS) {
             float dist = readObstacleDistanceCm();
             if (dist > 0 && dist < ANTI_PINCH_DIST_CM) {
-                // Obstacle detected under the barrier, delay close
-                _openTimer = now;
+                // Obstacle detected under the barrier, delay close - recheck fast (every 500ms)
+                _openTimer = now - (GATE_HOLD_MS - 500);
                 Serial.printf("[GATE] Anti-pinch triggered (dist=%.1fcm). Holding barrier open.\n", dist);
             } else {
                 close();

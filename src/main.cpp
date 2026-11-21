@@ -52,7 +52,7 @@ void handleCardScan(const String& uid) {
             Serial.println("[WARN] Parking lot is full.");
             parking.showLotFull();
             parking.beep(2, 200);
-            delay(1500);
+            delay(800);
             parking.showHome();
             break;
 
@@ -63,7 +63,7 @@ void handleCardScan(const String& uid) {
             mqtt.publishAlert("INVALID_CARD", uid);
             mqtt.publishScan(uid, "invalid", "N/A", "Unknown", 0, 0,
                              parking.getOccupiedCount(), parking.getMaxCapacity());
-            delay(1500);
+            delay(800);
             parking.showHome();
             break;
     }
@@ -125,7 +125,12 @@ void setup() {
 void loop() {
     // 1. Service updates
     mqtt.update();
+    bool wasOpen = gate.isOpen();
     gate.update();
+    if (wasOpen && !gate.isOpen()) {
+        mqtt.publishGateState(false);
+        parking.showHome();
+    }
 
     // 2. Physical RFID scanning
     if (!gate.isOpen()) {
