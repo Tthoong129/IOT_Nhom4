@@ -6,3 +6,5 @@
 docs/
 parking_log.txt
 parking_database.json
+data/*.txt
+data/*.json

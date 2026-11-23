@@ -1,859 +1,801 @@
 [
   {
-    "id": "tab1",
+    "id": "tab_parking",
     "type": "tab",
-    "label": "Parking Application M3 - Tuần 7",
+    "label": "Bãi giữ xe RFID - Nhóm 4",
     "disabled": false,
-    "info": "Hệ thống Bãi Giữ Xe Thông Minh ESP32 - Tầng 4 Application & Automation Nâng Cao (Tuần 7: Overstay Timeout, Sức Chứa Lot Full, Thẻ Lạ Quẹt Liên Tiếp, Tự Đóng Barie Kẹt Downlink)",
-    "wires": []
+    "info": "Tầng 3 (Middleware) và Tầng 4 (Application).\n\nESP32 là nguồn dữ liệu gốc về ô đỗ và barie; Node-RED đồng bộ qua MQTT, chạy 4 rule, ghi log và hiển thị dashboard."
   },
   {
-    "id": "broker1",
+    "id": "broker_hivemq",
     "type": "mqtt-broker",
-    "name": "HiveMQ Broker",
+    "name": "HiveMQ public broker",
     "broker": "broker.hivemq.com",
     "port": "1883",
     "clientid": "",
     "autoConnect": true,
     "usetls": false,
     "protocolVersion": "4",
-    "keepalive": "60",
+    "keepalive": "30",
     "cleansession": true,
     "autoUnsubscribe": true,
-    "wires": []
+    "birthTopic": "",
+    "closeTopic": "",
+    "willTopic": "",
+    "userProps": "",
+    "sessionExpiry": ""
   },
   {
-    "id": "ui_tab_parking",
+    "id": "cfg_ui_base",
+    "type": "ui_base",
+    "theme": {
+      "name": "theme-dark",
+      "lightTheme": {
+        "default": "#0094CE",
+        "baseColor": "#0094CE",
+        "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
+        "edited": true,
+        "reset": false
+      },
+      "darkTheme": {
+        "default": "#097479",
+        "baseColor": "#0ea5e9",
+        "baseFont": "Segoe UI,Roboto,Arial,sans-serif",
+        "edited": true,
+        "reset": false
+      },
+      "customTheme": {
+        "name": "Untitled Theme 1",
+        "default": "#4B7930",
+        "baseColor": "#4B7930",
+        "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif"
+      },
+      "themeState": {
+        "base-color": {
+          "default": "#097479",
+          "value": "#0ea5e9",
+          "edited": true
+        },
+        "page-titlebar-backgroundColor": {
+          "value": "#0f172a",
+          "edited": true
+        },
+        "page-backgroundColor": {
+          "value": "#0b1120",
+          "edited": true
+        },
+        "page-sidebar-backgroundColor": {
+          "value": "#0f172a",
+          "edited": true
+        },
+        "group-textColor": {
+          "value": "#38bdf8",
+          "edited": true
+        },
+        "group-borderColor": {
+          "value": "#1e293b",
+          "edited": true
+        },
+        "group-backgroundColor": {
+          "value": "#111827",
+          "edited": true
+        },
+        "widget-textColor": {
+          "value": "#e2e8f0",
+          "edited": true
+        },
+        "widget-backgroundColor": {
+          "value": "#0ea5e9",
+          "edited": true
+        },
+        "widget-borderColor": {
+          "value": "#111827",
+          "edited": true
+        },
+        "base-font": {
+          "value": "Segoe UI,Roboto,Arial,sans-serif"
+        }
+      },
+      "angularTheme": {
+        "primary": "indigo",
+        "accents": "blue",
+        "warn": "red",
+        "background": "grey",
+        "palette": "dark"
+      }
+    },
+    "site": {
+      "name": "Bãi giữ xe RFID - Nhóm 4",
+      "hideToolbar": "false",
+      "allowSwipe": "false",
+      "lockMenu": "false",
+      "allowTempTheme": "false",
+      "dateFormat": "DD/MM/YYYY",
+      "sizes": {
+        "sx": 48,
+        "sy": 48,
+        "gx": 8,
+        "gy": 8,
+        "cx": 8,
+        "cy": 8,
+        "px": 0,
+        "py": 0
+      }
+    }
+  },
+  {
+    "id": "ui_tab_main",
     "type": "ui_tab",
-    "name": "Bãi Giữ Xe Thông Minh",
-    "icon": "dashboard",
+    "name": "Giám sát bãi xe",
+    "icon": "local_parking",
     "order": 1,
     "disabled": false,
-    "hidden": false,
-    "wires": []
+    "hidden": false
   },
   {
-    "id": "ui_group_monitor",
+    "id": "uig_overview",
     "type": "ui_group",
-    "name": "Giám Sát Bãi Xe (Thời Gian Thực)",
-    "tab": "ui_tab_parking",
+    "name": "Tổng quan",
+    "tab": "ui_tab_main",
     "order": 1,
     "disp": true,
-    "width": "6",
+    "width": "12",
     "collapse": false,
-    "wires": []
+    "className": ""
   },
   {
-    "id": "ui_group_control",
+    "id": "uig_slots",
     "type": "ui_group",
-    "name": "Điều Khiển Barie & Cảnh Báo",
-    "tab": "ui_tab_parking",
+    "name": "Sơ đồ ô đỗ",
+    "tab": "ui_tab_main",
     "order": 2,
     "disp": true,
     "width": "6",
     "collapse": false,
-    "wires": []
+    "className": ""
   },
   {
-    "id": "ui_group_history",
+    "id": "uig_control",
     "type": "ui_group",
-    "name": "Lịch Sử Vào / Ra & Cảnh Báo",
-    "tab": "ui_tab_parking",
+    "name": "Điều khiển barie và cảnh báo",
+    "tab": "ui_tab_main",
+    "order": 3,
+    "disp": true,
+    "width": "6",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "uig_log",
+    "type": "ui_group",
+    "name": "Nhật ký sự kiện",
+    "tab": "ui_tab_main",
+    "order": 4,
+    "disp": true,
+    "width": "12",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "uig_stats",
+    "type": "ui_group",
+    "name": "Thống kê vận hành",
+    "tab": "ui_tab_main",
     "order": 5,
     "disp": true,
     "width": "12",
     "collapse": false,
-    "wires": []
+    "className": ""
   },
   {
-    "id": "in_scan",
-    "type": "mqtt in",
-    "z": "tab1",
-    "name": "RFID Scan In",
-    "topic": "parking_n4/rfid/scan",
-    "qos": "0",
-    "datatype": "utf8",
-    "broker": "broker1",
-    "nl": false,
-    "rap": true,
-    "rh": 0,
-    "x": 110,
-    "y": 100,
-    "wires": [
-      [
-        "check",
-        "fn_slot_map",
-        "fn_analytics_db"
-      ]
-    ]
-  },
-  {
-    "id": "check",
-    "type": "function",
-    "z": "tab1",
-    "name": "Check Card (Rule 2 & 3)",
-    "func": "const CAPACITY = 2;\nconst INVALID_LIMIT = 3;\nconst WINDOW_MS = 60000;\n\nlet p = msg.payload;\nif (typeof p === 'string') {\n  try { p = JSON.parse(p); } catch (e) { p = { uid: p }; }\n}\nlet rawUid = (p && p.uid) ? String(p.uid) : (typeof p === 'string' ? p : '');\nlet match = rawUid.match(/[0-9A-Fa-f]{2}(?:[ :][0-9A-Fa-f]{2}){3}/);\nlet uid = match ? match[0].replace(/:/g, ' ').toUpperCase() : rawUid.replace(/scan/gi, '').trim().toUpperCase();\nif (!uid) return null;\n\nlet valid = flow.get('validUIDs') || [\n  \"01 02 03 04\", \"A3 5C 12 F0\", \"B4 22 9A 01\", \"DE AD BE EF\",\n  \"11 22 33 44\", \"AA BB CC DD\", \"12 34 56 78\", \"55 66 77 88\"\n];\nlet inside = flow.get('inside') || {};\nlet warned = flow.get('warned') || {};\nlet now = Date.now();\n\nlet isInvalid = false;\nif (p && p.action === 'invalid') {\n  isInvalid = true;\n} else if (!valid.includes(uid)) {\n  isInvalid = true;\n}\n\nif (isInvalid) {\n  let bad = (flow.get('bad') || []).filter(t => now - t < WINDOW_MS);\n  bad.push(now);\n  flow.set('bad', bad);\n  node.status({fill:\"red\", shape:\"dot\", text:\"INVALID \" + uid});\n  let msgs = [{payload:{event:\"INVALID_CARD\", uid:uid}}];\n  if (bad.length >= INVALID_LIMIT) {\n    msgs.push({payload:{event:\"REPEATED_INVALID\", uid:uid, count:bad.length}});\n    flow.set('bad', []);\n  }\n  return [null, msgs];\n}\n\nlet msgs = [];\nif (p && p.action === 'check_out') {\n  let mins = p.durationSec ? Math.round(p.durationSec / 6) / 10 : (inside[uid] ? Math.round((now - inside[uid]) / 6000) / 10 : 0.1);\n  delete inside[uid];\n  delete warned[uid];\n  msgs.push({payload:{event:\"VEHICLE_OUT\", uid:uid, duration_min:mins, fee:p.fee||5000, plate:p.licensePlate, owner:p.ownerName}});\n} else if (p && p.action === 'check_in') {\n  inside[uid] = now;\n  msgs.push({payload:{event:\"VEHICLE_IN\", uid:uid, plate:p.licensePlate, owner:p.ownerName}});\n  let count = Object.keys(inside).length;\n  if (count >= CAPACITY) {\n    msgs.push({payload:{event:\"LOT_FULL\", count:count, capacity:CAPACITY}});\n  }\n} else {\n  if (inside[uid]) {\n    let mins = Math.round((now - inside[uid]) / 6000) / 10;\n    delete inside[uid];\n    delete warned[uid];\n    msgs.push({payload:{event:\"VEHICLE_OUT\", uid:uid, duration_min:mins}});\n  } else {\n    inside[uid] = now;\n    msgs.push({payload:{event:\"VEHICLE_IN\", uid:uid}});\n    let count = Object.keys(inside).length;\n    if (count >= CAPACITY) {\n      msgs.push({payload:{event:\"LOT_FULL\", count:count, capacity:CAPACITY}});\n    }\n  }\n}\nflow.set('inside', inside);\nflow.set('warned', warned);\nnode.status({fill:\"green\", shape:\"dot\", text:msgs[0].payload.event});\nreturn [msgs, null];",
-    "outputs": 2,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 350,
-    "y": 100,
-    "wires": [
-      [
-        "fmt",
-        "update_stats",
-        "fn_receipt",
-        "fn_banner_alert",
-        "fn_alert_toast"
-      ],
-      [
-        "fmt",
-        "update_stats",
-        "fn_alert_toast",
-        "fn_banner_alert"
-      ]
-    ]
-  },
-  {
-    "id": "fn_alert_toast",
-    "type": "function",
-    "z": "tab1",
-    "name": "Alert Toast Function",
-    "func": "let e = msg.payload;\nif (typeof e === 'string') {\n  try { e = JSON.parse(e); } catch (err) {}\n}\nif (!e || !e.event) return null;\n\nconst text = {\n  INVALID_CARD: \"Thẻ lạ: \" + (e.uid || ''),\n  OVERSTAY: \"Xe gửi quá lâu: \" + (e.uid || '') + \" (\" + e.duration_min + \" phút)\",\n  LOT_FULL: \"Bãi đầy: \" + e.count + \"/\" + e.capacity,\n  REPEATED_INVALID: \"Thẻ lạ quẹt \" + e.count + \" lần liên tiếp\",\n  BARRIER_STUCK: \"Barie mở quá lâu, đã gửi lệnh đóng\"\n};\n\nif (!text[e.event]) return null;\n\nlet title = \"CẢNH BÁO AN NINH\";\nlet sub = \"ĐÃ TỪ CHỐI & KHÓA BARIE!\";\nlet highlightColor = \"#b71c1c\";\n\nif (e.event === 'OVERSTAY') {\n  title = \"⏰ CẢNH BÁO TIMEOUT (QUÁ GIỜ)\";\n  sub = \"Vượt quá thời gian gửi quy định (30 giây)!\";\n  highlightColor = \"#d35400\";\n} else if (e.event === 'LOT_FULL') {\n  title = \"CẢNH BÁO SỨC CHỨA (BÃI ĐẦY)\";\n  sub = \"Đã đạt giới hạn sức chứa bãi xe!\";\n  highlightColor = \"#c0392b\";\n} else if (e.event === 'REPEATED_INVALID') {\n  title = \"CẢNH BÁO BẤT THƯỜNG (SPAM THẺ LẠ)\";\n  sub = \"Phát hiện quẹt thẻ không hợp lệ 3 lần liên tiếp!\";\n  highlightColor = \"#8e44ad\";\n} else if (e.event === 'BARRIER_STUCK') {\n  title = \"CẢNH BÁO SỰ CỐ BARIE KẸT MỞ\";\n  sub = \"Tự động kích hoạt cơ chế Downlink đóng barie!\";\n  highlightColor = \"#b71c1c\";\n}\n\nlet toastHtml = `\n<div style=\"background: ${highlightColor}; color: #ffffff; padding: 14px 18px; border-radius: 10px; border: 2px solid #ffeb3b; box-shadow: 0 8px 25px rgba(0,0,0,0.6); min-width: 290px; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif;\">\n  <div style=\"font-size: 16px; font-weight: bold; color: #ffffff; margin-bottom: 6px;\">\n    ${title}\n  </div>\n  <div style=\"font-size: 15px; font-weight: bold; color: #fff59d; margin-bottom: 6px; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 5px;\">\n    ${text[e.event]}\n  </div>\n  <div style=\"font-size: 12px; color: #ffcdd2; font-weight: bold;\">\n    ${sub}\n  </div>\n</div>\n`;\n\nreturn {\n  payload: toastHtml,\n  topic: text[e.event],\n  highlight: highlightColor\n};",
-    "outputs": 1,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 620,
-    "y": 60,
-    "wires": [
-      [
-        "ui_toast_alert"
-      ]
-    ]
-  },
-  {
-    "id": "ui_toast_alert",
-    "type": "ui_toast",
-    "z": "tab1",
-    "position": "top right",
-    "displayTime": "8",
-    "highlight": "#b71c1c",
-    "sendall": true,
-    "outputs": 0,
-    "ok": "ĐÃ HIỂU",
-    "cancel": "",
-    "raw": true,
-    "className": "",
-    "topic": "Cảnh Báo An Ninh",
-    "name": "Cảnh Báo Thông Báo (Toast)",
-    "x": 890,
-    "y": 60,
-    "wires": []
-  },
-  {
-    "id": "fn_banner_alert",
-    "type": "function",
-    "z": "tab1",
-    "name": "Security Banner Format",
-    "func": "let e = msg.payload;\nif (typeof e === 'string') {\n  try { e = JSON.parse(e); } catch (err) {}\n}\n\nlet banner = \"\";\nlet t = new Date().toLocaleTimeString('vi-VN');\n\nif (e && e.event === 'INVALID_CARD') {\n  banner = `<div style='background: #c0392b; color: #ffffff; padding: 12px 16px; border-radius: 8px; font-weight: bold; border-left: 6px solid #f1c40f;'><div style='font-size:15px; margin-bottom:3px;'>[CẢNH BÁO: THẺ LẠ]</div><div style='font-size:13px; color:#ffeaa7;'>UID: <b>${e.uid}</b> - Lúc ${t} | Đã từ chối truy cập!</div></div>`;\n} else if (e && e.event === 'REPEATED_INVALID') {\n  banner = `<div style='background: #8e44ad; color: #ffffff; padding: 12px 16px; border-radius: 8px; font-weight: bold; border-left: 6px solid #f39c12;'><div style='font-size:15px; margin-bottom:3px;'>[BẤT THƯỜNG: SPAM THẺ LẠ LIÊN TIẾP]</div><div style='font-size:13px; color:#f5eef8;'>UID: <b>${e.uid}</b> đã quẹt <b>${e.count} lần</b> trong 60s!</div></div>`;\n} else if (e && e.event === 'OVERSTAY') {\n  banner = `<div style='background: #d35400; color: #ffffff; padding: 12px 16px; border-radius: 8px; font-weight: bold; border-left: 6px solid #f39c12;'><div style='font-size:15px; margin-bottom:3px;'>⏰ [CẢNH BÁO: XE GỬI QUÁ LÂU]</div><div style='font-size:13px; color:#fdebd0;'>Xe <b>${e.uid}</b> gửi <b>${e.duration_min} phút</b> (> 0.5 phút) - Lúc ${t}</div></div>`;\n} else if (e && e.event === 'LOT_FULL') {\n  banner = `<div style='background: #c0392b; color: #ffffff; padding: 12px 16px; border-radius: 8px; font-weight: bold; border-left: 6px solid #e74c3c;'><div style='font-size:15px; margin-bottom:3px;'>[CẢNH BÁO: BÃI ĐÃ ĐẦY]</div><div style='font-size:13px; color:#ffebee;'>Đã đạt sức chứa tối đa: <b>${e.count}/${e.capacity} xe</b>!</div></div>`;\n} else if (e && e.event === 'BARRIER_STUCK') {\n  banner = `<div style='background: #b71c1c; color: #ffffff; padding: 12px 16px; border-radius: 8px; font-weight: bold; border-left: 6px solid #ffeb3b;'><div style='font-size:15px; margin-bottom:3px;'>[SỰ CỐ: BARIE KẸT MỞ QUÁ LÂU]</div><div style='font-size:13px; color:#fff9c4;'>Đã tự động gửi lệnh ĐÓNG barie an toàn lúc ${t}!</div></div>`;\n} else if (e && (e.event === 'VEHICLE_IN' || e.event === 'VEHICLE_OUT')) {\n  banner = `<div style='background: #27ae60; color: #ffffff; padding: 12px 16px; border-radius: 8px; font-weight: bold; border-left: 6px solid #2ecc71;'><div style='font-size:15px; margin-bottom:2px;'>[AN NINH TRỰC THỜI GIAN THỰC]</div><div style='font-size:13px; font-weight:normal; color:#e8f8f5;'>Lượt quét: ${e.event} (${e.uid}) lúc ${t}</div></div>`;\n}\n\nif (banner) {\n  msg.payload = banner;\n  return msg;\n}\nreturn null;",
-    "outputs": 1,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 630,
-    "y": 120,
-    "wires": [
-      [
-        "ui_template_security"
-      ]
-    ]
-  },
-  {
-    "id": "ui_template_security",
-    "type": "ui_template",
-    "z": "tab1",
-    "group": "ui_group_control",
-    "name": "Banner Trạng Thái An Ninh",
-    "order": 1,
-    "width": 6,
-    "height": 2,
-    "format": "<div ng-if=\"!msg.payload\" style=\"background: #27ae60; color: #ffffff; padding: 12px 16px; border-radius: 8px; font-weight: bold; border-left: 6px solid #2ecc71;\"><div style=\"font-size:15px; margin-bottom:2px;\">[AN NINH TRỰC THỜI GIAN THỰC]</div><div style=\"font-size:13px; font-weight:normal; color:#e8f8f5;\">Hệ thống an toàn - Đang giám sát cổng vào/ra</div></div><div ng-if=\"msg.payload\" ng-bind-html=\"msg.payload\"></div>",
-    "storeOutMessages": true,
-    "fwdInMessages": true,
-    "resendOnRefresh": true,
-    "templateScope": "local",
-    "className": "",
-    "x": 900,
-    "y": 120,
-    "wires": [
-      []
-    ]
-  },
-  {
-    "id": "fn_receipt",
-    "type": "function",
-    "z": "tab1",
-    "name": "Format Receipt",
-    "func": "let e = msg.payload;\nif (!e || e.event !== 'VEHICLE_OUT') return null;\nreturn { payload: 'Thẻ ' + e.uid + ' | gửi ' + e.duration_min + ' phút | ' +\n         new Date().toLocaleTimeString('vi-VN') };",
-    "outputs": 1,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 600,
-    "y": 180,
-    "wires": [
-      [
-        "ui_text_receipt"
-      ]
-    ]
-  },
-  {
-    "id": "ui_text_receipt",
-    "type": "ui_text",
-    "z": "tab1",
-    "group": "ui_group_monitor",
-    "order": 3,
-    "width": 6,
-    "height": 2,
-    "name": "Biên nhận gần nhất",
-    "label": "Biên Nhận Gần Nhất",
-    "format": "<span style='color:#009688; font-weight:bold; font-size:14px;'>{{msg.payload || 'Chưa có lượt xe ra'}}</span>",
-    "layout": "row-spread",
-    "className": "",
-    "x": 880,
-    "y": 180,
-    "wires": []
-  },
-  {
-    "id": "update_stats",
-    "type": "function",
-    "z": "tab1",
-    "name": "Update Stats (Dashboard)",
-    "func": "let inside = flow.get('inside') || {};\nlet hist = flow.get('hist') || [];\nlet e = msg.payload;\nif (typeof e === 'string') {\n  try { e = JSON.parse(e); } catch (err) {}\n}\nlet detail = '';\nif (e.uid) detail += ' ' + e.uid;\nif (e.duration_min !== undefined) detail += ' (' + e.duration_min + ' phút)';\nif (e.count !== undefined && e.capacity !== undefined) detail += ' (' + e.count + '/' + e.capacity + ')';\nif (e.count !== undefined && e.capacity === undefined) detail += ' (' + e.count + ' lần)';\nhist.unshift(new Date().toLocaleTimeString('vi-VN') + ' ' + (e.event || e.type || 'EVENT') + detail);\nhist = hist.slice(0, 10);\nflow.set('hist', hist);\nreturn [\n  { payload: Object.keys(inside).length },\n  { payload: hist.join('\\n') }\n];",
-    "outputs": 2,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 630,
-    "y": 240,
-    "wires": [
-      [
-        "ui_gauge_vehicles"
-      ],
-      [
-        "ui_template_hist"
-      ]
-    ]
-  },
-  {
-    "id": "ui_gauge_vehicles",
-    "type": "ui_gauge",
-    "z": "tab1",
-    "name": "Số Xe Trong Bãi",
-    "group": "ui_group_monitor",
-    "order": 1,
-    "width": 6,
-    "height": 4,
-    "gtype": "gage",
-    "title": "Số Xe Trong Bãi",
-    "label": "xe",
-    "format": "{{value}} / 2",
-    "min": 0,
-    "max": 2,
-    "colors": [
-      "#2ecc71",
-      "#f39c12",
-      "#e74c3c"
-    ],
-    "seg1": "1",
-    "seg2": "2",
-    "diff": false,
-    "className": "",
-    "x": 880,
-    "y": 240,
-    "wires": []
-  },
-  {
-    "id": "ui_template_hist",
-    "type": "ui_template",
-    "z": "tab1",
-    "group": "ui_group_history",
-    "name": "Lịch Sử Vào Ra Gần Nhất",
-    "order": 1,
-    "width": 12,
-    "height": 5,
-    "format": "<div style='background:#181b20; border-radius:8px; padding:12px; font-family:Courier New, monospace;'>\n  <div style='color:#00ff99; font-weight:bold; margin-bottom:8px;'>[NHẬT KÝ VÀO / RA & CẢNH BÁO THỜI GIAN THỰC]</div>\n  <pre style='color:#e0e0e0; font-size:13px; line-height:1.6; margin:0; white-space:pre-wrap;'>{{msg.payload || 'Chưa có dữ liệu phương tiện'}}</pre>\n</div>",
-    "storeOutMessages": true,
-    "fwdInMessages": true,
-    "resendOnRefresh": true,
-    "templateScope": "local",
-    "className": "",
-    "x": 900,
-    "y": 290,
-    "wires": [
-      []
-    ]
-  },
-  {
+    "z": "tab_parking",
     "id": "in_status",
+    "g": "g_in",
     "type": "mqtt in",
-    "z": "tab1",
-    "name": "Barie Status In",
+    "name": "parking_n4/status",
+    "topic": "parking_n4/status",
+    "qos": "1",
+    "datatype": "json",
+    "broker": "broker_hivemq",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 135,
+    "y": 120,
+    "wires": [
+      [
+        "fn_sync"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "in_scan",
+    "g": "g_in",
+    "type": "mqtt in",
+    "name": "parking_n4/rfid/scan",
+    "topic": "parking_n4/rfid/scan",
+    "qos": "1",
+    "datatype": "json",
+    "broker": "broker_hivemq",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 145,
+    "y": 200,
+    "wires": [
+      [
+        "fn_scan"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "in_gate",
+    "g": "g_in",
+    "type": "mqtt in",
+    "name": "parking_n4/barie/status",
     "topic": "parking_n4/barie/status",
-    "qos": "0",
-    "datatype": "utf8",
-    "broker": "broker1",
+    "qos": "1",
+    "datatype": "json",
+    "broker": "broker_hivemq",
     "nl": false,
     "rap": true,
     "rh": 0,
-    "x": 110,
-    "y": 350,
+    "inputs": 0,
+    "x": 150,
+    "y": 280,
     "wires": [
       [
-        "fmt",
-        "fmt_barie_status",
-        "fn_track_status"
+        "fn_gate"
       ]
     ]
   },
   {
-    "id": "fmt_barie_status",
-    "type": "function",
-    "z": "tab1",
-    "name": "Format Barie Status",
-    "func": "let p = msg.payload;\nif (typeof p === 'string') {\n  try { p = JSON.parse(p); } catch (e) {}\n}\nlet state = (typeof p === 'object' && p !== null) ? (p.state || JSON.stringify(p)) : p;\nif (typeof state === 'string') {\n  state = state.trim().toLowerCase();\n}\n\nif (state === 'open' || state === 'mo') {\n  msg.payload = 'ĐANG MỞ (OPEN)';\n} else if (state === 'closed' || state === 'dong') {\n  msg.payload = 'ĐANG ĐÓNG (CLOSED)';\n} else {\n  msg.payload = '' + state;\n}\nreturn msg;",
-    "outputs": 1,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 390,
-    "y": 350,
-    "wires": [
-      [
-        "ui_text_barie"
-      ]
-    ]
-  },
-  {
-    "id": "ui_text_barie",
-    "type": "ui_text",
-    "z": "tab1",
-    "group": "ui_group_monitor",
-    "order": 2,
-    "width": 6,
-    "height": 2,
-    "name": "Hiển Thị Barie",
-    "label": "Trạng Thái Barie",
-    "format": "<span style='font-size:16px; font-weight:bold;'>{{msg.payload || 'ĐANG ĐÓNG (CLOSED)'}}</span>",
-    "layout": "row-spread",
-    "className": "",
-    "x": 880,
-    "y": 350,
-    "wires": []
-  },
-  {
-    "id": "init_status",
-    "type": "inject",
-    "z": "tab1",
-    "name": "Khởi tạo trạng thái Đóng",
-    "props": [
-      {
-        "p": "payload"
-      }
-    ],
-    "repeat": "",
-    "crontab": "",
-    "once": true,
-    "onceDelay": 0.5,
-    "topic": "",
-    "payload": "{\"state\":\"closed\"}",
-    "payloadType": "json",
-    "x": 140,
-    "y": 400,
-    "wires": [
-      [
-        "fmt_barie_status"
-      ]
-    ]
-  },
-  {
-    "id": "fn_track_status",
-    "type": "function",
-    "z": "tab1",
-    "name": "Track Status (Rule 4)",
-    "func": "let p = msg.payload;\nif (typeof p === 'string') {\n  try { p = JSON.parse(p); } catch (e) {}\n}\nlet s = (typeof p === 'object' && p !== null) ? p.state : p;\nif (typeof s === 'string') s = s.trim().toLowerCase();\nflow.set('barrierOpenAt', s === \"open\" ? Date.now() : null);\nreturn msg;",
-    "outputs": 1,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 390,
-    "y": 400,
-    "wires": [
-      []
-    ]
-  },
-  {
-    "id": "inject_overstay",
-    "type": "inject",
-    "z": "tab1",
-    "name": "Inject 5s (Overstay Check)",
-    "props": [
-      {
-        "p": "payload"
-      }
-    ],
-    "repeat": "5",
-    "crontab": "",
-    "once": true,
-    "onceDelay": 1,
-    "topic": "",
-    "payload": "",
-    "payloadType": "date",
-    "x": 140,
-    "y": 460,
-    "wires": [
-      [
-        "fn_overstay"
-      ]
-    ]
-  },
-  {
-    "id": "fn_overstay",
-    "type": "function",
-    "z": "tab1",
-    "name": "Overstay Check (Rule 1)",
-    "func": "const LIMIT_MIN = 0.5;\nlet inside = flow.get('inside') || {};\nlet warned = flow.get('warned') || {};\nlet now = Date.now();\nlet alerts = [];\nfor (let uid in inside) {\n  let mins = (now - inside[uid]) / 60000;\n  if (mins > LIMIT_MIN && !warned[uid]) {\n    warned[uid] = true;\n    alerts.push({payload:{event:\"OVERSTAY\", uid:uid,\n      duration_min:Math.round(mins*10)/10}});\n  }\n}\nflow.set('warned', warned);\nif (alerts.length > 0) {\n  node.status({fill:\"yellow\", shape:\"dot\", text:\"OVERSTAY: \" + alerts.length + \" xe\"});\n  return [alerts];\n}\nnode.status({fill:\"grey\", shape:\"ring\", text:\"ok\"});\nreturn [null];",
-    "outputs": 1,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 390,
-    "y": 460,
-    "wires": [
-      [
-        "fmt",
-        "fn_alert_toast",
-        "fn_banner_alert",
-        "update_stats"
-      ]
-    ]
-  },
-  {
-    "id": "inject_barrier_watch",
-    "type": "inject",
-    "z": "tab1",
-    "name": "Inject 5s (Barrier Watch)",
-    "props": [
-      {
-        "p": "payload"
-      }
-    ],
-    "repeat": "5",
-    "crontab": "",
-    "once": true,
-    "onceDelay": 2,
-    "topic": "",
-    "payload": "",
-    "payloadType": "date",
-    "x": 140,
-    "y": 520,
-    "wires": [
-      [
-        "fn_barrier_watch"
-      ]
-    ]
-  },
-  {
-    "id": "fn_barrier_watch",
-    "type": "function",
-    "z": "tab1",
-    "name": "Barrier Watch (Rule 4)",
-    "func": "const MAX_OPEN_MS = 10000;\nlet t = flow.get('barrierOpenAt');\nif (t && Date.now() - t > MAX_OPEN_MS) {\n  flow.set('barrierOpenAt', null);\n  node.status({fill:\"red\", shape:\"dot\", text:\"STUCK -> AUTO CLOSE\"});\n  return [{payload:{cmd:\"close\"}}, {payload:{event:\"BARRIER_STUCK\"}}];\n}\nnode.status({fill:\"grey\", shape:\"ring\", text:\"idle\"});\nreturn [null, null];",
-    "outputs": 2,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 390,
-    "y": 520,
-    "wires": [
-      [
-        "out_cmd"
-      ],
-      [
-        "fmt",
-        "fn_alert_toast",
-        "fn_banner_alert",
-        "update_stats"
-      ]
-    ]
-  },
-  {
-    "id": "fmt",
-    "type": "function",
-    "z": "tab1",
-    "name": "Format Event Log",
-    "func": "let p = msg.payload;\nif (typeof p === 'string') {\n  try { p = JSON.parse(p); } catch (e) {}\n}\nlet t = new Date().toLocaleString('vi-VN');\nlet line;\nif (p && p.event) {\n  line = '['+t+'] [EVENT] '+p.event;\n  if (p.uid) line += ' uid=' + p.uid;\n  if (p.duration_min !== undefined) line += ' duration=' + p.duration_min + 'min';\n  if (p.count !== undefined) line += ' count=' + p.count;\n  if (p.capacity !== undefined) line += ' capacity=' + p.capacity;\n} else if (p && p.state) {\n  line = '['+t+'] [STATUS] barie='+p.state;\n} else if (p && p.type) {\n  line = '['+t+'] [ALERT] '+p.type+' uid='+(p.uid||'-');\n} else {\n  line = '['+t+'] [RAW] '+(typeof p === 'object' ? JSON.stringify(p) : p);\n}\nmsg.payload = line + '\\n';\nreturn msg;",
-    "outputs": 1,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 630,
-    "y": 460,
-    "wires": [
-      [
-        "save",
-        "dbg"
-      ]
-    ]
-  },
-  {
-    "id": "save",
-    "type": "file",
-    "z": "tab1",
-    "name": "Save Event History",
-    "filename": "D:/HocHe/IOT/Project/Bai_Giu_Xe/parking_log.txt",
-    "filenameType": "str",
-    "appendNewline": false,
-    "createDir": true,
-    "overwriteFile": "false",
-    "encoding": "none",
-    "x": 880,
-    "y": 440,
-    "wires": [
-      []
-    ]
-  },
-  {
-    "id": "dbg",
-    "type": "debug",
-    "z": "tab1",
-    "name": "Event History Debug",
-    "active": true,
-    "tosidebar": true,
-    "complete": "payload",
-    "targetType": "msg",
-    "x": 880,
-    "y": 490,
-    "wires": []
-  },
-  {
+    "z": "tab_parking",
     "id": "in_alert",
+    "g": "g_in",
     "type": "mqtt in",
-    "z": "tab1",
-    "name": "Alert In",
+    "name": "parking_n4/alert",
     "topic": "parking_n4/alert",
-    "qos": "0",
-    "datatype": "utf8",
-    "broker": "broker1",
+    "qos": "1",
+    "datatype": "json",
+    "broker": "broker_hivemq",
     "nl": false,
     "rap": true,
     "rh": 0,
-    "x": 110,
-    "y": 580,
+    "inputs": 0,
+    "x": 130,
+    "y": 380,
     "wires": [
       [
-        "fmt"
+        "sw_alert"
       ]
     ]
   },
   {
-    "id": "inject_open_hold",
+    "z": "tab_parking",
+    "id": "tick_1s",
+    "g": "g_in",
     "type": "inject",
-    "z": "tab1",
-    "name": "Mở giữ (mô phỏng kẹt)",
+    "name": "Mỗi 1 giây",
     "props": [
       {
         "p": "payload"
       }
     ],
-    "repeat": "",
+    "repeat": "1",
     "crontab": "",
-    "once": false,
+    "once": true,
+    "onceDelay": "1",
     "topic": "",
-    "payload": "{\"cmd\":\"open_hold\"}",
-    "payloadType": "json",
-    "x": 140,
-    "y": 640,
+    "payload": "",
+    "payloadType": "date",
+    "x": 120,
+    "y": 470,
     "wires": [
       [
-        "out_cmd"
+        "fn_rule1",
+        "fn_rule4"
       ]
     ]
   },
   {
-    "id": "ui_btn_open",
-    "type": "ui_button",
-    "z": "tab1",
-    "name": "Nút Mở Barie (Dashboard)",
-    "group": "ui_group_control",
-    "order": 2,
-    "width": 2,
-    "height": 2,
-    "passthru": false,
-    "label": "MỞ",
-    "tooltip": "Gửi lệnh mở barie từ xa qua MQTT",
-    "color": "#ffffff",
-    "bgcolor": "#27ae60",
-    "icon": "fa-arrow-up",
-    "payload": "{\"cmd\":\"open\"}",
-    "payloadType": "json",
-    "topic": "",
-    "topicType": "str",
-    "x": 150,
-    "y": 700,
+    "z": "tab_parking",
+    "id": "st_broker",
+    "g": "g_in",
+    "type": "status",
+    "name": "Trạng thái broker",
+    "scope": [
+      "in_scan"
+    ],
+    "x": 135,
+    "y": 530,
     "wires": [
       [
-        "out_cmd"
+        "fn_broker"
       ]
     ]
   },
   {
-    "id": "ui_btn_close",
-    "type": "ui_button",
-    "z": "tab1",
-    "name": "Nút Đóng Barie (Dashboard)",
-    "group": "ui_group_control",
-    "order": 3,
-    "width": 2,
-    "height": 2,
-    "passthru": false,
-    "label": "ĐÓNG",
-    "tooltip": "Gửi lệnh đóng barie từ xa qua MQTT",
-    "color": "#ffffff",
-    "bgcolor": "#c0392b",
-    "icon": "fa-arrow-down",
-    "payload": "{\"cmd\":\"close\"}",
-    "payloadType": "json",
-    "topic": "",
-    "topicType": "str",
-    "x": 150,
-    "y": 750,
+    "z": "tab_parking",
+    "id": "ui_connect",
+    "g": "g_in",
+    "type": "ui_ui_control",
+    "name": "Mở dashboard",
+    "events": "connect",
+    "x": 130,
+    "y": 590,
     "wires": [
       [
-        "out_cmd"
+        "fn_dispatch"
       ]
     ]
   },
   {
-    "id": "ui_btn_open_hold",
-    "type": "ui_button",
-    "z": "tab1",
-    "name": "Nút Mở Giữ Barie (Kẹt)",
-    "group": "ui_group_control",
-    "order": 4,
-    "width": 2,
-    "height": 2,
-    "passthru": false,
-    "label": "MỞ GIỮ (KẸT)",
-    "tooltip": "Mô phỏng sự cố barie kẹt mở quá 10s để Node-RED tự động gửi lệnh đóng",
-    "color": "#ffffff",
-    "bgcolor": "#e67e22",
-    "icon": "fa-exclamation-triangle",
-    "payload": "{\"cmd\":\"open_hold\"}",
-    "payloadType": "json",
-    "topic": "",
-    "topicType": "str",
-    "x": 160,
-    "y": 800,
-    "wires": [
-      [
-        "out_cmd"
-      ]
-    ]
-  },
-  {
-    "id": "out_cmd",
-    "type": "mqtt out",
-    "z": "tab1",
-    "name": "MQTT Out Cmd to ESP32",
-    "topic": "parking_n4/barie/cmd",
-    "qos": "0",
-    "retain": "false",
-    "broker": "broker1",
-    "x": 510,
-    "y": 720,
-    "wires": []
-  },
-  {
-    "id": "ui_group_slots",
-    "type": "ui_group",
-    "name": "Sơ Đồ Ô Đỗ Thời Gian Thực (2 Vị Trí)",
-    "tab": "ui_tab_parking",
-    "order": 3,
-    "disp": true,
-    "width": "6",
-    "collapse": false,
-    "wires": []
-  },
-  {
-    "id": "fn_slot_map",
+    "z": "tab_parking",
+    "id": "fn_sync",
+    "g": "g_rules",
     "type": "function",
-    "z": "tab1",
-    "name": "Live Slot Map Engine",
-    "func": "let p = msg.payload;\nif (typeof p === 'string') {\n  try { p = JSON.parse(p); } catch (e) {}\n}\n\nlet slots = flow.get('slots') || [\n  { id: \"01\", occupied: false, plate: \"\", time: \"\", owner: \"\" },\n  { id: \"02\", occupied: false, plate: \"\", time: \"\", owner: \"\" }\n];\n\nlet receiptData = null;\n\nif (p && p.action === 'check_in') {\n  let empty = slots.find(s => !s.occupied);\n  if (empty) {\n    empty.occupied = true;\n    empty.plate = p.licensePlate || p.uid;\n    empty.owner = p.ownerName || \"Khách đăng ký\";\n    empty.time = new Date().toLocaleTimeString('vi-VN');\n  }\n} else if (p && p.action === 'check_out') {\n  let target = slots.find(s => s.plate === (p.licensePlate || p.uid));\n  if (!target) target = slots.find(s => s.occupied);\n  if (target) {\n    target.occupied = false;\n    target.plate = \"\";\n    target.owner = \"\";\n    target.time = \"\";\n  }\n  receiptData = {\n    fee: p.fee || 5000,\n    plate: p.licensePlate || p.uid,\n    duration: p.durationSec || 20\n  };\n}\n\nflow.set('slots', slots);\n\n// Generate Slot Map HTML (2 slots: Ô 1 & Ô 2)\nlet html = '<div style=\"display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:6px;\">';\nfor (let s of slots) {\n  let bg = s.occupied ? 'linear-gradient(135deg, #c62828, #8e0000)' : 'linear-gradient(135deg, #1b5e20, #003300)';\n  let border = s.occupied ? '#ff5252' : '#00e676';\n  let icon = s.occupied ? '🏍️' : '🟢';\n  let status = s.occupied ? ('<b>' + s.plate + '</b>') : 'TRỐNG (SẴN SÀNG)';\n  let sub = s.occupied ? ('Chủ xe: ' + (s.owner || '') + '<br/>Vào lúc: ' + s.time) : 'Vị trí đỗ sẵn sàng tiếp nhận';\n  html += `\n  <div style=\"background:${bg}; border:2px solid ${border}; border-radius:10px; padding:16px 12px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.5); min-height:110px;\">\n    <div style=\"font-size:16px; font-weight:bold; color:#ffffff; margin-bottom:6px; letter-spacing:0.5px;\">${icon} Ô ĐỖ ${s.id}</div>\n    <div style=\"font-size:15px; font-weight:bold; color:#fff59d; margin-bottom:6px;\">${status}</div>\n    <div style=\"font-size:11px; color:#cfd8dc; line-height:1.4;\">${sub}</div>\n  </div>`;\n}\nhtml += '</div>';\n\nlet msgMap = { payload: html };\nlet msgReceipt = receiptData ? { payload: receiptData } : null;\n\nreturn [msgMap, msgReceipt];\n",
-    "outputs": 2,
-    "x": 620,
-    "y": 150,
-    "wires": [
-      [
-        "ui_slot_map"
-      ],
-      [
-        "fn_vietqr"
-      ]
-    ]
-  },
-  {
-    "id": "ui_slot_map",
-    "type": "ui_template",
-    "z": "tab1",
-    "group": "ui_group_slots",
-    "name": "Sơ Đồ Mặt Bằng Bãi Xe 2D",
-    "order": 1,
-    "width": 6,
-    "height": 5,
-    "format": "<div ng-bind-html=\"msg.payload\"></div>",
-    "storeOutMessages": true,
-    "fwdInMessages": true,
-    "resendOnRefresh": true,
-    "templateScope": "local",
-    "x": 900,
-    "y": 140,
-    "wires": [
-      []
-    ]
-  },
-  {
-    "id": "fn_vietqr",
-    "type": "function",
-    "z": "tab1",
-    "name": "VietQR Payment Generator",
-    "func": "let p = msg.payload;\nif (!p || !p.fee) return null;\n\nlet fee = p.fee;\nlet plate = encodeURIComponent(p.plate || \"XE\");\nlet qrUrl = `https://img.vietqr.io/image/MB-0987654321-compact2.png?amount=${fee}&addInfo=Phi%20gui%20xe%20${plate}&accountName=BAI%20XE%20THONG%20MINH`;\n\nlet html = `\n<div style=\"background:#212529; border:2px solid #00e676; border-radius:10px; padding:12px; text-align:center; margin-top:6px;\">\n  <div style=\"color:#00e676; font-size:15px; font-weight:bold; margin-bottom:4px;\">QUÉT MÃ VIETQR ĐỂ TRẢ PHÍ</div>\n  <div style=\"color:#ffffff; font-size:14px; margin-bottom:8px;\">Số tiền: <b style=\"color:#ffd54f; font-size:17px;\">${fee.toLocaleString('vi-VN')} VNĐ</b></div>\n  <img src=\"${qrUrl}\" style=\"max-width:180px; width:100%; border-radius:6px; box-shadow:0 4px 15px rgba(0,0,0,0.5);\"/>\n  <div style=\"color:#b0bec5; font-size:11px; margin-top:6px;\">Tự động xác nhận giao dịch qua Ngân hàng</div>\n</div>\n`;\n\nreturn { payload: html };\n",
+    "name": "Đồng bộ snapshot ESP32",
+    "func": "// Dong bo snapshot tu ESP32 (retained). {\"online\":false} la Last Will do broker gui khi ESP32 mat ket noi.\nconst park = flow.get('park');\nif (!park) return null;\nconst p = msg.payload || {};\nconst now = Date.now();\nconst events = [];\n\nif (p.online === false) {\n    if (park.online && !msg.retain) {\n        events.push({ level: 'danger', title: 'Mất kết nối thiết bị', text: 'Broker báo ESP32 ngắt kết nối (Last Will)', toast: true, alert: true });\n    }\n    park.online = false;\n} else {\n    if (!park.online && !msg.retain) {\n        events.push({ level: 'ok', title: 'Thiết bị trực tuyến', text: 'ESP32 đã kết nối và đồng bộ trạng thái' });\n    }\n    park.online = true;\n    if (p.capacity) park.capacity = p.capacity;\n    if (Array.isArray(p.slots)) {\n        park.slots = p.slots.map(s => {\n            if (!s.uid) return { slot: s.slot, uid: null, plate: null, owner: null, since: null, warned: false };\n            const old = park.slots.find(o => o.slot === s.slot && o.uid === s.uid);\n            return {\n                slot: s.slot, uid: s.uid, plate: s.plate, owner: s.owner,\n                since: old && old.since ? old.since : now - (s.parkedSec || 0) * 1000,\n                warned: old ? old.warned : false\n            };\n        });\n    }\n    if (p.gate && p.gate !== park.gate.state) {\n        park.gate.state = p.gate;\n        park.gate.since = now;\n    }\n}\nflow.set('park', park);\nnode.status({ fill: park.online ? 'green' : 'red', shape: 'dot', text: park.online ? 'ESP32 trực tuyến' : 'ESP32 mất kết nối' });\nmsg.events = events;\nreturn msg;",
     "outputs": 1,
-    "x": 640,
-    "y": 200,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 445,
+    "y": 120,
     "wires": [
       [
-        "ui_vietqr"
+        "fn_dispatch"
       ]
     ]
   },
   {
-    "id": "ui_vietqr",
-    "type": "ui_template",
-    "z": "tab1",
-    "group": "ui_group_slots",
-    "name": "Mã QR Thanh Toán Tự Động",
-    "order": 2,
-    "width": 6,
-    "height": 6,
-    "format": "<div ng-if=\"!msg.payload\" style=\"text-align:center; color:#90a4ae; padding:30px; font-size:13px;\">Sẵn sàng tạo mã VietQR thanh toán khi có xe ra bãi</div><div ng-if=\"msg.payload\" ng-bind-html=\"msg.payload\"></div>",
-    "storeOutMessages": true,
-    "fwdInMessages": true,
-    "resendOnRefresh": true,
-    "templateScope": "local",
-    "x": 900,
+    "z": "tab_parking",
+    "id": "fn_scan",
+    "g": "g_rules",
+    "type": "function",
+    "name": "Cập nhật lượt xe vào/ra",
+    "func": "// Cap nhat luot xe vao/ra hop le (ESP32 da quyet dinh tai cong)\nconst park = flow.get('park');\nif (!park) return null;\nconst p = msg.payload || {};\nconst now = Date.now();\nconst idx = (p.slot || 0) - 1;\nconst fmtDur = s => s < 60 ? s + ' giây' : Math.floor(s / 60) + ' phút ' + String(s % 60).padStart(2, '0') + ' giây';\nmsg.events = [];\nif (p.totalSlots) park.capacity = p.totalSlots;\n\nif (p.action === 'check_in') {\n    if (park.slots[idx]) park.slots[idx] = { slot: p.slot, uid: p.uid, plate: p.licensePlate, owner: p.ownerName, since: now, warned: false };\n    park.stats.checkins++;\n    msg.events.push({ level: 'info', title: 'Xe vào', plate: p.licensePlate, text: 'Ô ' + p.slot + ' · ' + p.ownerName });\n} else if (p.action === 'check_out') {\n    if (park.slots[idx]) park.slots[idx] = { slot: p.slot, uid: null, plate: null, owner: null, since: null, warned: false };\n    park.stats.checkouts++;\n    park.stats.revenue += Number(p.fee) || 0;\n    park.stats.durationSec += Number(p.durationSec) || 0;\n    msg.events.push({ level: 'ok', title: 'Xe ra', plate: p.licensePlate, text: fmtDur(p.durationSec) + ' · ' + Number(p.fee).toLocaleString('vi-VN') + ' đ' });\n} else {\n    return null;\n}\n\npark.transactions.unshift({\n    time: new Date(now).toISOString(), action: p.action, uid: p.uid, plate: p.licensePlate,\n    owner: p.ownerName, slot: p.slot, durationSec: p.durationSec || 0, fee: p.fee || 0\n});\npark.transactions = park.transactions.slice(0, 100);\nflow.set('park', park);\nnode.status({ fill: 'green', shape: 'dot', text: p.action + ' ' + p.licensePlate });\nmsg.save = true;\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 445,
     "y": 200,
     "wires": [
-      []
+      [
+        "fn_rule2"
+      ]
     ]
   },
   {
-    "id": "ui_group_analytics",
-    "type": "ui_group",
-    "name": "Báo Cáo Thống Kê & Cơ Sở Dữ Liệu (Analytics & Database)",
-    "tab": "ui_tab_parking",
-    "order": 6,
-    "disp": true,
-    "width": "12",
-    "collapse": false,
-    "wires": []
+    "z": "tab_parking",
+    "id": "fn_rule2",
+    "g": "g_rules",
+    "type": "function",
+    "name": "Rule 2 · Bãi đầy",
+    "func": "// Rule 2: bai day. (a) xe vao lam bai dat suc chua, (b) ESP32 tu choi xe vi bai day\nconst park = flow.get('park');\nif (!park) return null;\nconst p = msg.payload || {};\nmsg.events = msg.events || [];\nconst cap = p.totalSlots || park.capacity;\n\nif (p.action === 'check_in' && p.parkedCount >= cap) {\n    msg.events.push({ level: 'warn', title: 'Rule 2 · Bãi đã đầy', text: 'Đạt ' + p.parkedCount + '/' + cap + ' xe, cổng sẽ từ chối xe tiếp theo', toast: true, alert: true });\n    node.status({ fill: 'red', shape: 'dot', text: 'đầy ' + p.parkedCount + '/' + cap });\n} else if (p.type === 'LOT_FULL') {\n    msg.events.push({ level: 'warn', title: 'Rule 2 · Từ chối do bãi đầy', plate: p.licensePlate, text: 'Cổng không mở, bãi đang ' + p.parkedCount + '/' + cap + ' xe', toast: true, alert: true });\n    node.status({ fill: 'red', shape: 'ring', text: 'từ chối ' + p.licensePlate });\n} else {\n    node.status({ fill: 'grey', shape: 'ring', text: (p.parkedCount || 0) + '/' + cap });\n}\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 690,
+    "y": 240,
+    "wires": [
+      [
+        "fn_dispatch"
+      ]
+    ]
   },
   {
-    "id": "fn_analytics_db",
+    "z": "tab_parking",
+    "id": "fn_gate",
+    "g": "g_rules",
     "type": "function",
-    "z": "tab1",
-    "name": "Analytics & Database Engine",
-    "func": "var data = typeof msg.payload === 'object' ? msg.payload : JSON.parse(msg.payload || '{}');\nvar stats = flow.get('parking_stats') || {\n    totalRevenue: 0,\n    totalCheckins: 0,\n    totalCheckouts: 0,\n    totalDuration: 0,\n    currentParked: 0,\n    maxCapacity: 2,\n    transactions: []\n};\n\nif (msg.resetStats) {\n    stats = {\n        totalRevenue: 0,\n        totalCheckins: 0,\n        totalCheckouts: 0,\n        totalDuration: 0,\n        currentParked: 0,\n        maxCapacity: 2,\n        transactions: []\n    };\n    flow.set('parking_stats', stats);\n} else if (data.action) {\n    var now = new Date();\n    var timeStr = now.toLocaleTimeString('vi-VN', { hour12: false });\n    \n    if (data.action === 'check_in') {\n        stats.totalCheckins++;\n        stats.currentParked = (data.parkedCount !== undefined) ? data.parkedCount : (stats.currentParked + 1);\n    } else if (data.action === 'check_out') {\n        stats.totalCheckouts++;\n        stats.currentParked = (data.parkedCount !== undefined) ? data.parkedCount : Math.max(0, stats.currentParked - 1);\n        var fee = Number(data.fee) || 0;\n        stats.totalRevenue += fee;\n        stats.totalDuration += (Number(data.durationSec) || 0);\n    }\n    if (data.totalSlots) {\n        stats.maxCapacity = data.totalSlots;\n    }\n\n    stats.transactions.unshift({\n        id: 'TXN-' + Date.now().toString(36).toUpperCase(),\n        timestamp: now.toISOString(),\n        timeFormatted: timeStr,\n        action: data.action,\n        uid: data.uid || 'N/A',\n        licensePlate: data.licensePlate || 'N/A',\n        ownerName: data.ownerName || 'Khach vang lai',\n        durationSec: data.durationSec || 0,\n        fee: data.fee || 0,\n        parkedCount: stats.currentParked\n    });\n    if (stats.transactions.length > 100) stats.transactions.pop();\n\n    flow.set('parking_stats', stats);\n}\n\nvar avgFee = stats.totalCheckouts > 0 ? Math.round(stats.totalRevenue / stats.totalCheckouts) : 0;\nvar avgDuration = stats.totalCheckouts > 0 ? Math.round(stats.totalDuration / stats.totalCheckouts) : 0;\nvar turnoverRate = stats.maxCapacity > 0 ? ((stats.totalCheckins / stats.maxCapacity) * 100).toFixed(0) : 0;\n\nvar kpiHtml = '<div style=\"display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif;\">' +\n    '<div style=\"background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid #334155; border-radius: 8px; padding: 14px; text-align: left; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\">' +\n        '<div style=\"font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px;\">Tổng Doanh Thu Lũy Kế</div>' +\n        '<div style=\"font-size: 24px; font-weight: 700; color: #10b981; margin-top: 4px;\">' + stats.totalRevenue.toLocaleString('vi-VN') + ' <span style=\"font-size: 14px; color: #6ee7b7;\">VNĐ</span></div>' +\n        '<div style=\"font-size: 11px; color: #cbd5e1; margin-top: 4px;\">TB: ' + avgFee.toLocaleString('vi-VN') + ' đ/lượt</div>' +\n    '</div>' +\n    '<div style=\"background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid #334155; border-radius: 8px; padding: 14px; text-align: left; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\">' +\n        '<div style=\"font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px;\">Tổng Lượt Xe Phục Vụ</div>' +\n        '<div style=\"font-size: 24px; font-weight: 700; color: #38bdf8; margin-top: 4px;\">' + (stats.totalCheckins + stats.totalCheckouts) + ' <span style=\"font-size: 14px; color: #7dd3fc;\">lượt</span></div>' +\n        '<div style=\"font-size: 11px; color: #cbd5e1; margin-top: 4px;\">Vào: ' + stats.totalCheckins + ' | Ra: ' + stats.totalCheckouts + '</div>' +\n    '</div>' +\n    '<div style=\"background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid #334155; border-radius: 8px; padding: 14px; text-align: left; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\">' +\n        '<div style=\"font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px;\">Hiện Tại / Công Suất</div>' +\n        '<div style=\"font-size: 24px; font-weight: 700; color: ' + (stats.currentParked >= stats.maxCapacity ? '#ef4444' : '#f59e0b') + '; margin-top: 4px;\">' + stats.currentParked + ' / ' + stats.maxCapacity + ' <span style=\"font-size: 14px; color: #cbd5e1;\">xe</span></div>' +\n        '<div style=\"font-size: 11px; color: #cbd5e1; margin-top: 4px;\">Hệ số quay vòng: ' + turnoverRate + '%</div>' +\n    '</div>' +\n    '<div style=\"background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid #334155; border-radius: 8px; padding: 14px; text-align: left; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\">' +\n        '<div style=\"font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px;\">Thời Gian Đỗ Trung Bình</div>' +\n        '<div style=\"font-size: 24px; font-weight: 700; color: #a855f7; margin-top: 4px;\">' + avgDuration + ' <span style=\"font-size: 14px; color: #d8b4fe;\">giây</span></div>' +\n        '<div style=\"font-size: 11px; color: #cbd5e1; margin-top: 4px;\">Trạng thái DB: Persistent Active</div>' +\n    '</div>' +\n'</div>';\n\nvar msgKpi = { payload: kpiHtml };\nvar msgRevChart = { payload: stats.totalRevenue, topic: 'Doanh thu (VNĐ)' };\nvar msgOccChart = { payload: stats.currentParked, topic: 'Số xe trong bãi' };\nvar msgDbSave = { \n    filename: 'parking_database.json',\n    payload: JSON.stringify({\n        database_meta: {\n            system: 'Smart Parking AIoT Database',\n            version: '2.4.0',\n            updated_at: new Date().toISOString()\n        },\n        analytics_summary: {\n            total_revenue_vnd: stats.totalRevenue,\n            total_checkins: stats.totalCheckins,\n            total_checkouts: stats.totalCheckouts,\n            current_parked: stats.currentParked,\n            max_capacity: stats.maxCapacity,\n            avg_fee_vnd: avgFee,\n            avg_duration_sec: avgDuration\n        },\n        transactions: stats.transactions\n    }, null, 2)\n};\n\nreturn [msgKpi, msgRevChart, msgOccChart, msgDbSave];",
-    "outputs": 4,
+    "name": "Cập nhật trạng thái barie",
+    "func": "// Trang thai barie that tu ESP32 (retained)\nconst park = flow.get('park');\nif (!park) return null;\nconst p = msg.payload || {};\nconst now = Date.now();\nconst prev = park.gate;\nconst SRC = { card: 'Quẹt thẻ', timeout: 'Tự đóng sau 3 giây', dashboard: 'Dashboard', rule4: 'Rule 4', serial: 'Serial', mqtt: 'MQTT', boot: 'Khởi động' };\nconst changed = p.state !== prev.state || p.source !== prev.source || p.mode !== prev.mode;\nconst reopened = !msg.retain && p.state === 'open' && p.source === 'dashboard';\n\npark.gate = {\n    state: p.state, source: p.source, mode: p.mode, angle: p.angle,\n    since: (changed || reopened) ? now : prev.since,\n    blocked: p.state === 'open' ? prev.blocked && !changed && !reopened : false\n};\nif (changed || reopened) park.rule4 = { sentAt: null, alerted: false };\nflow.set('park', park);\n\nmsg.events = [];\nif (changed && !msg.retain) {\n    const routine = p.source === 'card' || p.source === 'timeout';\n    msg.events.push({\n        level: 'info', title: p.state === 'open' ? 'Barie mở' : 'Barie đóng',\n        text: 'Nguồn: ' + (SRC[p.source] || p.source) + ' · góc ' + p.angle + '°',\n        table: !routine\n    });\n}\nnode.status({ fill: p.state === 'open' ? 'green' : 'red', shape: 'dot', text: p.state + ' (' + p.source + ')' });\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
     "noerr": 0,
     "initialize": "",
     "finalize": "",
     "libs": [],
     "x": 450,
-    "y": 1120,
+    "y": 280,
     "wires": [
       [
-        "ui_template_kpi"
+        "fn_dispatch"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "sw_alert",
+    "g": "g_rules",
+    "type": "switch",
+    "name": "Loại cảnh báo",
+    "property": "payload.type",
+    "propertyType": "msg",
+    "rules": [
+      {
+        "t": "eq",
+        "v": "INVALID_CARD",
+        "vt": "str"
+      },
+      {
+        "t": "eq",
+        "v": "LOT_FULL",
+        "vt": "str"
+      },
+      {
+        "t": "eq",
+        "v": "ANTI_PINCH",
+        "vt": "str"
+      }
+    ],
+    "checkall": "false",
+    "repair": false,
+    "outputs": 3,
+    "x": 425,
+    "y": 380,
+    "wires": [
+      [
+        "fn_rule3"
+      ],
+      [
+        "fn_rule2"
+      ],
+      [
+        "fn_obstacle"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "fn_rule3",
+    "g": "g_rules",
+    "type": "function",
+    "name": "Rule 3 · Dò thẻ lạ",
+    "func": "// Rule 3: the la quet >= 3 lan trong 60 giay -> canh bao do the\nconst WINDOW_MS = 60000;\nconst LIMIT = 3;\nconst park = flow.get('park');\nif (!park) return null;\nconst p = msg.payload || {};\nconst now = Date.now();\n\npark.invalidTimes = (park.invalidTimes || []).filter(t => now - t < WINDOW_MS);\npark.invalidTimes.push(now);\nconst n = park.invalidTimes.length;\n\nif (n >= LIMIT) {\n    msg.events = [{ level: 'danger', title: 'Rule 3 · Nghi vấn dò thẻ', plate: p.uid, text: n + ' lần quẹt thẻ lạ trong 60 giây', toast: true, alert: true }];\n    park.invalidTimes = [];\n} else {\n    msg.events = [{ level: 'warn', title: 'Thẻ lạ bị từ chối', plate: p.uid, text: 'Lần ' + n + '/' + LIMIT + ' trong 60 giây', toast: true, alert: true }];\n}\nflow.set('park', park);\nnode.status({ fill: n === 0 ? 'red' : 'yellow', shape: 'dot', text: (n || LIMIT) + '/' + LIMIT + ' lần' });\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 690,
+    "y": 340,
+    "wires": [
+      [
+        "fn_dispatch"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "fn_obstacle",
+    "g": "g_rules",
+    "type": "function",
+    "name": "Cảnh báo chống kẹp xe",
+    "func": "// Canh bao chong kep xe do ESP32 gui len (barie dang hoan dong)\nconst park = flow.get('park');\nif (!park) return null;\nconst d = msg.payload && msg.payload.distanceCm;\npark.gate.blocked = true;\nflow.set('park', park);\nmsg.events = [{ level: 'warn', title: 'Chống kẹp xe', text: 'Vật cản ' + d + ' cm dưới barie, tạm hoãn đóng', toast: true, alert: true }];\nnode.status({ fill: 'yellow', shape: 'dot', text: d + ' cm' });\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 700,
+    "y": 410,
+    "wires": [
+      [
+        "fn_dispatch"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "fn_rule1",
+    "g": "g_rules",
+    "type": "function",
+    "name": "Rule 1 · Xe gửi quá giờ",
+    "func": "// Rule 1: xe gui qua nguong thoi gian (demo 30 giay) -> canh bao 1 lan / xe\nconst LIMIT_SEC = 30;\nconst park = flow.get('park');\nif (!park) return null;\nconst now = Date.now();\nmsg.events = [];\nfor (const s of park.slots) {\n    if (!s.uid || !s.since || s.warned) continue;\n    const sec = Math.floor((now - s.since) / 1000);\n    if (sec > LIMIT_SEC) {\n        s.warned = true;\n        msg.events.push({ level: 'warn', title: 'Rule 1 · Xe gửi quá giờ', plate: s.plate, text: 'Ô ' + s.slot + ' đã gửi ' + sec + ' giây (ngưỡng ' + LIMIT_SEC + ' giây)', toast: true, alert: true });\n    }\n}\nflow.set('park', park);\nconst late = park.slots.filter(s => s.warned).length;\nnode.status(late ? { fill: 'yellow', shape: 'dot', text: late + ' xe quá giờ' } : { fill: 'grey', shape: 'ring', text: 'bình thường' });\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 445,
+    "y": 470,
+    "wires": [
+      [
+        "fn_dispatch"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "fn_rule4",
+    "g": "g_rules",
+    "type": "function",
+    "name": "Rule 4 · Barie mở quá lâu",
+    "func": "// Rule 4: barie mo qua 10 giay -> tu gui lenh dong (ESP32 van kiem tra chong kep truoc khi ha)\nconst MAX_OPEN_MS = 10000;\nconst RESEND_MS = 10000;\nconst park = flow.get('park');\nif (!park) return null;\nconst now = Date.now();\nconst g = park.gate;\nlet cmd = null;\nconst out = { events: [] };\n\nif (g.state === 'open' && now - g.since > MAX_OPEN_MS && park.online) {\n    if (!park.rule4.sentAt || now - park.rule4.sentAt > RESEND_MS) {\n        park.rule4.sentAt = now;\n        cmd = { payload: { cmd: 'close', src: 'rule4' } };\n        if (!park.rule4.alerted) {\n            park.rule4.alerted = true;\n            out.events.push({ level: 'danger', title: 'Rule 4 · Barie mở quá lâu', text: 'Mở hơn 10 giây, Node-RED đã gửi lệnh đóng', toast: true, alert: true });\n        }\n        flow.set('park', park);\n    }\n    node.status({ fill: 'red', shape: 'dot', text: 'mở ' + Math.floor((now - g.since) / 1000) + ' giây' });\n} else {\n    node.status(g.state === 'open' ? { fill: 'yellow', shape: 'ring', text: 'mở ' + Math.floor((now - g.since) / 1000) + ' giây' } : { fill: 'grey', shape: 'ring', text: 'barie đóng' });\n}\nreturn [cmd, out.events.length ? out : null];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 455,
+    "y": 550,
+    "wires": [
+      [
+        "out_cmd"
+      ],
+      [
+        "fn_dispatch"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "fn_broker",
+    "g": "g_rules",
+    "type": "function",
+    "name": "Theo dõi broker",
+    "func": "// Theo doi ket noi Node-RED <-> MQTT broker\nconst park = flow.get('park');\nif (!park) return null;\nconst ok = msg.status && msg.status.fill === 'green';\nif (ok === park.broker) return null;\npark.broker = ok;\nflow.set('park', park);\nreturn { events: ok ? [] : [{ level: 'danger', title: 'Mất kết nối broker', text: 'Node-RED không kết nối được broker.hivemq.com', toast: true }] };",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 690,
+    "y": 520,
+    "wires": [
+      [
+        "fn_dispatch"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "fn_dispatch",
+    "g": "g_ui",
+    "type": "function",
+    "name": "Điều phối sự kiện",
+    "func": "// Gom su kien tu moi nhanh: cap nhat nhat ky, canh bao, ghi file va kich hoat ve giao dien\nconst park = flow.get('park');\nif (!park) return null;\nconst DIR = env.get('PARKING_DATA_DIR') || 'D:/HocHe/IOT/Project/Bai_Giu_Xe/data';\nconst COLORS = { ok: '#22c55e', info: '#38bdf8', warn: '#f59e0b', danger: '#ef4444' };\nconst now = new Date();\nconst time = now.toLocaleTimeString('vi-VN', { hour12: false });\nconst stamp = now.toLocaleDateString('vi-VN') + ' ' + time;\nconst toasts = [];\nconst lines = [];\n\nfor (const e of (msg.events || [])) {\n    if (e.table !== false) {\n        park.events.unshift({ id: ++park.seq, time: time, level: e.level, title: e.title, plate: e.plate || '', text: e.text });\n    }\n    if (e.alert) park.alert = { level: e.level, title: e.title, text: e.text, time: time, ts: now.getTime() };\n    if (e.toast) toasts.push({ topic: e.title, payload: e.text, highlight: COLORS[e.level] });\n    lines.push(stamp + ' | ' + e.title.padEnd(28) + ' | ' + (e.plate || '-').padEnd(12) + ' | ' + e.text);\n}\npark.events = park.events.slice(0, 12);\nflow.set('park', park);\n\nconst logMsg = lines.length ? { filename: DIR + '/parking_log.txt', payload: lines.join('\\n') } : null;\nlet dbMsg = null;\nif (msg.save || lines.length) {\n    dbMsg = {\n        filename: DIR + '/parking_database.json',\n        payload: JSON.stringify({\n            updated_at: now.toISOString(),\n            capacity: park.capacity,\n            vehicles_inside: park.slots.filter(s => s.uid).map(s => ({ slot: s.slot, uid: s.uid, plate: s.plate, owner: s.owner, since: new Date(s.since).toISOString() })),\n            stats: park.stats,\n            events: park.events,\n            transactions: park.transactions\n        }, null, 2)\n    };\n}\nreturn [{ resetCharts: msg.resetCharts, forceRender: msg.forceRender }, toasts, logMsg, dbMsg];",
+    "outputs": 4,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "// Trang thai dung chung cua toan flow. ESP32 la nguon du lieu goc ve o do va barie;\n// Node-RED dong bo qua MQTT va chi luu thong ke, lich su su kien.\nflow.set('park', {\n    online: false,\n    broker: false,\n    capacity: 2,\n    seq: 0,\n    gate: { state: 'closed', source: 'boot', mode: 'none', angle: 0, since: Date.now(), blocked: false },\n    slots: [\n        { slot: 1, uid: null, plate: null, owner: null, since: null, warned: false },\n        { slot: 2, uid: null, plate: null, owner: null, since: null, warned: false }\n    ],\n    stats: { revenue: 0, checkins: 0, checkouts: 0, durationSec: 0 },\n    events: [],\n    transactions: [],\n    alert: null,\n    invalidTimes: [],\n    rule4: { sentAt: null, alerted: false }\n});",
+    "finalize": "",
+    "libs": [],
+    "x": 960,
+    "y": 300,
+    "wires": [
+      [
+        "fn_render"
+      ],
+      [
+        "ui_toast"
+      ],
+      [
+        "file_log"
+      ],
+      [
+        "file_db"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "fn_render",
+    "g": "g_ui",
+    "type": "function",
+    "name": "Dựng giao diện",
+    "func": "// Dung view-model cho tung khoi giao dien tu MOT trang thai duy nhat va chi gui khi du lieu thay doi\nconst park = flow.get('park');\nif (!park) return null;\nconst now = Date.now();\nconst SRC = { card: 'Quẹt thẻ', timeout: 'Tự đóng sau 3 giây', dashboard: 'Dashboard', rule4: 'Rule 4', serial: 'Serial', mqtt: 'MQTT', boot: 'Khởi động' };\nconst ALERT_SHOW_MS = 30000;\nconst fmtDur = s => s < 60 ? s + ' giây' : Math.floor(s / 60) + ' phút ' + String(s % 60).padStart(2, '0') + ' giây';\nconst money = v => Number(v || 0).toLocaleString('vi-VN');\nconst clock = t => new Date(t).toLocaleTimeString('vi-VN', { hour12: false });\n\nconst occupied = park.slots.filter(s => s.uid).length;\nconst cap = park.capacity;\nconst g = park.gate;\nconst openSec = Math.max(0, Math.floor((now - g.since) / 1000));\nconst gate = {\n    open: g.state === 'open',\n    blocked: !!g.blocked && g.state === 'open',\n    angle: g.angle || (g.state === 'open' ? 90 : 0),\n    source: SRC[g.source] || g.source,\n    detail: g.state === 'open'\n        ? (g.blocked ? 'Có vật cản, tạm hoãn đóng' : (g.mode === 'hold' ? 'Giữ mở theo lệnh · ' + openSec + ' giây' : 'Tự đóng sau 3 giây'))\n        : 'Đèn đỏ · sẵn sàng'\n};\n\nconst overview = {\n    occupied: occupied, capacity: cap, free: Math.max(0, cap - occupied), full: occupied >= cap,\n    percent: cap ? Math.round(occupied / cap * 100) : 0,\n    online: park.online, broker: park.broker, gate: gate,\n    revenue: money(park.stats.revenue), checkins: park.stats.checkins, checkouts: park.stats.checkouts\n};\n\nconst slotsPayload = {\n    slots: park.slots.map(s => {\n        if (!s.uid) return { slot: s.slot, occupied: false };\n        const sec = Math.max(0, Math.floor((now - s.since) / 1000));\n        return { slot: s.slot, occupied: true, plate: s.plate, owner: s.owner, timeIn: clock(s.since), duration: fmtDur(sec), overstay: s.warned };\n    }),\n    capacity: cap\n};\n\nconst alert = park.alert && now - park.alert.ts < ALERT_SHOW_MS ? park.alert : null;\nconst controlPayload = { alert: alert, gate: gate, online: park.online };\n\nconst st = park.stats;\nconst statsPayload = {\n    avgDuration: st.checkouts ? fmtDur(Math.round(st.durationSec / st.checkouts)) : '—',\n    avgFee: st.checkouts ? money(Math.round(st.revenue / st.checkouts)) + ' đ' : '—',\n    transactions: park.transactions.length,\n    late: park.slots.filter(s => s.warned).length\n};\n\n// Chi day thong diep UI cho khoi nao co du lieu thay doi -> khong giat, khong rac WebSocket\nconst cache = context.get('cache') || {};\nconst changed = (key, obj) => {\n    const s = JSON.stringify(obj);\n    if (!msg.forceRender && cache[key] === s) return null;\n    cache[key] = s;\n    return { payload: obj };\n};\n\n// Bieu do: chi day diem moi khi doanh thu hoac so xe thay doi\nconst last = context.get('last') || {};\nlet rev = null, occ = null;\nif (msg.resetCharts) {\n    rev = [{ payload: [] }, { topic: 'Doanh thu', payload: 0 }];\n    occ = [{ payload: [] }, { topic: 'Số xe', payload: occupied }];\n} else {\n    if (last.rev !== st.revenue) rev = { topic: 'Doanh thu', payload: st.revenue };\n    if (last.occ !== occupied) occ = { topic: 'Số xe', payload: occupied };\n}\ncontext.set('last', { rev: st.revenue, occ: occupied });\nconst outs = [\n    changed('overview', overview),\n    changed('slots', slotsPayload),\n    changed('control', controlPayload),\n    changed('log', park.events),\n    changed('stats', statsPayload),\n    rev, occ\n];\ncontext.set('cache', cache);\nreturn outs;",
+    "outputs": 7,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1180,
+    "y": 180,
+    "wires": [
+      [
+        "ui_overview"
+      ],
+      [
+        "ui_slots"
+      ],
+      [
+        "ui_control"
+      ],
+      [
+        "ui_log"
+      ],
+      [
+        "ui_stats"
       ],
       [
         "ui_chart_rev"
       ],
       [
         "ui_chart_occ"
-      ],
-      [
-        "file_db_save"
       ]
     ]
   },
   {
-    "id": "ui_template_kpi",
+    "z": "tab_parking",
+    "id": "ui_css",
+    "g": "g_ui",
     "type": "ui_template",
-    "z": "tab1",
-    "group": "ui_group_analytics",
-    "name": "Bảng Số Liệu KPI Doanh Thu & Lưu Lượng",
-    "order": 1,
-    "width": "12",
-    "height": "3",
-    "format": "<div ng-if=\"!msg.payload\" style=\"display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif;\"><div style=\"background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid #334155; border-radius: 8px; padding: 14px; text-align: left; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\"><div style=\"font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px;\">Tổng Doanh Thu Lũy Kế</div><div style=\"font-size: 24px; font-weight: 700; color: #10b981; margin-top: 4px;\">0 <span style=\"font-size: 14px; color: #6ee7b7;\">VNĐ</span></div><div style=\"font-size: 11px; color: #cbd5e1; margin-top: 4px;\">TB: 0 đ/lượt</div></div><div style=\"background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid #334155; border-radius: 8px; padding: 14px; text-align: left; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\"><div style=\"font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px;\">Tổng Lượt Xe Phục Vụ</div><div style=\"font-size: 24px; font-weight: 700; color: #38bdf8; margin-top: 4px;\">0 <span style=\"font-size: 14px; color: #7dd3fc;\">lượt</span></div><div style=\"font-size: 11px; color: #cbd5e1; margin-top: 4px;\">Vào: 0 | Ra: 0</div></div><div style=\"background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid #334155; border-radius: 8px; padding: 14px; text-align: left; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\"><div style=\"font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px;\">Hiện Tại / Công Suất</div><div style=\"font-size: 24px; font-weight: 700; color: #10b981; margin-top: 4px;\">0 / 2 <span style=\"font-size: 14px; color: #cbd5e1;\">xe</span></div><div style=\"font-size: 11px; color: #cbd5e1; margin-top: 4px;\">Hệ số quay vòng: 0%</div></div><div style=\"background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid #334155; border-radius: 8px; padding: 14px; text-align: left; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\"><div style=\"font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px;\">Thời Gian Đỗ Trung Bình</div><div style=\"font-size: 24px; font-weight: 700; color: #a855f7; margin-top: 4px;\">0 <span style=\"font-size: 14px; color: #d8b4fe;\">giây</span></div><div style=\"font-size: 11px; color: #cbd5e1; margin-top: 4px;\">Trạng thái DB: Sẵn sàng</div></div></div><div ng-if=\"msg.payload\" ng-bind-html=\"msg.payload\"></div>",
-    "storeOutMessages": true,
-    "fwdInMessages": true,
-    "resendOnRefresh": true,
-    "templateScope": "local",
-    "x": 820,
-    "y": 1060,
+    "tab": "",
+    "name": "Giao diện chung (CSS)",
+    "order": 0,
+    "width": 0,
+    "height": 0,
+    "format": "<style>\n.pk-wrap{font-family:'Segoe UI',Roboto,Arial,sans-serif;color:#e2e8f0;height:100%;box-sizing:border-box}\n.pk-muted{color:#94a3b8}\n.pk-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;height:100%}\n.pk-kpi{background:#0f172a;border:1px solid #1e293b;border-left:4px solid #38bdf8;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;justify-content:space-between;min-width:0}\n.pk-kpi.ok{border-left-color:#22c55e}.pk-kpi.warn{border-left-color:#f59e0b}.pk-kpi.danger{border-left-color:#ef4444}\n.pk-kpi-head{font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:#94a3b8;font-weight:600}\n.pk-kpi-head .fa{margin-right:6px;color:#38bdf8}\n.pk-kpi-value{font-size:28px;font-weight:700;line-height:1.1;white-space:nowrap}\n.pk-kpi-value small{font-size:15px;color:#94a3b8;font-weight:600}\n.pk-kpi-value.txt{font-size:16px}\n.pk-kpi-sub{font-size:12px;color:#cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\n.pk-bar{height:6px;background:#1e293b;border-radius:3px;overflow:hidden}\n.pk-bar div{height:100%;background:#38bdf8;transition:width .4s}\n.pk-kpi.danger .pk-bar div{background:#ef4444}\n.pk-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;vertical-align:middle;background:#ef4444;box-shadow:0 0 8px #ef4444}\n.pk-dot.on{background:#22c55e;box-shadow:0 0 8px #22c55e}\n.pk-slots{display:grid;grid-template-columns:1fr 1fr;gap:10px;height:100%}\n.pk-slot{position:relative;border-radius:12px;padding:12px;text-align:center;border:2px dashed #22c55e;background:rgba(34,197,94,.06);display:flex;flex-direction:column;justify-content:center;transition:all .3s}\n.pk-slot.busy{border:2px solid #38bdf8;background:linear-gradient(160deg,#0c2a4a,#0f172a)}\n.pk-slot.late{border-color:#f59e0b;background:linear-gradient(160deg,#3a2606,#0f172a)}\n.pk-slot-id{position:absolute;top:8px;left:12px;font-size:12px;font-weight:700;color:#94a3b8;letter-spacing:.5px}\n.pk-slot-empty{color:#22c55e;font-weight:700;letter-spacing:1px}\n.pk-slot-empty .fa{font-size:34px;display:block;margin-bottom:6px}\n.pk-slot .fa-motorcycle{font-size:30px;color:#38bdf8;margin-bottom:4px}\n.pk-slot.late .fa-motorcycle{color:#f59e0b}\n.pk-plate{display:inline-block;font-family:Consolas,monospace;font-size:18px;font-weight:700;background:#f8fafc;color:#0f172a;border-radius:4px;padding:2px 10px;margin:4px auto 6px;border:2px solid #334155}\n.pk-line{font-size:12px;color:#cbd5e1;line-height:1.5}\n.pk-timer{margin-top:4px;font-size:13px;font-weight:700;color:#e2e8f0}\n.pk-tag{position:absolute;top:8px;right:10px;background:#f59e0b;color:#111827;font-size:10px;font-weight:800;padding:2px 6px;border-radius:4px}\n.pk-banner{display:flex;align-items:center;gap:12px;border-radius:10px;padding:10px 14px;background:rgba(34,197,94,.12);border:1px solid #166534;transition:all .3s}\n.pk-banner .fa{font-size:24px;color:#22c55e;width:26px;text-align:center}\n.pk-banner.lv-warn{background:rgba(245,158,11,.14);border-color:#b45309}.pk-banner.lv-warn .fa{color:#f59e0b}\n.pk-banner.lv-danger{background:rgba(239,68,68,.16);border-color:#b91c1c}.pk-banner.lv-danger .fa{color:#ef4444}\n.pk-banner.lv-info{background:rgba(56,189,248,.12);border-color:#0369a1}.pk-banner.lv-info .fa{color:#38bdf8}\n.pk-banner-title{font-weight:700;font-size:14px}\n.pk-banner-text{font-size:12px;color:#cbd5e1}\n.pk-gate{display:flex;align-items:center;gap:16px;margin-top:12px;padding:10px 14px;background:#0f172a;border:1px solid #1e293b;border-radius:10px}\n.pk-scene{position:relative;width:120px;height:70px;flex:none}\n.pk-post{position:absolute;left:8px;bottom:6px;width:14px;height:44px;background:#475569;border-radius:3px}\n.pk-arm{position:absolute;left:15px;bottom:42px;width:100px;height:8px;border-radius:4px;transform-origin:4px 50%;transition:transform .6s ease;background:repeating-linear-gradient(90deg,#ef4444 0 14px,#f8fafc 14px 28px)}\n.pk-arm.open{transform:rotate(-80deg)}\n.pk-road{position:absolute;left:0;right:0;bottom:0;height:6px;background:#334155;border-radius:3px}\n.pk-lights{display:flex;flex-direction:column;gap:6px}\n.pk-light{width:14px;height:14px;border-radius:50%;background:#1e293b;border:1px solid #334155}\n.pk-light.red.on{background:#ef4444;box-shadow:0 0 10px #ef4444}\n.pk-light.green.on{background:#22c55e;box-shadow:0 0 10px #22c55e}\n.pk-gate-state{font-size:18px;font-weight:700}\n.pk-gate-sub{font-size:12px;color:#cbd5e1;line-height:1.6}\n.pk-table{width:100%;border-collapse:collapse;font-size:13px}\n.pk-table th{text-align:left;color:#94a3b8;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:6px 8px;border-bottom:1px solid #1e293b}\n.pk-table td{padding:6px 8px;border-bottom:1px solid #162033;white-space:nowrap}\n.pk-table td:last-child{white-space:normal;color:#cbd5e1}\n.pk-table tr:first-child td{animation:pkflash 1.2s ease}\n@keyframes pkflash{from{background:rgba(56,189,248,.18)}to{background:transparent}}\n.pk-mono{font-family:Consolas,monospace;font-weight:600}\n.pk-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid}\n.pk-badge.ok{color:#4ade80;border-color:#166534;background:rgba(34,197,94,.1)}\n.pk-badge.info{color:#7dd3fc;border-color:#0369a1;background:rgba(56,189,248,.1)}\n.pk-badge.warn{color:#fbbf24;border-color:#b45309;background:rgba(245,158,11,.1)}\n.pk-badge.danger{color:#f87171;border-color:#b91c1c;background:rgba(239,68,68,.12)}\n.pk-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;height:100%}\n.pk-stat{background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:8px 12px}\n.pk-stat b{display:block;font-size:20px;margin-top:2px}\n.pk-stat span{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px}\n.pk-dbnote{display:flex;align-items:center;height:100%;font-size:12px;color:#94a3b8;padding:0 4px}\n.pk-dbnote .fa{margin-right:8px;color:#38bdf8;flex:none}\n.pk-dbnote code{background:#1e293b;color:#7dd3fc;padding:2px 6px;border-radius:4px;font-family:Consolas,monospace;font-size:11px;margin:0 2px}\n@media (max-width:760px){.pk-kpis,.pk-stats{grid-template-columns:repeat(2,1fr)}}\nmd-toast .md-toast-content{font-family:'Segoe UI',Roboto,Arial,sans-serif}\n</style>",
+    "storeOutMessages": false,
+    "fwdInMessages": false,
+    "resendOnRefresh": false,
+    "templateScope": "global",
+    "className": "",
+    "x": 1420,
+    "y": 40,
     "wires": [
       []
     ]
   },
   {
+    "z": "tab_parking",
+    "id": "ui_overview",
+    "g": "g_ui",
+    "type": "ui_template",
+    "group": "uig_overview",
+    "name": "Thẻ tổng quan",
+    "order": 1,
+    "width": "12",
+    "height": "3",
+    "format": "<div class=\"pk-wrap pk-kpis\">\n  <div class=\"pk-kpi\" ng-class=\"msg.payload.full ? 'danger' : ''\">\n    <div class=\"pk-kpi-head\"><i class=\"fa fa-motorcycle\"></i>Xe trong bãi</div>\n    <div class=\"pk-kpi-value\">{{msg.payload.occupied}}<small> / {{msg.payload.capacity}}</small></div>\n    <div class=\"pk-bar\"><div ng-style=\"{width: msg.payload.percent + '%'}\"></div></div>\n    <div class=\"pk-kpi-sub\">{{msg.payload.full ? 'Bãi đã đầy' : 'Còn ' + msg.payload.free + ' chỗ trống'}}</div>\n  </div>\n  <div class=\"pk-kpi\" ng-class=\"msg.payload.gate.blocked ? 'warn' : (msg.payload.gate.open ? 'ok' : '')\">\n    <div class=\"pk-kpi-head\"><i class=\"fa fa-road\"></i>Barie</div>\n    <div class=\"pk-kpi-value txt\">{{msg.payload.gate.open ? 'ĐANG MỞ' : 'ĐÃ ĐÓNG'}}</div>\n    <div class=\"pk-kpi-sub\">{{msg.payload.gate.detail}}</div>\n  </div>\n  <div class=\"pk-kpi\" ng-class=\"msg.payload.online ? 'ok' : 'danger'\">\n    <div class=\"pk-kpi-head\"><i class=\"fa fa-microchip\"></i>Thiết bị ESP32</div>\n    <div class=\"pk-kpi-value txt\"><span class=\"pk-dot\" ng-class=\"{on: msg.payload.online}\"></span>{{msg.payload.online ? 'TRỰC TUYẾN' : 'NGOẠI TUYẾN'}}</div>\n    <div class=\"pk-kpi-sub\">Broker: {{msg.payload.broker ? 'đã kết nối' : 'mất kết nối'}}</div>\n  </div>\n  <div class=\"pk-kpi\">\n    <div class=\"pk-kpi-head\"><i class=\"fa fa-money\"></i>Doanh thu</div>\n    <div class=\"pk-kpi-value\">{{msg.payload.revenue}}<small>đ</small></div>\n    <div class=\"pk-kpi-sub\">{{msg.payload.checkins}} lượt vào · {{msg.payload.checkouts}} lượt ra</div>\n  </div>\n</div>",
+    "storeOutMessages": true,
+    "fwdInMessages": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1420,
+    "y": 80,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "ui_slots",
+    "g": "g_ui",
+    "type": "ui_template",
+    "group": "uig_slots",
+    "name": "Sơ đồ ô đỗ",
+    "order": 1,
+    "width": "6",
+    "height": "5",
+    "format": "<div class=\"pk-wrap pk-slots\">\n  <div class=\"pk-slot\" ng-repeat=\"s in msg.payload.slots track by s.slot\" ng-class=\"{busy: s.occupied, late: s.overstay}\">\n    <div class=\"pk-slot-id\">Ô {{s.slot}}</div>\n    <div class=\"pk-tag\" ng-if=\"s.overstay\">QUÁ GIỜ</div>\n    <div ng-if=\"s.occupied\">\n      <i class=\"fa fa-motorcycle\"></i>\n      <div><span class=\"pk-plate\">{{s.plate}}</span></div>\n      <div class=\"pk-line\">{{s.owner}}</div>\n      <div class=\"pk-line\">Vào lúc {{s.timeIn}}</div>\n      <div class=\"pk-timer\"><i class=\"fa fa-clock-o\"></i> {{s.duration}}</div>\n    </div>\n    <div ng-if=\"!s.occupied\" class=\"pk-slot-empty\"><i class=\"fa fa-check-circle-o\"></i>TRỐNG</div>\n  </div>\n</div>",
+    "storeOutMessages": true,
+    "fwdInMessages": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1420,
+    "y": 120,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "ui_control",
+    "g": "g_ui",
+    "type": "ui_template",
+    "group": "uig_control",
+    "name": "Trạng thái barie và cảnh báo",
+    "order": 1,
+    "width": "6",
+    "height": "4",
+    "format": "<div class=\"pk-wrap\">\n  <div class=\"pk-banner\" ng-class=\"'lv-' + (msg.payload.alert ? msg.payload.alert.level : 'ok')\">\n    <i class=\"fa\" ng-class=\"msg.payload.alert ? (msg.payload.alert.level === 'danger' ? 'fa-exclamation-circle' : 'fa-exclamation-triangle') : 'fa-shield'\"></i>\n    <div>\n      <div class=\"pk-banner-title\">{{msg.payload.alert ? msg.payload.alert.title : 'Hệ thống hoạt động bình thường'}}</div>\n      <div class=\"pk-banner-text\">{{msg.payload.alert ? msg.payload.alert.text + ' · ' + msg.payload.alert.time : 'Đang giám sát cổng vào/ra theo thời gian thực'}}</div>\n    </div>\n  </div>\n  <div class=\"pk-gate\">\n    <div class=\"pk-scene\"><div class=\"pk-road\"></div><div class=\"pk-post\"></div><div class=\"pk-arm\" ng-class=\"{open: msg.payload.gate.open}\"></div></div>\n    <div class=\"pk-lights\"><div class=\"pk-light red\" ng-class=\"{on: !msg.payload.gate.open}\"></div><div class=\"pk-light green\" ng-class=\"{on: msg.payload.gate.open}\"></div></div>\n    <div>\n      <div class=\"pk-gate-state\">{{msg.payload.gate.open ? 'BARIE ĐANG MỞ' : 'BARIE ĐÃ ĐÓNG'}}</div>\n      <div class=\"pk-gate-sub\">Góc servo {{msg.payload.gate.angle}}° · Nguồn: {{msg.payload.gate.source}}<br>{{msg.payload.gate.detail}}</div>\n    </div>\n  </div>\n</div>",
+    "storeOutMessages": true,
+    "fwdInMessages": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1420,
+    "y": 160,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "ui_log",
+    "g": "g_ui",
+    "type": "ui_template",
+    "group": "uig_log",
+    "name": "Bảng nhật ký",
+    "order": 1,
+    "width": "12",
+    "height": "10",
+    "format": "<div class=\"pk-wrap\">\n  <table class=\"pk-table\">\n    <thead><tr><th style=\"width:90px\">Thời gian</th><th style=\"width:220px\">Sự kiện</th><th style=\"width:140px\">Biển số / Mã thẻ</th><th>Chi tiết</th></tr></thead>\n    <tbody>\n      <tr ng-repeat=\"e in msg.payload track by e.id\">\n        <td class=\"pk-mono pk-muted\">{{e.time}}</td>\n        <td><span class=\"pk-badge\" ng-class=\"e.level\">{{e.title}}</span></td>\n        <td class=\"pk-mono\">{{e.plate || '—'}}</td>\n        <td>{{e.text}}</td>\n      </tr>\n      <tr ng-if=\"!msg.payload.length\"><td colspan=\"4\" class=\"pk-muted\">Chưa có sự kiện. Quẹt thẻ trên Wokwi để bắt đầu.</td></tr>\n    </tbody>\n  </table>\n</div>",
+    "storeOutMessages": true,
+    "fwdInMessages": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1420,
+    "y": 200,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "ui_stats",
+    "g": "g_ui",
+    "type": "ui_template",
+    "group": "uig_stats",
+    "name": "Chỉ số thống kê",
+    "order": 1,
+    "width": "12",
+    "height": "2",
+    "format": "<div class=\"pk-wrap pk-stats\">\n  <div class=\"pk-stat\"><span>Thời gian gửi TB</span><b>{{msg.payload.avgDuration}}</b></div>\n  <div class=\"pk-stat\"><span>Phí TB / lượt</span><b>{{msg.payload.avgFee}}</b></div>\n  <div class=\"pk-stat\"><span>Giao dịch đã lưu</span><b>{{msg.payload.transactions}}</b></div>\n  <div class=\"pk-stat\"><span>Xe đang quá giờ</span><b>{{msg.payload.late}}</b></div>\n</div>",
+    "storeOutMessages": true,
+    "fwdInMessages": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1420,
+    "y": 240,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "z": "tab_parking",
     "id": "ui_chart_rev",
+    "g": "g_ui",
     "type": "ui_chart",
-    "z": "tab1",
-    "name": "Biểu Đồ Doanh Thu Tích Lũy",
-    "group": "ui_group_analytics",
+    "name": "Biểu đồ doanh thu",
+    "group": "uig_stats",
     "order": 2,
     "width": "6",
-    "height": "6",
-    "label": "Biểu Đồ Doanh Thu Tích Lũy (VNĐ)",
+    "height": "5",
+    "label": "Doanh thu lũy kế (đồng)",
     "chartType": "line",
     "legend": "false",
     "xformat": "HH:mm:ss",
-    "interpolate": "linear",
-    "nodata": "Chưa có giao dịch thanh toán",
-    "dot": false,
+    "interpolate": "step",
+    "nodata": "Chưa có dữ liệu",
+    "dot": true,
     "ymin": "0",
     "ymax": "",
-    "removeOlder": "1",
+    "removeOlder": "2",
     "removeOlderPoints": "",
     "removeOlderUnit": "3600",
+    "cutout": 0,
     "useOneColor": false,
     "useUTC": false,
     "colors": [
-      "#10b981",
+      "#22c55e",
       "#aec7e8",
       "#ff7f0e",
       "#2ca02c",
@@ -866,33 +808,35 @@
     "outputs": 1,
     "useDifferentColor": false,
     "className": "",
-    "x": 800,
-    "y": 1120,
+    "x": 1415,
+    "y": 280,
     "wires": [
       []
     ]
   },
   {
+    "z": "tab_parking",
     "id": "ui_chart_occ",
+    "g": "g_ui",
     "type": "ui_chart",
-    "z": "tab1",
-    "name": "Biểu Đồ Biến Thiên Lưu Lượng Xe",
-    "group": "ui_group_analytics",
+    "name": "Biểu đồ số xe",
+    "group": "uig_stats",
     "order": 3,
     "width": "6",
-    "height": "6",
-    "label": "Biểu Đồ Biến Thiên Số Xe Trong Bãi",
+    "height": "5",
+    "label": "Số xe trong bãi theo thời gian",
     "chartType": "line",
     "legend": "false",
     "xformat": "HH:mm:ss",
     "interpolate": "step",
-    "nodata": "Chưa có lượt xe vào",
-    "dot": false,
+    "nodata": "Chưa có dữ liệu",
+    "dot": true,
     "ymin": "0",
     "ymax": "2",
-    "removeOlder": "1",
+    "removeOlder": "2",
     "removeOlderPoints": "",
     "removeOlderUnit": "3600",
+    "cutout": 0,
     "useOneColor": false,
     "useUTC": false,
     "colors": [
@@ -909,53 +853,510 @@
     "outputs": 1,
     "useDifferentColor": false,
     "className": "",
-    "x": 810,
-    "y": 1180,
+    "x": 1415,
+    "y": 320,
     "wires": [
       []
     ]
   },
   {
-    "id": "file_db_save",
+    "z": "tab_parking",
+    "id": "ui_dbnote",
+    "g": "g_ui",
+    "type": "ui_template",
+    "group": "uig_stats",
+    "name": "Ghi chú lưu trữ",
+    "order": 4,
+    "width": "9",
+    "height": "1",
+    "format": "<div class=\"pk-dbnote\"><i class=\"fa fa-database\"></i><span>Tự động lưu nhật ký ra <code>parking_log.txt</code> và trạng thái ra <code>parking_database.json</code></span></div>",
+    "storeOutMessages": false,
+    "fwdInMessages": false,
+    "resendOnRefresh": false,
+    "templateScope": "local",
+    "className": "",
+    "x": 1420,
+    "y": 360,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "ui_toast",
+    "g": "g_ui",
+    "type": "ui_toast",
+    "name": "Thông báo cảnh báo",
+    "position": "top right",
+    "displayTime": "5",
+    "highlight": "",
+    "sendall": true,
+    "outputs": 0,
+    "ok": "Đóng",
+    "cancel": "",
+    "raw": false,
+    "className": "",
+    "topic": "",
+    "x": 1185,
+    "y": 400,
+    "wires": []
+  },
+  {
+    "z": "tab_parking",
+    "id": "file_log",
+    "g": "g_ui",
     "type": "file",
-    "z": "tab1",
-    "name": "Lưu Trữ Persistent Database (JSON)",
-    "filename": "parking_database.json",
+    "name": "Ghi parking_log.txt",
+    "filename": "filename",
+    "filenameType": "msg",
+    "appendNewline": true,
+    "createDir": true,
+    "overwriteFile": "false",
+    "encoding": "utf8",
+    "x": 1185,
+    "y": 450,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "file_db",
+    "g": "g_ui",
+    "type": "file",
+    "name": "Lưu parking_database.json",
+    "filename": "filename",
+    "filenameType": "msg",
     "appendNewline": false,
     "createDir": true,
     "overwriteFile": "true",
     "encoding": "utf8",
-    "x": 830,
-    "y": 1240,
+    "x": 1195,
+    "y": 500,
     "wires": [
       []
     ]
   },
   {
-    "id": "ui_btn_reset_stats",
+    "z": "tab_parking",
+    "id": "btn_open",
+    "g": "g_down",
     "type": "ui_button",
-    "z": "tab1",
-    "name": "Nút Reset Thống Kê",
-    "group": "ui_group_analytics",
-    "order": 4,
-    "width": "4",
+    "name": "Nút mở barie",
+    "group": "uig_control",
+    "order": 2,
+    "width": "3",
     "height": "1",
     "passthru": false,
-    "label": "Đặt Lại Thống Kê Ngày Mới",
-    "tooltip": "Xóa sạch thống kê và tạo phiên kiểm toán mới",
+    "label": "MỞ BARIE",
+    "tooltip": "Gửi lệnh mở và giữ barie (Rule 4 tự đóng sau 10 giây)",
     "color": "#ffffff",
-    "bgcolor": "#475569",
-    "icon": "",
-    "payload": "{\"resetStats\": true}",
+    "bgcolor": "#16a34a",
+    "className": "",
+    "icon": "fa-arrow-up",
+    "payload": "{\"cmd\":\"open\"}",
     "payloadType": "json",
     "topic": "",
     "topicType": "str",
-    "x": 170,
-    "y": 1160,
+    "x": 135,
+    "y": 700,
     "wires": [
       [
-        "fn_analytics_db"
+        "fn_cmd"
       ]
     ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "btn_close",
+    "g": "g_down",
+    "type": "ui_button",
+    "name": "Nút đóng barie",
+    "group": "uig_control",
+    "order": 3,
+    "width": "3",
+    "height": "1",
+    "passthru": false,
+    "label": "ĐÓNG BARIE",
+    "tooltip": "Gửi lệnh đóng (vẫn kiểm tra chống kẹp tại cổng)",
+    "color": "#ffffff",
+    "bgcolor": "#dc2626",
+    "className": "",
+    "icon": "fa-arrow-down",
+    "payload": "{\"cmd\":\"close\"}",
+    "payloadType": "json",
+    "topic": "",
+    "topicType": "str",
+    "x": 135,
+    "y": 760,
+    "wires": [
+      [
+        "fn_cmd"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "fn_cmd",
+    "g": "g_down",
+    "type": "function",
+    "name": "Lệnh từ Dashboard",
+    "func": "// Lenh tu nut bam Dashboard -> downlink MQTT (chi ghi bang neu thiet bi offline, tranh trung dong xac nhan)\nconst park = flow.get('park');\nif (!park) return null;\nconst cmd = msg.payload && msg.payload.cmd;\nif (!cmd) return null;\nconst label = cmd === 'open' ? 'Lệnh mở barie' : 'Lệnh đóng barie';\nconst ev = park.online\n    ? { level: 'info', title: label, text: 'Gửi từ Dashboard qua MQTT', table: false }\n    : { level: 'warn', title: label, text: 'ESP32 đang ngoại tuyến, lệnh có thể không được thực hiện', toast: true };\nreturn [{ payload: { cmd: cmd, src: 'dashboard' } }, { events: [ev] }];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 385,
+    "y": 730,
+    "wires": [
+      [
+        "out_cmd"
+      ],
+      [
+        "fn_dispatch"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "out_cmd",
+    "g": "g_down",
+    "type": "mqtt out",
+    "name": "parking_n4/barie/cmd",
+    "topic": "parking_n4/barie/cmd",
+    "qos": "1",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "broker_hivemq",
+    "x": 645,
+    "y": 700,
+    "wires": []
+  },
+  {
+    "z": "tab_parking",
+    "id": "inj_sync",
+    "g": "g_down",
+    "type": "inject",
+    "name": "Yêu cầu đồng bộ khi khởi động",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "3",
+    "topic": "",
+    "payload": "{\"cmd\":\"sync\",\"src\":\"nodered\"}",
+    "payloadType": "json",
+    "x": 405,
+    "y": 790,
+    "wires": [
+      [
+        "out_cmd"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "btn_reset",
+    "g": "g_down",
+    "type": "ui_button",
+    "name": "Nút đặt lại thống kê",
+    "group": "uig_stats",
+    "order": 5,
+    "width": "3",
+    "height": "1",
+    "passthru": false,
+    "label": "Đặt lại thống kê",
+    "tooltip": "Xóa doanh thu, lịch sử giao dịch và nhật ký",
+    "color": "#e2e8f0",
+    "bgcolor": "#334155",
+    "className": "",
+    "icon": "fa-refresh",
+    "payload": "",
+    "payloadType": "str",
+    "topic": "",
+    "topicType": "str",
+    "x": 145,
+    "y": 850,
+    "wires": [
+      [
+        "fn_reset"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "fn_reset",
+    "g": "g_down",
+    "type": "function",
+    "name": "Đặt lại thống kê",
+    "func": "const park = flow.get('park');\nif (!park) return null;\npark.stats = { revenue: 0, checkins: 0, checkouts: 0, durationSec: 0 };\npark.transactions = [];\npark.events = [];\npark.alert = null;\nflow.set('park', park);\nreturn { events: [{ level: 'info', title: 'Đặt lại thống kê', text: 'Bắt đầu phiên thống kê mới' }], save: true, resetCharts: true, forceRender: true };",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 385,
+    "y": 850,
+    "wires": [
+      [
+        "fn_dispatch"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "inj_boot",
+    "g": "g_boot",
+    "type": "inject",
+    "name": "Khởi động",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "0.2",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 130,
+    "y": 940,
+    "wires": [
+      [
+        "fn_dbpath"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "fn_dbpath",
+    "g": "g_boot",
+    "type": "function",
+    "name": "Đường dẫn dữ liệu",
+    "func": "msg.filename = (env.get('PARKING_DATA_DIR') || 'D:/HocHe/IOT/Project/Bai_Giu_Xe/data') + '/parking_database.json';\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 315,
+    "y": 940,
+    "wires": [
+      [
+        "file_read"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "file_read",
+    "g": "g_boot",
+    "type": "file in",
+    "name": "Đọc parking_database.json",
+    "filename": "filename",
+    "filenameType": "msg",
+    "format": "utf8",
+    "chunk": false,
+    "sendError": false,
+    "encoding": "utf8",
+    "allProps": false,
+    "x": 540,
+    "y": 940,
+    "wires": [
+      [
+        "fn_restore"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "catch_read",
+    "g": "g_boot",
+    "type": "catch",
+    "name": "Chưa có file",
+    "scope": [
+      "file_read"
+    ],
+    "uncaught": false,
+    "x": 540,
+    "y": 995,
+    "wires": [
+      [
+        "fn_restore"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "fn_restore",
+    "g": "g_boot",
+    "type": "function",
+    "name": "Khôi phục dữ liệu",
+    "func": "// Khoi phuc thong ke + lich su tu parking_database.json sau khi Node-RED khoi dong lai\nconst park = flow.get('park');\nif (!park) return null;\nif (msg.error || typeof msg.payload !== 'string') {\n    node.status({ fill: 'grey', shape: 'ring', text: 'chưa có dữ liệu cũ' });\n    return { events: [], forceRender: true };\n}\ntry {\n    const db = JSON.parse(msg.payload);\n    if (db.stats) park.stats = Object.assign(park.stats, db.stats);\n    if (Array.isArray(db.transactions)) park.transactions = db.transactions.slice(0, 100);\n    if (Array.isArray(db.events)) {\n        park.events = db.events.slice(0, 12).map((e, i) => Object.assign({ id: ++park.seq || (i + 1) }, e));\n    }\n    flow.set('park', park);\n    node.status({ fill: 'green', shape: 'dot', text: 'đã khôi phục ' + park.transactions.length + ' giao dịch' });\n} catch (e) {\n    node.status({ fill: 'red', shape: 'ring', text: 'file hỏng, bỏ qua' });\n}\nreturn { events: [], charts: true, forceRender: true };",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 770,
+    "y": 940,
+    "wires": [
+      [
+        "fn_dispatch"
+      ]
+    ]
+  },
+  {
+    "id": "g_in",
+    "type": "group",
+    "z": "tab_parking",
+    "name": "1. UPLINK · MQTT & Tick",
+    "nodes": [
+      "in_status",
+      "in_scan",
+      "in_gate",
+      "in_alert",
+      "tick_1s",
+      "st_broker",
+      "ui_connect"
+    ],
+    "style": {
+      "label": true,
+      "stroke": "#0284c7",
+      "fill": "#e0f2fe",
+      "fill-opacity": "0.35",
+      "color": "#0284c7"
+    },
+    "x": 14,
+    "y": 65,
+    "w": 273,
+    "h": 560
+  },
+  {
+    "id": "g_rules",
+    "type": "group",
+    "z": "tab_parking",
+    "name": "2. MIDDLEWARE · Đồng bộ & 4 Rule tự động",
+    "nodes": [
+      "fn_sync",
+      "fn_scan",
+      "fn_rule2",
+      "fn_gate",
+      "sw_alert",
+      "fn_rule3",
+      "fn_obstacle",
+      "fn_rule1",
+      "fn_rule4",
+      "fn_broker"
+    ],
+    "style": {
+      "label": true,
+      "stroke": "#7c3aed",
+      "fill": "#ede9fe",
+      "fill-opacity": "0.35",
+      "color": "#7c3aed"
+    },
+    "x": 306,
+    "y": 65,
+    "w": 523,
+    "h": 520
+  },
+  {
+    "id": "g_ui",
+    "type": "group",
+    "z": "tab_parking",
+    "name": "3. APPLICATION · Dashboard, nhật ký & lưu trữ",
+    "nodes": [
+      "fn_dispatch",
+      "fn_render",
+      "ui_css",
+      "ui_overview",
+      "ui_slots",
+      "ui_control",
+      "ui_log",
+      "ui_stats",
+      "ui_chart_rev",
+      "ui_chart_occ",
+      "ui_dbnote",
+      "ui_toast",
+      "file_log",
+      "file_db"
+    ],
+    "style": {
+      "label": true,
+      "stroke": "#059669",
+      "fill": "#d1fae5",
+      "fill-opacity": "0.35",
+      "color": "#059669"
+    },
+    "x": 846,
+    "y": -15,
+    "w": 729,
+    "h": 550
+  },
+  {
+    "id": "g_down",
+    "type": "group",
+    "z": "tab_parking",
+    "name": "4. DOWNLINK · Điều khiển xuống ESP32",
+    "nodes": [
+      "btn_open",
+      "btn_close",
+      "fn_cmd",
+      "out_cmd",
+      "inj_sync",
+      "btn_reset",
+      "fn_reset"
+    ],
+    "style": {
+      "label": true,
+      "stroke": "#dc2626",
+      "fill": "#fee2e2",
+      "fill-opacity": "0.35",
+      "color": "#dc2626"
+    },
+    "x": 20,
+    "y": 645,
+    "w": 750,
+    "h": 240
+  },
+  {
+    "id": "g_boot",
+    "type": "group",
+    "z": "tab_parking",
+    "name": "Khởi động · khôi phục dữ liệu",
+    "nodes": [
+      "inj_boot",
+      "fn_dbpath",
+      "file_read",
+      "catch_read",
+      "fn_restore"
+    ],
+    "style": {
+      "label": true,
+      "stroke": "#64748b",
+      "fill": "#f1f5f9",
+      "fill-opacity": "0.35",
+      "color": "#64748b"
+    },
+    "x": 46,
+    "y": 885,
+    "w": 838,
+    "h": 145
   }
 ]

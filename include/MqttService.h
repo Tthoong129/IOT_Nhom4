@@ -6,21 +6,20 @@
 #include <functional>
 #include "Config.h"
 
-typedef std::function<void(const String& cmd)> CommandCallback;
+// Lenh downlink: cmd = "open" | "close" | "sync", src = nguon gui lenh (dashboard, rule4, ...)
+typedef std::function<void(const String& cmd, const String& src)> CommandCallback;
+// Duoc goi moi lan ket noi MQTT thanh cong de thiet bi gui lai toan bo trang thai
+typedef std::function<void()> ConnectCallback;
 
 class MqttService {
 public:
     MqttService(const char* ssid, const char* pass, const char* broker, int port);
 
-    void begin(CommandCallback onCommand);
+    void begin(CommandCallback onCommand, ConnectCallback onConnect);
     void update();
-
     bool isConnected();
-    void publishScan(const String& uid, const String& action, const String& plate,
-                     const String& owner, unsigned long durationSec, uint32_t fee,
-                     int occupied, int capacity);
-    void publishAlert(const String& type, const String& uid);
-    void publishGateState(bool isOpen);
+
+    void publishJson(const char* topic, JsonDocument& doc, bool retained = false);
 
 private:
     const char* _ssid;
@@ -28,9 +27,10 @@ private:
     const char* _broker;
     int _port;
 
-    WiFiClient _wifiClient;
+    WiFiClient   _wifiClient;
     PubSubClient _mqttClient;
     CommandCallback _commandCallback;
+    ConnectCallback _connectCallback;
     String _clientId;
     unsigned long _lastReconnectAttempt;
 

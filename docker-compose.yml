@@ -20,7 +20,7 @@ services:
   # Service 2: Node-RED Automation Engine & Dashboard (Tầng 3 & Tầng 4)
   # =========================================================================
   nodered:
-    image: nodered/node-red:latest
+    build: ./docker/nodered
     container_name: iot_parking_middleware
     restart: unless-stopped
     ports:
@@ -28,8 +28,8 @@ services:
     environment:
       - TZ=Asia/Ho_Chi_Minh
       - NODE_RED_ENABLE_PROJECTS=false
+      - PARKING_DATA_DIR=/data/storage
     volumes:
-      - ./docker/nodered/package.json:/data/package.json:ro
       - ./docker/nodered/flows.json:/data/flows.json
       - nodered_data:/data
       - ./data:/data/storage

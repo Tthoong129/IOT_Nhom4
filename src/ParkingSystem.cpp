@@ -1,160 +1,179 @@
 #include "ParkingSystem.h"
 
-ParkingSystem::ParkingSystem(uint8_t lcdAddr, int buzzerPin, int maxCapacity)
-    : _lcd(lcdAddr, LCD_COLS, LCD_ROWS), _buzzerPin(buzzerPin), _maxCapacity(maxCapacity) {
-    // Registered cards (matching Wokwi MFRC522 default presets)
-    _cards[0] = {"01 02 03 04", "29A-123.45", "Nguyen Van A", false, 0}; // Wokwi Blue Card
-    _cards[1] = {"11 22 33 44", "51F-999.88", "Tran Thi B",   false, 0}; // Wokwi Green Card
-    _cards[2] = {"55 66 77 88", "43C-678.90", "Le Van C",     false, 0}; // Wokwi Yellow Card
-    // Backward compatibility for serial tests
-    _cards[3] = {"04 3B 2A 1C", "29A-123.45", "Nguyen Van A", false, 0};
-    _cards[4] = {"14 8C 3D 2E", "51F-999.88", "Tran Thi B",   false, 0};
-    _cards[5] = {"24 D5 4E 3F", "43C-678.90", "Le Van C",     false, 0};
-    // Note: "AA BB CC DD" (Wokwi Red Card) is deliberately unregistered to simulate unauthorized cards!
+ParkingSystem::ParkingSystem(uint8_t lcdAddr, int buzzerPin)
+    : _lcd(lcdAddr, LCD_COLS, LCD_ROWS), _buzzerPin(buzzerPin),
+      _homeAt(0), _beepLeft(0), _beepOnMs(0), _beepOffMs(0), _beepOn(false), _beepAt(0) {
+    // The da dang ky (trung UID voi the mau cua Wokwi MFRC522).
+    // The Red "AA BB CC DD" co y KHONG dang ky de mo phong the la.
+    _cards[0] = {"01 02 03 04", "29A-123.45", "Nguyễn Văn A", 0, 0};   // Blue card   / phim 1
+    _cards[1] = {"11 22 33 44", "51F-999.88", "Trần Thị B",   0, 0};   // Green card  / phim 2
+    _cards[2] = {"55 66 77 88", "43C-678.90", "Lê Văn C",     0, 0};   // Yellow card / phim 3
 }
 
 void ParkingSystem::begin() {
-    pinMode(_buzzerPin, OUTPUT);
-    digitalWrite(_buzzerPin, LOW);
+    ledcSetup(BUZZER_LEDC_CH, BUZZER_FREQ_HZ, 8);
+    ledcAttachPin(_buzzerPin, BUZZER_LEDC_CH);
+    ledcWriteTone(BUZZER_LEDC_CH, 0);
 
     Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
     _lcd.init();
     _lcd.backlight();
-    showHome();
+    showMessage("BAI GIU XE RFID", "Dang khoi dong..");
 }
 
-int ParkingSystem::findCardIndex(const String& uid) {
-    for (int i = 0; i < CARD_COUNT; i++) {
-        if (uid.equalsIgnoreCase(_cards[i].uid)) {
-            return i;
+// ---------------------------------------------------------------------------
+// Non-blocking services
+// ---------------------------------------------------------------------------
+void ParkingSystem::update() {
+    unsigned long now = millis();
+
+    if (_homeAt != 0 && (long)(now - _homeAt) >= 0) {
+        _homeAt = 0;
+        showHome();
+    }
+
+    if (_beepLeft > 0 && (long)(now - _beepAt) >= 0) {
+        if (_beepOn) {
+            ledcWriteTone(BUZZER_LEDC_CH, 0);
+            _beepOn = false;
+            _beepLeft--;
+            _beepAt = now + _beepOffMs;
+        } else {
+            ledcWriteTone(BUZZER_LEDC_CH, BUZZER_FREQ_HZ);
+            _beepOn = true;
+            _beepAt = now + _beepOnMs;
         }
     }
+}
+
+void ParkingSystem::beep(int count, int onMs, int offMs) {
+    _beepLeft  = count;
+    _beepOnMs  = onMs;
+    _beepOffMs = offMs;
+    _beepOn    = false;
+    _beepAt    = millis();
+    ledcWriteTone(BUZZER_LEDC_CH, 0);
+}
+
+// ---------------------------------------------------------------------------
+// Business logic
+// ---------------------------------------------------------------------------
+int ParkingSystem::findCardIndex(const String& uid) const {
+    for (int i = 0; i < CARD_COUNT; i++) {
+        if (uid.equalsIgnoreCase(_cards[i].uid)) return i;
+    }
     return -1;
+}
+
+int ParkingSystem::findFreeSlot() const {
+    for (int s = 1; s <= PARKING_CAPACITY; s++) {
+        if (cardInSlot(s) == nullptr) return s;
+    }
+    return 0;
+}
+
+const VehicleCard* ParkingSystem::cardInSlot(int slot) const {
+    for (int i = 0; i < CARD_COUNT; i++) {
+        if (_cards[i].slot == slot) return &_cards[i];
+    }
+    return nullptr;
 }
 
 int ParkingSystem::getOccupiedCount() const {
     int count = 0;
     for (int i = 0; i < CARD_COUNT; i++) {
-        if (_cards[i].isParked) count++;
+        if (_cards[i].slot > 0) count++;
     }
     return count;
 }
 
-int ParkingSystem::getMaxCapacity() const {
-    return _maxCapacity;
-}
-
-bool ParkingSystem::isFull() const {
-    return getOccupiedCount() >= _maxCapacity;
+uint32_t ParkingSystem::calcFee(unsigned long durationSec) {
+    if (durationSec > FEE_TIER2_SEC) return FEE_TIER3_VND;
+    if (durationSec >= FEE_TIER1_SEC) return FEE_TIER2_VND;
+    return FEE_TIER1_VND;
 }
 
 CardScanEvent ParkingSystem::processCard(const String& rawUid) {
-    CardScanEvent event;
-    int idx = findCardIndex(rawUid);
+    CardScanEvent ev;
+    ev.uid = rawUid;
+    ev.slot = 0;
+    ev.durationSec = 0;
+    ev.fee = 0;
 
-    if (idx == -1) {
-        event.result = CARD_NOT_FOUND;
-        event.card.uid = rawUid;
-        event.durationSec = 0;
-        event.fee = 0;
-        return event;
+    int idx = findCardIndex(rawUid);
+    if (idx < 0) {
+        ev.result = CARD_NOT_FOUND;
+        return ev;
     }
 
     VehicleCard& card = _cards[idx];
-    unsigned long now = millis();
+    ev.uid = card.uid;
+    ev.licensePlate = card.licensePlate;
+    ev.ownerName = card.ownerName;
 
-    if (!card.isParked) {
-        if (isFull()) {
-            event.result = CARD_PARKING_FULL;
-            event.card = card;
-            event.durationSec = 0;
-            event.fee = 0;
-            return event;
+    if (card.slot == 0) {
+        int slot = findFreeSlot();
+        if (slot == 0) {
+            ev.result = CARD_PARKING_FULL;
+            return ev;
         }
-
-        card.isParked = true;
-        card.entryTime = now;
-        event.result = CARD_CHECK_IN;
-        event.card = card;
-        event.durationSec = 0;
-        event.fee = 0;
+        card.slot = slot;
+        card.entryTime = millis();
+        ev.result = CARD_CHECK_IN;
+        ev.slot = slot;
     } else {
-        card.isParked = false;
-        unsigned long dur = (now - card.entryTime) / 1000;
+        unsigned long dur = (millis() - card.entryTime) / 1000;
         if (dur == 0) dur = 1;
-
-        uint32_t fee = 3000;
-        if (dur > 30) fee = 9000;
-        else if (dur >= 10) fee = 5000;
-
-        event.result = CARD_CHECK_OUT;
-        event.card = card;
-        event.durationSec = dur;
-        event.fee = fee;
+        ev.result = CARD_CHECK_OUT;
+        ev.slot = card.slot;
+        ev.durationSec = dur;
+        ev.fee = calcFee(dur);
+        card.slot = 0;
+        card.entryTime = 0;
     }
-
-    return event;
+    return ev;
 }
 
-void ParkingSystem::showHome() {
-    _lcd.clear();
-    _lcd.setCursor(0, 0);
-    _lcd.printf("BAI XE: %d/%d XE", getOccupiedCount(), _maxCapacity);
-    _lcd.setCursor(0, 1);
-    _lcd.print("Moi quet the...");
-}
-
-void ParkingSystem::showCheckIn(const String& plate) {
-    _lcd.clear();
-    _lcd.setCursor(0, 0);
-    _lcd.print("VAO: " + plate);
-    _lcd.setCursor(0, 1);
-    _lcd.print("Moi vao! -> MO");
-}
-
-void ParkingSystem::showCheckOut(const String& plate, unsigned long durationSec, uint32_t fee) {
-    _lcd.clear();
-    _lcd.setCursor(0, 0);
-    _lcd.print("RA: " + plate);
-    _lcd.setCursor(0, 1);
-    _lcd.printf("T:%lus %ud", durationSec, fee);
-}
-
-void ParkingSystem::showLotFull() {
-    _lcd.clear();
-    _lcd.setCursor(0, 0);
-    _lcd.print("BAI XE DA DAY!");
-    _lcd.setCursor(0, 1);
-    _lcd.print("Vui long quay lai");
-}
-
-void ParkingSystem::showDenied() {
-    _lcd.clear();
-    _lcd.setCursor(0, 0);
-    _lcd.print("THE KHONG HOP LE");
-    _lcd.setCursor(0, 1);
-    _lcd.print("Tu choi truy cap");
-}
-
-void ParkingSystem::showStatus(const String& line1, const String& line2) {
+// ---------------------------------------------------------------------------
+// LCD screens (16 x 2)
+// ---------------------------------------------------------------------------
+void ParkingSystem::showMessage(const char* line1, const char* line2, unsigned long autoHomeMs) {
     _lcd.clear();
     _lcd.setCursor(0, 0);
     _lcd.print(line1);
     _lcd.setCursor(0, 1);
     _lcd.print(line2);
+    _homeAt = autoHomeMs ? millis() + autoHomeMs : 0;
 }
 
-void ParkingSystem::beep(int count, int durationMs, int pauseMs) {
-    for (int i = 0; i < count; i++) {
-        long pulses = (long)1500 * durationMs / 1000;
-        for (long j = 0; j < pulses; j++) {
-            digitalWrite(_buzzerPin, HIGH);
-            delayMicroseconds(333);
-            digitalWrite(_buzzerPin, LOW);
-            delayMicroseconds(333);
-        }
-        if (count > 1 && i < count - 1) {
-            delay(pauseMs);
-        }
-    }
+void ParkingSystem::showHome() {
+    char l1[17], l2[17];
+    int used = getOccupiedCount();
+    snprintf(l1, sizeof(l1), "BAI XE: %d/%d XE", used, PARKING_CAPACITY);
+    snprintf(l2, sizeof(l2), used >= PARKING_CAPACITY ? "Het cho trong" : "Moi quet the...");
+    showMessage(l1, l2);
+}
+
+void ParkingSystem::showCheckIn(const String& plate, int slot) {
+    char l1[17], l2[17];
+    snprintf(l1, sizeof(l1), "VAO: %s", plate.c_str());
+    snprintf(l2, sizeof(l2), "O so %d - Moi vao", slot);
+    showMessage(l1, l2);
+}
+
+void ParkingSystem::showCheckOut(const String& plate, unsigned long durationSec, uint32_t fee) {
+    char l1[17], l2[17];
+    snprintf(l1, sizeof(l1), "RA: %s", plate.c_str());
+    snprintf(l2, sizeof(l2), "%lus Phi:%lud", durationSec, (unsigned long)fee);
+    showMessage(l1, l2);
+}
+
+void ParkingSystem::showLotFull()          { showMessage("BAI XE DA DAY!", "Het cho gui xe!", LCD_MESSAGE_MS); }
+void ParkingSystem::showDenied()           { showMessage("THE KHONG HOP LE", "Tu choi vao bai", LCD_MESSAGE_MS); }
+void ParkingSystem::showRemoteOpen()       { showMessage("MO BARIE TU XA", "Lenh: Dashboard"); }
+
+void ParkingSystem::showObstacle(float distCm) {
+    char l2[17];
+    snprintf(l2, sizeof(l2), "Vat can %.0fcm", distCm);
+    showMessage("TAM HOAN DONG", l2);
 }
