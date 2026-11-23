@@ -4,7 +4,7 @@
     "type": "tab",
     "label": "Bãi giữ xe RFID - Nhóm 4",
     "disabled": false,
-    "info": "Tầng 3 (Middleware) và Tầng 4 (Application).\n\nESP32 là nguồn dữ liệu gốc về ô đỗ và barie; Node-RED đồng bộ qua MQTT, chạy 4 rule, ghi log và hiển thị dashboard."
+    "info": "Tầng 3 (Middleware) và Tầng 4 (Application).\n\nESP32 đồng bộ trạng thái 2 ô đỗ và barie lên Node-RED qua MQTT; Node-RED quản lý thẻ RFID, bảng giá động, 4 rule tự động và lưu dữ liệu bền vững."
   },
   {
     "id": "broker_hivemq",
@@ -133,6 +133,24 @@
     "hidden": false
   },
   {
+    "id": "ui_tab_cards",
+    "type": "ui_tab",
+    "name": "Quản lý Thẻ & Bảng giá",
+    "icon": "credit_card",
+    "order": 2,
+    "disabled": false,
+    "hidden": false
+  },
+  {
+    "id": "ui_tab_history",
+    "type": "ui_tab",
+    "name": "Lịch sử Giao dịch",
+    "icon": "receipt",
+    "order": 3,
+    "disabled": false,
+    "hidden": false
+  },
+  {
     "id": "uig_overview",
     "type": "ui_group",
     "name": "Tổng quan",
@@ -184,6 +202,39 @@
     "order": 5,
     "disp": true,
     "width": "12",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "uig_cfg_left",
+    "type": "ui_group",
+    "name": "Bảng giá & Đăng ký thẻ RFID",
+    "tab": "ui_tab_cards",
+    "order": 1,
+    "disp": true,
+    "width": "12",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "uig_card_list",
+    "type": "ui_group",
+    "name": "Danh sách thẻ đã đăng ký",
+    "tab": "ui_tab_cards",
+    "order": 2,
+    "disp": true,
+    "width": "12",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "uig_history",
+    "type": "ui_group",
+    "name": "Đối soát lịch sử vào / ra & xuất báo cáo",
+    "tab": "ui_tab_history",
+    "order": 1,
+    "disp": true,
+    "width": "24",
     "collapse": false,
     "className": ""
   },
@@ -340,7 +391,7 @@
     "g": "g_rules",
     "type": "function",
     "name": "Đồng bộ snapshot ESP32",
-    "func": "// Dong bo snapshot tu ESP32 (retained). {\"online\":false} la Last Will do broker gui khi ESP32 mat ket noi.\nconst park = flow.get('park');\nif (!park) return null;\nconst p = msg.payload || {};\nconst now = Date.now();\nconst events = [];\n\nif (p.online === false) {\n    if (park.online && !msg.retain) {\n        events.push({ level: 'danger', title: 'Mất kết nối thiết bị', text: 'Broker báo ESP32 ngắt kết nối (Last Will)', toast: true, alert: true });\n    }\n    park.online = false;\n} else {\n    if (!park.online && !msg.retain) {\n        events.push({ level: 'ok', title: 'Thiết bị trực tuyến', text: 'ESP32 đã kết nối và đồng bộ trạng thái' });\n    }\n    park.online = true;\n    if (p.capacity) park.capacity = p.capacity;\n    if (Array.isArray(p.slots)) {\n        park.slots = p.slots.map(s => {\n            if (!s.uid) return { slot: s.slot, uid: null, plate: null, owner: null, since: null, warned: false };\n            const old = park.slots.find(o => o.slot === s.slot && o.uid === s.uid);\n            return {\n                slot: s.slot, uid: s.uid, plate: s.plate, owner: s.owner,\n                since: old && old.since ? old.since : now - (s.parkedSec || 0) * 1000,\n                warned: old ? old.warned : false\n            };\n        });\n    }\n    if (p.gate && p.gate !== park.gate.state) {\n        park.gate.state = p.gate;\n        park.gate.since = now;\n    }\n}\nflow.set('park', park);\nnode.status({ fill: park.online ? 'green' : 'red', shape: 'dot', text: park.online ? 'ESP32 trực tuyến' : 'ESP32 mất kết nối' });\nmsg.events = events;\nreturn msg;",
+    "func": "const park = flow.get('park');\nif (!park) return null;\nconst p = msg.payload || {};\nconst now = Date.now();\nconst events = [];\n\nif (p.online === false) {\n    if (park.online && !msg.retain) {\n        events.push({ level: 'danger', title: 'Mất kết nối thiết bị', text: 'Broker báo ESP32 ngắt kết nối (Last Will)', toast: true, alert: true });\n    }\n    park.online = false;\n} else {\n    if (!park.online && !msg.retain) {\n        events.push({ level: 'ok', title: 'Thiết bị trực tuyến', text: 'ESP32 đã kết nối và đồng bộ trạng thái' });\n    }\n    park.online = true;\n    if (p.capacity) park.capacity = p.capacity;\n    if (Array.isArray(p.slots)) {\n        park.slots = p.slots.map(s => {\n            if (!s.uid) return { slot: s.slot, uid: null, plate: null, owner: null, monthly: false, since: null, warned: false };\n            const old = park.slots.find(o => o.slot === s.slot && o.uid === s.uid);\n            return {\n                slot: s.slot, uid: s.uid, plate: s.plate, owner: s.owner, monthly: !!s.monthly,\n                since: old && old.since ? old.since : now - (s.parkedSec || 0) * 1000,\n                warned: old ? old.warned : false\n            };\n        });\n    }\n    if (p.gate && p.gate !== park.gate.state) {\n        park.gate.state = p.gate;\n        park.gate.since = now;\n    }\n}\nflow.set('park', park);\nnode.status({ fill: park.online ? 'green' : 'red', shape: 'dot', text: park.online ? 'ESP32 trực tuyến' : 'ESP32 mất kết nối' });\nmsg.events = events;\nreturn msg;",
     "outputs": 1,
     "timeout": 0,
     "noerr": 0,
@@ -361,7 +412,7 @@
     "g": "g_rules",
     "type": "function",
     "name": "Cập nhật lượt xe vào/ra",
-    "func": "// Cap nhat luot xe vao/ra hop le (ESP32 da quyet dinh tai cong)\nconst park = flow.get('park');\nif (!park) return null;\nconst p = msg.payload || {};\nconst now = Date.now();\nconst idx = (p.slot || 0) - 1;\nconst fmtDur = s => s < 60 ? s + ' giây' : Math.floor(s / 60) + ' phút ' + String(s % 60).padStart(2, '0') + ' giây';\nmsg.events = [];\nif (p.totalSlots) park.capacity = p.totalSlots;\n\nif (p.action === 'check_in') {\n    if (park.slots[idx]) park.slots[idx] = { slot: p.slot, uid: p.uid, plate: p.licensePlate, owner: p.ownerName, since: now, warned: false };\n    park.stats.checkins++;\n    msg.events.push({ level: 'info', title: 'Xe vào', plate: p.licensePlate, text: 'Ô ' + p.slot + ' · ' + p.ownerName });\n} else if (p.action === 'check_out') {\n    if (park.slots[idx]) park.slots[idx] = { slot: p.slot, uid: null, plate: null, owner: null, since: null, warned: false };\n    park.stats.checkouts++;\n    park.stats.revenue += Number(p.fee) || 0;\n    park.stats.durationSec += Number(p.durationSec) || 0;\n    msg.events.push({ level: 'ok', title: 'Xe ra', plate: p.licensePlate, text: fmtDur(p.durationSec) + ' · ' + Number(p.fee).toLocaleString('vi-VN') + ' đ' });\n} else {\n    return null;\n}\n\npark.transactions.unshift({\n    time: new Date(now).toISOString(), action: p.action, uid: p.uid, plate: p.licensePlate,\n    owner: p.ownerName, slot: p.slot, durationSec: p.durationSec || 0, fee: p.fee || 0\n});\npark.transactions = park.transactions.slice(0, 100);\nflow.set('park', park);\nnode.status({ fill: 'green', shape: 'dot', text: p.action + ' ' + p.licensePlate });\nmsg.save = true;\nreturn msg;",
+    "func": "const park = flow.get('park');\nif (!park) return null;\nconst p = msg.payload || {};\nconst now = Date.now();\nconst nowIso = new Date(now).toISOString();\nconst idx = (p.slot || 0) - 1;\nconst fmtDur = s => s < 60 ? s + ' giây' : Math.floor(s / 60) + ' phút ' + String(s % 60).padStart(2, '0') + ' giây';\nmsg.events = [];\nif (p.totalSlots) park.capacity = p.totalSlots;\n\nif (p.action === 'check_in') {\n    if (park.slots[idx]) {\n        park.slots[idx] = { slot: p.slot, uid: p.uid, plate: p.licensePlate, owner: p.ownerName, monthly: !!p.monthly, since: now, warned: false };\n    }\n    park.stats.checkins++;\n    park.transactions.unshift({\n        id: 'GD-' + now.toString(36).toUpperCase().slice(-6),\n        uid: p.uid, plate: p.licensePlate, owner: p.ownerName,\n        ticketType: p.monthly ? 'Vé tháng' : 'Vé lượt',\n        slot: p.slot, timeIn: nowIso, timeOut: null, durationSec: null, fee: null, status: 'Đang gửi'\n    });\n    park.transactions = park.transactions.slice(0, 100);\n    msg.events.push({ level: 'info', title: 'Xe vào', plate: p.licensePlate, text: 'Ô ' + p.slot + ' · ' + p.ownerName + (p.monthly ? ' (Vé tháng)' : '') });\n} else if (p.action === 'check_out') {\n    if (park.slots[idx]) {\n        park.slots[idx] = { slot: p.slot, uid: null, plate: null, owner: null, monthly: false, since: null, warned: false };\n    }\n    park.stats.checkouts++;\n    const fee = Number(p.fee) || 0;\n    const dur = Number(p.durationSec) || 0;\n    park.stats.revenue += fee;\n    park.stats.durationSec += dur;\n\n    const openTx = park.transactions.find(t => t.uid === p.uid && t.status === 'Đang gửi');\n    if (openTx) {\n        openTx.timeOut = nowIso;\n        openTx.durationSec = dur;\n        openTx.fee = fee;\n        openTx.status = 'Hoàn tất';\n    } else {\n        park.transactions.unshift({\n            id: 'GD-' + now.toString(36).toUpperCase().slice(-6),\n            uid: p.uid, plate: p.licensePlate, owner: p.ownerName,\n            ticketType: p.monthly ? 'Vé tháng' : 'Vé lượt',\n            slot: p.slot, timeIn: null, timeOut: nowIso, durationSec: dur, fee: fee, status: 'Hoàn tất'\n        });\n        park.transactions = park.transactions.slice(0, 100);\n    }\n\n    const feeTxt = p.monthly ? '0 đ (Vé tháng)' : (fee === 0 ? '0 đ (Miễn phí)' : fee.toLocaleString('vi-VN') + ' đ');\n    msg.events.push({ level: 'ok', title: 'Xe ra', plate: p.licensePlate, text: fmtDur(dur) + ' · ' + feeTxt });\n} else {\n    return null;\n}\n\nflow.set('park', park);\nnode.status({ fill: 'green', shape: 'dot', text: p.action + ' ' + p.licensePlate });\nmsg.save = true;\nreturn msg;",
     "outputs": 1,
     "timeout": 0,
     "noerr": 0,
@@ -382,14 +433,14 @@
     "g": "g_rules",
     "type": "function",
     "name": "Rule 2 · Bãi đầy",
-    "func": "// Rule 2: bai day. (a) xe vao lam bai dat suc chua, (b) ESP32 tu choi xe vi bai day\nconst park = flow.get('park');\nif (!park) return null;\nconst p = msg.payload || {};\nmsg.events = msg.events || [];\nconst cap = p.totalSlots || park.capacity;\n\nif (p.action === 'check_in' && p.parkedCount >= cap) {\n    msg.events.push({ level: 'warn', title: 'Rule 2 · Bãi đã đầy', text: 'Đạt ' + p.parkedCount + '/' + cap + ' xe, cổng sẽ từ chối xe tiếp theo', toast: true, alert: true });\n    node.status({ fill: 'red', shape: 'dot', text: 'đầy ' + p.parkedCount + '/' + cap });\n} else if (p.type === 'LOT_FULL') {\n    msg.events.push({ level: 'warn', title: 'Rule 2 · Từ chối do bãi đầy', plate: p.licensePlate, text: 'Cổng không mở, bãi đang ' + p.parkedCount + '/' + cap + ' xe', toast: true, alert: true });\n    node.status({ fill: 'red', shape: 'ring', text: 'từ chối ' + p.licensePlate });\n} else {\n    node.status({ fill: 'grey', shape: 'ring', text: (p.parkedCount || 0) + '/' + cap });\n}\nreturn msg;",
+    "func": "const park = flow.get('park');\nif (!park) return null;\nconst p = msg.payload || {};\nmsg.events = msg.events || [];\nconst cap = p.totalSlots || park.capacity;\n\nif (p.action === 'check_in' && p.parkedCount >= cap) {\n    msg.events.push({ level: 'warn', title: 'Rule 2 · Bãi đã đầy', text: 'Đạt ' + p.parkedCount + '/' + cap + ' xe, cổng sẽ từ chối xe tiếp theo', toast: true, alert: true });\n    node.status({ fill: 'red', shape: 'dot', text: 'đầy ' + p.parkedCount + '/' + cap });\n} else if (p.type === 'LOT_FULL') {\n    msg.events.push({ level: 'warn', title: 'Rule 2 · Từ chối do bãi đầy', plate: p.licensePlate, text: 'Cổng không mở, bãi đang ' + p.parkedCount + '/' + cap + ' xe', toast: true, alert: true });\n    node.status({ fill: 'red', shape: 'ring', text: 'từ chối ' + p.licensePlate });\n} else {\n    node.status({ fill: 'grey', shape: 'ring', text: (p.parkedCount || 0) + '/' + cap });\n}\nreturn msg;",
     "outputs": 1,
     "timeout": 0,
     "noerr": 0,
     "initialize": "",
     "finalize": "",
     "libs": [],
-    "x": 690,
+    "x": 700,
     "y": 240,
     "wires": [
       [
@@ -403,7 +454,7 @@
     "g": "g_rules",
     "type": "function",
     "name": "Cập nhật trạng thái barie",
-    "func": "// Trang thai barie that tu ESP32 (retained)\nconst park = flow.get('park');\nif (!park) return null;\nconst p = msg.payload || {};\nconst now = Date.now();\nconst prev = park.gate;\nconst SRC = { card: 'Quẹt thẻ', timeout: 'Tự đóng sau 3 giây', dashboard: 'Dashboard', rule4: 'Rule 4', serial: 'Serial', mqtt: 'MQTT', boot: 'Khởi động' };\nconst changed = p.state !== prev.state || p.source !== prev.source || p.mode !== prev.mode;\nconst reopened = !msg.retain && p.state === 'open' && p.source === 'dashboard';\n\npark.gate = {\n    state: p.state, source: p.source, mode: p.mode, angle: p.angle,\n    since: (changed || reopened) ? now : prev.since,\n    blocked: p.state === 'open' ? prev.blocked && !changed && !reopened : false\n};\nif (changed || reopened) park.rule4 = { sentAt: null, alerted: false };\nflow.set('park', park);\n\nmsg.events = [];\nif (changed && !msg.retain) {\n    const routine = p.source === 'card' || p.source === 'timeout';\n    msg.events.push({\n        level: 'info', title: p.state === 'open' ? 'Barie mở' : 'Barie đóng',\n        text: 'Nguồn: ' + (SRC[p.source] || p.source) + ' · góc ' + p.angle + '°',\n        table: !routine\n    });\n}\nnode.status({ fill: p.state === 'open' ? 'green' : 'red', shape: 'dot', text: p.state + ' (' + p.source + ')' });\nreturn msg;",
+    "func": "const park = flow.get('park');\nif (!park) return null;\nconst p = msg.payload || {};\nconst now = Date.now();\nconst prev = park.gate;\nconst SRC = { card: 'Quẹt thẻ', timeout: 'Tự đóng sau 3 giây', dashboard: 'Dashboard', rule4: 'Rule 4', serial: 'Serial', mqtt: 'MQTT', boot: 'Khởi động' };\nconst changed = p.state !== prev.state || p.source !== prev.source || p.mode !== prev.mode;\nconst reopened = !msg.retain && p.state === 'open' && p.source === 'dashboard';\n\npark.gate = {\n    state: p.state, source: p.source, mode: p.mode, angle: p.angle,\n    since: (changed || reopened) ? now : prev.since,\n    blocked: p.state === 'open' ? prev.blocked && !changed && !reopened : false\n};\nif (changed || reopened) park.rule4 = { sentAt: null, alerted: false };\nflow.set('park', park);\n\nmsg.events = [];\nif (changed && !msg.retain) {\n    const routine = p.source === 'card' || p.source === 'timeout';\n    msg.events.push({\n        level: 'info', title: p.state === 'open' ? 'Barie mở' : 'Barie đóng',\n        text: 'Nguồn: ' + (SRC[p.source] || p.source) + ' · góc ' + p.angle + '°',\n        table: !routine\n    });\n}\nnode.status({ fill: p.state === 'open' ? 'green' : 'red', shape: 'dot', text: p.state + ' (' + p.source + ')' });\nreturn msg;",
     "outputs": 1,
     "timeout": 0,
     "noerr": 0,
@@ -434,6 +485,11 @@
       },
       {
         "t": "eq",
+        "v": "LOCKED_CARD",
+        "vt": "str"
+      },
+      {
+        "t": "eq",
         "v": "LOT_FULL",
         "vt": "str"
       },
@@ -445,12 +501,15 @@
     ],
     "checkall": "false",
     "repair": false,
-    "outputs": 3,
+    "outputs": 4,
     "x": 425,
     "y": 380,
     "wires": [
       [
         "fn_rule3"
+      ],
+      [
+        "fn_locked"
       ],
       [
         "fn_rule2"
@@ -466,15 +525,36 @@
     "g": "g_rules",
     "type": "function",
     "name": "Rule 3 · Dò thẻ lạ",
-    "func": "// Rule 3: the la quet >= 3 lan trong 60 giay -> canh bao do the\nconst WINDOW_MS = 60000;\nconst LIMIT = 3;\nconst park = flow.get('park');\nif (!park) return null;\nconst p = msg.payload || {};\nconst now = Date.now();\n\npark.invalidTimes = (park.invalidTimes || []).filter(t => now - t < WINDOW_MS);\npark.invalidTimes.push(now);\nconst n = park.invalidTimes.length;\n\nif (n >= LIMIT) {\n    msg.events = [{ level: 'danger', title: 'Rule 3 · Nghi vấn dò thẻ', plate: p.uid, text: n + ' lần quẹt thẻ lạ trong 60 giây', toast: true, alert: true }];\n    park.invalidTimes = [];\n} else {\n    msg.events = [{ level: 'warn', title: 'Thẻ lạ bị từ chối', plate: p.uid, text: 'Lần ' + n + '/' + LIMIT + ' trong 60 giây', toast: true, alert: true }];\n}\nflow.set('park', park);\nnode.status({ fill: n === 0 ? 'red' : 'yellow', shape: 'dot', text: (n || LIMIT) + '/' + LIMIT + ' lần' });\nreturn msg;",
+    "func": "const WINDOW_MS = 60000;\nconst LIMIT = 3;\nconst park = flow.get('park');\nif (!park) return null;\nconst p = msg.payload || {};\nconst now = Date.now();\n\nif (p.uid) park.lastUnknownUid = p.uid;\npark.invalidTimes = (park.invalidTimes || []).filter(t => now - t < WINDOW_MS);\npark.invalidTimes.push(now);\nconst n = park.invalidTimes.length;\n\nif (n >= LIMIT) {\n    msg.events = [{ level: 'danger', title: 'Rule 3 · Nghi vấn dò thẻ', plate: p.uid, text: n + ' lần quẹt thẻ lạ trong 60 giây', toast: true, alert: true }];\n    park.invalidTimes = [];\n} else {\n    msg.events = [{ level: 'warn', title: 'Thẻ lạ bị từ chối', plate: p.uid, text: 'Lần ' + n + '/' + LIMIT + ' trong 60 giây', toast: true, alert: true }];\n}\nflow.set('park', park);\nnode.status({ fill: n === 0 ? 'red' : 'yellow', shape: 'dot', text: (n || LIMIT) + '/' + LIMIT + ' lần' });\nreturn msg;",
     "outputs": 1,
     "timeout": 0,
     "noerr": 0,
     "initialize": "",
     "finalize": "",
     "libs": [],
-    "x": 690,
-    "y": 340,
+    "x": 700,
+    "y": 320,
+    "wires": [
+      [
+        "fn_dispatch"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "fn_locked",
+    "g": "g_rules",
+    "type": "function",
+    "name": "Cảnh báo thẻ bị khóa",
+    "func": "const p = msg.payload || {};\nmsg.events = [{ level: 'danger', title: 'Thẻ bị khóa quét tại cổng', plate: p.licensePlate || p.uid, text: 'Thẻ ' + (p.uid || '') + ' đang bị khóa, đã từ chối mở barie', toast: true, alert: true }];\nnode.status({ fill: 'red', shape: 'dot', text: 'khóa ' + (p.uid || '') });\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 705,
+    "y": 375,
     "wires": [
       [
         "fn_dispatch"
@@ -487,15 +567,15 @@
     "g": "g_rules",
     "type": "function",
     "name": "Cảnh báo chống kẹp xe",
-    "func": "// Canh bao chong kep xe do ESP32 gui len (barie dang hoan dong)\nconst park = flow.get('park');\nif (!park) return null;\nconst d = msg.payload && msg.payload.distanceCm;\npark.gate.blocked = true;\nflow.set('park', park);\nmsg.events = [{ level: 'warn', title: 'Chống kẹp xe', text: 'Vật cản ' + d + ' cm dưới barie, tạm hoãn đóng', toast: true, alert: true }];\nnode.status({ fill: 'yellow', shape: 'dot', text: d + ' cm' });\nreturn msg;",
+    "func": "const park = flow.get('park');\nif (!park) return null;\nconst d = msg.payload && msg.payload.distanceCm;\npark.gate.blocked = true;\nflow.set('park', park);\nmsg.events = [{ level: 'warn', title: 'Chống kẹp xe', text: 'Vật cản ' + d + ' cm dưới barie, tạm hoãn đóng', toast: true, alert: true }];\nnode.status({ fill: 'yellow', shape: 'dot', text: d + ' cm' });\nreturn msg;",
     "outputs": 1,
     "timeout": 0,
     "noerr": 0,
     "initialize": "",
     "finalize": "",
     "libs": [],
-    "x": 700,
-    "y": 410,
+    "x": 710,
+    "y": 430,
     "wires": [
       [
         "fn_dispatch"
@@ -508,7 +588,7 @@
     "g": "g_rules",
     "type": "function",
     "name": "Rule 1 · Xe gửi quá giờ",
-    "func": "// Rule 1: xe gui qua nguong thoi gian (demo 30 giay) -> canh bao 1 lan / xe\nconst LIMIT_SEC = 30;\nconst park = flow.get('park');\nif (!park) return null;\nconst now = Date.now();\nmsg.events = [];\nfor (const s of park.slots) {\n    if (!s.uid || !s.since || s.warned) continue;\n    const sec = Math.floor((now - s.since) / 1000);\n    if (sec > LIMIT_SEC) {\n        s.warned = true;\n        msg.events.push({ level: 'warn', title: 'Rule 1 · Xe gửi quá giờ', plate: s.plate, text: 'Ô ' + s.slot + ' đã gửi ' + sec + ' giây (ngưỡng ' + LIMIT_SEC + ' giây)', toast: true, alert: true });\n    }\n}\nflow.set('park', park);\nconst late = park.slots.filter(s => s.warned).length;\nnode.status(late ? { fill: 'yellow', shape: 'dot', text: late + ' xe quá giờ' } : { fill: 'grey', shape: 'ring', text: 'bình thường' });\nreturn msg;",
+    "func": "const park = flow.get('park');\nif (!park) return null;\nconst limitSec = Number(park.pricing && park.pricing.overstaySec) || 30;\nconst now = Date.now();\nmsg.events = [];\nfor (const s of park.slots) {\n    if (!s.uid || !s.since || s.warned) continue;\n    const sec = Math.floor((now - s.since) / 1000);\n    if (sec > limitSec) {\n        s.warned = true;\n        msg.events.push({ level: 'warn', title: 'Rule 1 · Xe gửi quá giờ', plate: s.plate, text: 'Ô ' + s.slot + ' đã gửi ' + sec + ' giây (ngưỡng ' + limitSec + ' giây)', toast: true, alert: true });\n    }\n}\nflow.set('park', park);\nconst late = park.slots.filter(s => s.warned).length;\nnode.status(late ? { fill: 'yellow', shape: 'dot', text: late + ' xe quá giờ' } : { fill: 'grey', shape: 'ring', text: 'bình thường' });\nreturn msg;",
     "outputs": 1,
     "timeout": 0,
     "noerr": 0,
@@ -516,7 +596,7 @@
     "finalize": "",
     "libs": [],
     "x": 445,
-    "y": 470,
+    "y": 485,
     "wires": [
       [
         "fn_dispatch"
@@ -529,7 +609,7 @@
     "g": "g_rules",
     "type": "function",
     "name": "Rule 4 · Barie mở quá lâu",
-    "func": "// Rule 4: barie mo qua 10 giay -> tu gui lenh dong (ESP32 van kiem tra chong kep truoc khi ha)\nconst MAX_OPEN_MS = 10000;\nconst RESEND_MS = 10000;\nconst park = flow.get('park');\nif (!park) return null;\nconst now = Date.now();\nconst g = park.gate;\nlet cmd = null;\nconst out = { events: [] };\n\nif (g.state === 'open' && now - g.since > MAX_OPEN_MS && park.online) {\n    if (!park.rule4.sentAt || now - park.rule4.sentAt > RESEND_MS) {\n        park.rule4.sentAt = now;\n        cmd = { payload: { cmd: 'close', src: 'rule4' } };\n        if (!park.rule4.alerted) {\n            park.rule4.alerted = true;\n            out.events.push({ level: 'danger', title: 'Rule 4 · Barie mở quá lâu', text: 'Mở hơn 10 giây, Node-RED đã gửi lệnh đóng', toast: true, alert: true });\n        }\n        flow.set('park', park);\n    }\n    node.status({ fill: 'red', shape: 'dot', text: 'mở ' + Math.floor((now - g.since) / 1000) + ' giây' });\n} else {\n    node.status(g.state === 'open' ? { fill: 'yellow', shape: 'ring', text: 'mở ' + Math.floor((now - g.since) / 1000) + ' giây' } : { fill: 'grey', shape: 'ring', text: 'barie đóng' });\n}\nreturn [cmd, out.events.length ? out : null];",
+    "func": "const MAX_OPEN_MS = 10000;\nconst RESEND_MS = 10000;\nconst park = flow.get('park');\nif (!park) return null;\nconst now = Date.now();\nconst g = park.gate;\nlet cmd = null;\nconst out = { events: [] };\n\nif (g.state === 'open' && now - g.since > MAX_OPEN_MS && park.online) {\n    if (!park.rule4.sentAt || now - park.rule4.sentAt > RESEND_MS) {\n        park.rule4.sentAt = now;\n        cmd = { payload: { cmd: 'close', src: 'rule4' } };\n        if (!park.rule4.alerted) {\n            park.rule4.alerted = true;\n            out.events.push({ level: 'danger', title: 'Rule 4 · Barie mở quá lâu', text: 'Mở hơn 10 giây, Node-RED đã gửi lệnh đóng', toast: true, alert: true });\n        }\n        flow.set('park', park);\n    }\n    node.status({ fill: 'red', shape: 'dot', text: 'mở ' + Math.floor((now - g.since) / 1000) + ' giây' });\n} else {\n    node.status(g.state === 'open' ? { fill: 'yellow', shape: 'ring', text: 'mở ' + Math.floor((now - g.since) / 1000) + ' giây' } : { fill: 'grey', shape: 'ring', text: 'barie đóng' });\n}\nreturn [cmd, out.events.length ? out : null];",
     "outputs": 2,
     "timeout": 0,
     "noerr": 0,
@@ -537,7 +617,7 @@
     "finalize": "",
     "libs": [],
     "x": 455,
-    "y": 550,
+    "y": 560,
     "wires": [
       [
         "out_cmd"
@@ -553,14 +633,14 @@
     "g": "g_rules",
     "type": "function",
     "name": "Theo dõi broker",
-    "func": "// Theo doi ket noi Node-RED <-> MQTT broker\nconst park = flow.get('park');\nif (!park) return null;\nconst ok = msg.status && msg.status.fill === 'green';\nif (ok === park.broker) return null;\npark.broker = ok;\nflow.set('park', park);\nreturn { events: ok ? [] : [{ level: 'danger', title: 'Mất kết nối broker', text: 'Node-RED không kết nối được broker.hivemq.com', toast: true }] };",
+    "func": "const park = flow.get('park');\nif (!park) return null;\nconst ok = msg.status && msg.status.fill === 'green';\nif (ok === park.broker) return null;\npark.broker = ok;\nflow.set('park', park);\nreturn {\n    events: ok ? [] : [{ level: 'danger', title: 'Mất kết nối broker', text: 'Node-RED không kết nối được broker.hivemq.com', toast: true }],\n    pushConfig: ok\n};",
     "outputs": 1,
     "timeout": 0,
     "noerr": 0,
     "initialize": "",
     "finalize": "",
     "libs": [],
-    "x": 690,
+    "x": 700,
     "y": 520,
     "wires": [
       [
@@ -574,14 +654,14 @@
     "g": "g_ui",
     "type": "function",
     "name": "Điều phối sự kiện",
-    "func": "// Gom su kien tu moi nhanh: cap nhat nhat ky, canh bao, ghi file va kich hoat ve giao dien\nconst park = flow.get('park');\nif (!park) return null;\nconst DIR = env.get('PARKING_DATA_DIR') || 'D:/HocHe/IOT/Project/Bai_Giu_Xe/data';\nconst COLORS = { ok: '#22c55e', info: '#38bdf8', warn: '#f59e0b', danger: '#ef4444' };\nconst now = new Date();\nconst time = now.toLocaleTimeString('vi-VN', { hour12: false });\nconst stamp = now.toLocaleDateString('vi-VN') + ' ' + time;\nconst toasts = [];\nconst lines = [];\n\nfor (const e of (msg.events || [])) {\n    if (e.table !== false) {\n        park.events.unshift({ id: ++park.seq, time: time, level: e.level, title: e.title, plate: e.plate || '', text: e.text });\n    }\n    if (e.alert) park.alert = { level: e.level, title: e.title, text: e.text, time: time, ts: now.getTime() };\n    if (e.toast) toasts.push({ topic: e.title, payload: e.text, highlight: COLORS[e.level] });\n    lines.push(stamp + ' | ' + e.title.padEnd(28) + ' | ' + (e.plate || '-').padEnd(12) + ' | ' + e.text);\n}\npark.events = park.events.slice(0, 12);\nflow.set('park', park);\n\nconst logMsg = lines.length ? { filename: DIR + '/parking_log.txt', payload: lines.join('\\n') } : null;\nlet dbMsg = null;\nif (msg.save || lines.length) {\n    dbMsg = {\n        filename: DIR + '/parking_database.json',\n        payload: JSON.stringify({\n            updated_at: now.toISOString(),\n            capacity: park.capacity,\n            vehicles_inside: park.slots.filter(s => s.uid).map(s => ({ slot: s.slot, uid: s.uid, plate: s.plate, owner: s.owner, since: new Date(s.since).toISOString() })),\n            stats: park.stats,\n            events: park.events,\n            transactions: park.transactions\n        }, null, 2)\n    };\n}\nreturn [{ resetCharts: msg.resetCharts, forceRender: msg.forceRender }, toasts, logMsg, dbMsg];",
-    "outputs": 4,
+    "func": "const park = flow.get('park');\nif (!park) return null;\nconst DIR = env.get('PARKING_DATA_DIR') || 'D:/HocHe/IOT/Project/Bai_Giu_Xe/data';\nconst COLORS = { ok: '#22c55e', info: '#38bdf8', warn: '#f59e0b', danger: '#ef4444' };\nconst now = new Date();\nconst time = now.toLocaleTimeString('vi-VN', { hour12: false });\nconst stamp = now.toLocaleDateString('vi-VN') + ' ' + time;\nconst toasts = [];\nconst lines = [];\n\nfor (const e of (msg.events || [])) {\n    if (e.table !== false) {\n        park.events.unshift({ id: ++park.seq, time, level: e.level, title: e.title, plate: e.plate || '', text: e.text });\n    }\n    if (e.alert) park.alert = { level: e.level, title: e.title, text: e.text, time, ts: now.getTime() };\n    if (e.toast) toasts.push({ topic: e.title, payload: e.text, highlight: COLORS[e.level] });\n    lines.push(stamp + ' | ' + e.title.padEnd(28) + ' | ' + (e.plate || '-').padEnd(12) + ' | ' + e.text);\n}\npark.events = park.events.slice(0, 12);\nflow.set('park', park);\n\nconst logMsg = lines.length ? { filename: DIR + '/parking_log.txt', payload: lines.join('\\n') } : null;\nlet dbMsg = null;\nif (msg.save || lines.length) {\n    dbMsg = {\n        filename: DIR + '/parking_database.json',\n        payload: JSON.stringify({\n            updated_at: now.toISOString(),\n            capacity: park.capacity,\n            pricing: park.pricing,\n            cards: park.cards,\n            vehicles_inside: park.slots.filter(s => s.uid).map(s => ({ slot: s.slot, uid: s.uid, plate: s.plate, owner: s.owner, monthly: s.monthly, since: new Date(s.since).toISOString() })),\n            stats: park.stats,\n            events: park.events,\n            transactions: park.transactions\n        }, null, 2)\n    };\n}\n\nlet cfgMsg = null;\nif (msg.pushConfig) {\n    const pr = park.pricing;\n    cfgMsg = {\n        payload: {\n            v: 2,\n            p: { en: pr.enabled, t1s: pr.t1Sec, t1f: pr.t1Fee, t2s: pr.t2Sec, t2f: pr.t2Fee, t3f: pr.t3Fee },\n            c: park.cards.slice(0, 16).map(c => ({ u: c.uid, p: c.plate, o: c.owner, a: c.active, m: !!c.monthly }))\n        }\n    };\n}\n\nreturn [{ resetCharts: msg.resetCharts, forceRender: msg.forceRender }, toasts, logMsg, dbMsg, cfgMsg];",
+    "outputs": 5,
     "timeout": 0,
     "noerr": 0,
-    "initialize": "// Trang thai dung chung cua toan flow. ESP32 la nguon du lieu goc ve o do va barie;\n// Node-RED dong bo qua MQTT va chi luu thong ke, lich su su kien.\nflow.set('park', {\n    online: false,\n    broker: false,\n    capacity: 2,\n    seq: 0,\n    gate: { state: 'closed', source: 'boot', mode: 'none', angle: 0, since: Date.now(), blocked: false },\n    slots: [\n        { slot: 1, uid: null, plate: null, owner: null, since: null, warned: false },\n        { slot: 2, uid: null, plate: null, owner: null, since: null, warned: false }\n    ],\n    stats: { revenue: 0, checkins: 0, checkouts: 0, durationSec: 0 },\n    events: [],\n    transactions: [],\n    alert: null,\n    invalidTimes: [],\n    rule4: { sentAt: null, alerted: false }\n});",
+    "initialize": "flow.set('park', {\n    online: false,\n    broker: false,\n    capacity: 2,\n    seq: 0,\n    gate: { state: 'closed', source: 'boot', mode: 'none', angle: 0, since: Date.now(), blocked: false },\n    slots: [\n        { slot: 1, uid: null, plate: null, owner: null, monthly: false, since: null, warned: false },\n        { slot: 2, uid: null, plate: null, owner: null, monthly: false, since: null, warned: false }\n    ],\n    cards: [\n        { uid: '01 02 03 04', plate: '29A-123.45', owner: 'Nguyễn Văn A', active: true, monthly: false },\n        { uid: '11 22 33 44', plate: '51F-999.88', owner: 'Trần Thị B', active: true, monthly: false },\n        { uid: '55 66 77 88', plate: '43C-678.90', owner: 'Lê Văn C', active: true, monthly: false }\n    ],\n    pricing: { enabled: true, t1Sec: 10, t1Fee: 3000, t2Sec: 30, t2Fee: 5000, t3Fee: 9000, overstaySec: 30 },\n    lastUnknownUid: null,\n    editCard: null,\n    stats: { revenue: 0, checkins: 0, checkouts: 0, durationSec: 0 },\n    events: [],\n    transactions: [],\n    alert: null,\n    invalidTimes: [],\n    rule4: { sentAt: null, alerted: false }\n});",
     "finalize": "",
     "libs": [],
-    "x": 960,
+    "x": 975,
     "y": 300,
     "wires": [
       [
@@ -595,6 +675,9 @@
       ],
       [
         "file_db"
+      ],
+      [
+        "out_config"
       ]
     ]
   },
@@ -604,15 +687,15 @@
     "g": "g_ui",
     "type": "function",
     "name": "Dựng giao diện",
-    "func": "// Dung view-model cho tung khoi giao dien tu MOT trang thai duy nhat va chi gui khi du lieu thay doi\nconst park = flow.get('park');\nif (!park) return null;\nconst now = Date.now();\nconst SRC = { card: 'Quẹt thẻ', timeout: 'Tự đóng sau 3 giây', dashboard: 'Dashboard', rule4: 'Rule 4', serial: 'Serial', mqtt: 'MQTT', boot: 'Khởi động' };\nconst ALERT_SHOW_MS = 30000;\nconst fmtDur = s => s < 60 ? s + ' giây' : Math.floor(s / 60) + ' phút ' + String(s % 60).padStart(2, '0') + ' giây';\nconst money = v => Number(v || 0).toLocaleString('vi-VN');\nconst clock = t => new Date(t).toLocaleTimeString('vi-VN', { hour12: false });\n\nconst occupied = park.slots.filter(s => s.uid).length;\nconst cap = park.capacity;\nconst g = park.gate;\nconst openSec = Math.max(0, Math.floor((now - g.since) / 1000));\nconst gate = {\n    open: g.state === 'open',\n    blocked: !!g.blocked && g.state === 'open',\n    angle: g.angle || (g.state === 'open' ? 90 : 0),\n    source: SRC[g.source] || g.source,\n    detail: g.state === 'open'\n        ? (g.blocked ? 'Có vật cản, tạm hoãn đóng' : (g.mode === 'hold' ? 'Giữ mở theo lệnh · ' + openSec + ' giây' : 'Tự đóng sau 3 giây'))\n        : 'Đèn đỏ · sẵn sàng'\n};\n\nconst overview = {\n    occupied: occupied, capacity: cap, free: Math.max(0, cap - occupied), full: occupied >= cap,\n    percent: cap ? Math.round(occupied / cap * 100) : 0,\n    online: park.online, broker: park.broker, gate: gate,\n    revenue: money(park.stats.revenue), checkins: park.stats.checkins, checkouts: park.stats.checkouts\n};\n\nconst slotsPayload = {\n    slots: park.slots.map(s => {\n        if (!s.uid) return { slot: s.slot, occupied: false };\n        const sec = Math.max(0, Math.floor((now - s.since) / 1000));\n        return { slot: s.slot, occupied: true, plate: s.plate, owner: s.owner, timeIn: clock(s.since), duration: fmtDur(sec), overstay: s.warned };\n    }),\n    capacity: cap\n};\n\nconst alert = park.alert && now - park.alert.ts < ALERT_SHOW_MS ? park.alert : null;\nconst controlPayload = { alert: alert, gate: gate, online: park.online };\n\nconst st = park.stats;\nconst statsPayload = {\n    avgDuration: st.checkouts ? fmtDur(Math.round(st.durationSec / st.checkouts)) : '—',\n    avgFee: st.checkouts ? money(Math.round(st.revenue / st.checkouts)) + ' đ' : '—',\n    transactions: park.transactions.length,\n    late: park.slots.filter(s => s.warned).length\n};\n\n// Chi day thong diep UI cho khoi nao co du lieu thay doi -> khong giat, khong rac WebSocket\nconst cache = context.get('cache') || {};\nconst changed = (key, obj) => {\n    const s = JSON.stringify(obj);\n    if (!msg.forceRender && cache[key] === s) return null;\n    cache[key] = s;\n    return { payload: obj };\n};\n\n// Bieu do: chi day diem moi khi doanh thu hoac so xe thay doi\nconst last = context.get('last') || {};\nlet rev = null, occ = null;\nif (msg.resetCharts) {\n    rev = [{ payload: [] }, { topic: 'Doanh thu', payload: 0 }];\n    occ = [{ payload: [] }, { topic: 'Số xe', payload: occupied }];\n} else {\n    if (last.rev !== st.revenue) rev = { topic: 'Doanh thu', payload: st.revenue };\n    if (last.occ !== occupied) occ = { topic: 'Số xe', payload: occupied };\n}\ncontext.set('last', { rev: st.revenue, occ: occupied });\nconst outs = [\n    changed('overview', overview),\n    changed('slots', slotsPayload),\n    changed('control', controlPayload),\n    changed('log', park.events),\n    changed('stats', statsPayload),\n    rev, occ\n];\ncontext.set('cache', cache);\nreturn outs;",
-    "outputs": 7,
+    "func": "const park = flow.get('park');\nif (!park) return null;\nconst now = Date.now();\nconst SRC = { card: 'Quẹt thẻ', timeout: 'Tự đóng sau 3 giây', dashboard: 'Dashboard', rule4: 'Rule 4', serial: 'Serial', mqtt: 'MQTT', boot: 'Khởi động' };\nconst ALERT_SHOW_MS = 30000;\nconst fmtDur = s => s < 60 ? s + ' giây' : Math.floor(s / 60) + ' phút ' + String(s % 60).padStart(2, '0') + ' giây';\nconst money = v => Number(v || 0).toLocaleString('vi-VN');\nconst clock = t => t ? new Date(t).toLocaleTimeString('vi-VN', { hour12: false }) : '—';\n\nconst occupied = park.slots.filter(s => s.uid).length;\nconst cap = park.capacity;\nconst g = park.gate;\nconst openSec = Math.max(0, Math.floor((now - g.since) / 1000));\nconst gate = {\n    open: g.state === 'open',\n    blocked: !!g.blocked && g.state === 'open',\n    angle: g.angle || (g.state === 'open' ? 90 : 0),\n    source: SRC[g.source] || g.source,\n    detail: g.state === 'open'\n        ? (g.blocked ? 'Có vật cản, tạm hoãn đóng' : (g.mode === 'hold' ? 'Giữ mở theo lệnh · ' + openSec + ' giây' : 'Tự đóng sau 3 giây'))\n        : 'Đèn đỏ · sẵn sàng'\n};\n\nconst pr = park.pricing;\nconst feeLabel = pr.enabled ? `${Math.round(pr.t1Fee/1000)}k/${Math.round(pr.t2Fee/1000)}k/${Math.round(pr.t3Fee/1000)}k` : 'Miễn phí';\nconst overview = {\n    occupied, capacity: cap, free: Math.max(0, cap - occupied), full: occupied >= cap,\n    percent: cap ? Math.round(occupied / cap * 100) : 0,\n    online: park.online, broker: park.broker, gate,\n    revenue: money(park.stats.revenue),\n    revenueSub: `${park.stats.checkins}v · ${park.stats.checkouts}r · Giá ${feeLabel}`\n};\n\nconst slotsPayload = {\n    slots: park.slots.map(s => {\n        if (!s.uid) return { slot: s.slot, occupied: false };\n        const sec = Math.max(0, Math.floor((now - s.since) / 1000));\n        return { slot: s.slot, occupied: true, plate: s.plate, owner: s.owner, monthly: !!s.monthly, timeIn: clock(s.since), duration: fmtDur(sec), overstay: s.warned };\n    }),\n    capacity: cap\n};\n\nconst alert = park.alert && now - park.alert.ts < ALERT_SHOW_MS ? park.alert : null;\nconst controlPayload = { alert, gate, online: park.online };\n\nconst st = park.stats;\nconst statsPayload = {\n    avgDuration: st.checkouts ? fmtDur(Math.round(st.durationSec / st.checkouts)) : '—',\n    avgFee: st.checkouts ? money(Math.round(st.revenue / st.checkouts)) + ' đ' : '—',\n    transactions: park.transactions.length,\n    late: park.slots.filter(s => s.warned).length\n};\n\nconst cardListPayload = {\n    total: park.cards.length,\n    max: 16,\n    activeCount: park.cards.filter(c => c.active).length,\n    monthlyCount: park.cards.filter(c => c.monthly).length,\n    cards: park.cards.map(c => {\n        const inside = park.slots.find(s => s.uid === c.uid);\n        return Object.assign({}, c, { parkedSlot: inside ? inside.slot : 0 });\n    })\n};\n\nconst cardFormPayload = { lastUnknownUid: park.lastUnknownUid, editCard: park.editCard };\nif (park.editCard) { park.editCard = null; flow.set('park', park); }\n\nconst txPayload = park.transactions.map(t => ({\n    id: t.id, uid: t.uid, plate: t.plate, owner: t.owner, ticketType: t.ticketType || 'Vé lượt',\n    slot: t.slot, timeIn: clock(t.timeIn), timeOut: clock(t.timeOut),\n    duration: t.durationSec !== null && t.durationSec !== undefined ? fmtDur(t.durationSec) : 'Đang gửi',\n    fee: t.fee !== null && t.fee !== undefined ? money(t.fee) + ' đ' : '—',\n    feeRaw: t.fee || 0,\n    status: t.status || 'Hoàn tất'\n}));\n\nconst cache = context.get('cache') || {};\nconst changed = (key, obj, force) => {\n    const s = JSON.stringify(obj);\n    if (!force && !msg.forceRender && cache[key] === s) return null;\n    cache[key] = s;\n    return { payload: obj };\n};\n\nconst last = context.get('last') || {};\nlet rev = null, occ = null;\nif (msg.resetCharts) {\n    rev = [{ payload: [] }, { topic: 'Doanh thu', payload: 0 }];\n    occ = [{ payload: [] }, { topic: 'Số xe', payload: occupied }];\n} else {\n    if (last.rev !== st.revenue) rev = { topic: 'Doanh thu', payload: st.revenue };\n    if (last.occ !== occupied) occ = { topic: 'Số xe', payload: occupied };\n}\ncontext.set('last', { rev: st.revenue, occ: occupied });\n\nconst outForm = cardFormPayload.editCard ? { payload: cardFormPayload } : changed('cardForm', cardFormPayload);\nconst outs = [\n    changed('overview', overview),\n    changed('slots', slotsPayload),\n    changed('control', controlPayload),\n    changed('log', park.events),\n    changed('stats', statsPayload),\n    rev,\n    occ,\n    changed('pricing', pr),\n    outForm,\n    changed('cardList', cardListPayload),\n    changed('history', txPayload)\n];\ncontext.set('cache', cache);\nreturn outs;",
+    "outputs": 11,
     "timeout": 0,
     "noerr": 0,
     "initialize": "",
     "finalize": "",
     "libs": [],
-    "x": 1180,
-    "y": 180,
+    "x": 1200,
+    "y": 210,
     "wires": [
       [
         "ui_overview"
@@ -634,6 +717,18 @@
       ],
       [
         "ui_chart_occ"
+      ],
+      [
+        "ui_pricing"
+      ],
+      [
+        "ui_card_form"
+      ],
+      [
+        "ui_card_list"
+      ],
+      [
+        "ui_history"
       ]
     ]
   },
@@ -643,17 +738,17 @@
     "g": "g_ui",
     "type": "ui_template",
     "tab": "",
-    "name": "Giao diện chung (CSS)",
+    "name": "CSS & Thanh chuyển Tab",
     "order": 0,
     "width": 0,
     "height": 0,
-    "format": "<style>\n.pk-wrap{font-family:'Segoe UI',Roboto,Arial,sans-serif;color:#e2e8f0;height:100%;box-sizing:border-box}\n.pk-muted{color:#94a3b8}\n.pk-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;height:100%}\n.pk-kpi{background:#0f172a;border:1px solid #1e293b;border-left:4px solid #38bdf8;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;justify-content:space-between;min-width:0}\n.pk-kpi.ok{border-left-color:#22c55e}.pk-kpi.warn{border-left-color:#f59e0b}.pk-kpi.danger{border-left-color:#ef4444}\n.pk-kpi-head{font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:#94a3b8;font-weight:600}\n.pk-kpi-head .fa{margin-right:6px;color:#38bdf8}\n.pk-kpi-value{font-size:28px;font-weight:700;line-height:1.1;white-space:nowrap}\n.pk-kpi-value small{font-size:15px;color:#94a3b8;font-weight:600}\n.pk-kpi-value.txt{font-size:16px}\n.pk-kpi-sub{font-size:12px;color:#cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\n.pk-bar{height:6px;background:#1e293b;border-radius:3px;overflow:hidden}\n.pk-bar div{height:100%;background:#38bdf8;transition:width .4s}\n.pk-kpi.danger .pk-bar div{background:#ef4444}\n.pk-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;vertical-align:middle;background:#ef4444;box-shadow:0 0 8px #ef4444}\n.pk-dot.on{background:#22c55e;box-shadow:0 0 8px #22c55e}\n.pk-slots{display:grid;grid-template-columns:1fr 1fr;gap:10px;height:100%}\n.pk-slot{position:relative;border-radius:12px;padding:12px;text-align:center;border:2px dashed #22c55e;background:rgba(34,197,94,.06);display:flex;flex-direction:column;justify-content:center;transition:all .3s}\n.pk-slot.busy{border:2px solid #38bdf8;background:linear-gradient(160deg,#0c2a4a,#0f172a)}\n.pk-slot.late{border-color:#f59e0b;background:linear-gradient(160deg,#3a2606,#0f172a)}\n.pk-slot-id{position:absolute;top:8px;left:12px;font-size:12px;font-weight:700;color:#94a3b8;letter-spacing:.5px}\n.pk-slot-empty{color:#22c55e;font-weight:700;letter-spacing:1px}\n.pk-slot-empty .fa{font-size:34px;display:block;margin-bottom:6px}\n.pk-slot .fa-motorcycle{font-size:30px;color:#38bdf8;margin-bottom:4px}\n.pk-slot.late .fa-motorcycle{color:#f59e0b}\n.pk-plate{display:inline-block;font-family:Consolas,monospace;font-size:18px;font-weight:700;background:#f8fafc;color:#0f172a;border-radius:4px;padding:2px 10px;margin:4px auto 6px;border:2px solid #334155}\n.pk-line{font-size:12px;color:#cbd5e1;line-height:1.5}\n.pk-timer{margin-top:4px;font-size:13px;font-weight:700;color:#e2e8f0}\n.pk-tag{position:absolute;top:8px;right:10px;background:#f59e0b;color:#111827;font-size:10px;font-weight:800;padding:2px 6px;border-radius:4px}\n.pk-banner{display:flex;align-items:center;gap:12px;border-radius:10px;padding:10px 14px;background:rgba(34,197,94,.12);border:1px solid #166534;transition:all .3s}\n.pk-banner .fa{font-size:24px;color:#22c55e;width:26px;text-align:center}\n.pk-banner.lv-warn{background:rgba(245,158,11,.14);border-color:#b45309}.pk-banner.lv-warn .fa{color:#f59e0b}\n.pk-banner.lv-danger{background:rgba(239,68,68,.16);border-color:#b91c1c}.pk-banner.lv-danger .fa{color:#ef4444}\n.pk-banner.lv-info{background:rgba(56,189,248,.12);border-color:#0369a1}.pk-banner.lv-info .fa{color:#38bdf8}\n.pk-banner-title{font-weight:700;font-size:14px}\n.pk-banner-text{font-size:12px;color:#cbd5e1}\n.pk-gate{display:flex;align-items:center;gap:16px;margin-top:12px;padding:10px 14px;background:#0f172a;border:1px solid #1e293b;border-radius:10px}\n.pk-scene{position:relative;width:120px;height:70px;flex:none}\n.pk-post{position:absolute;left:8px;bottom:6px;width:14px;height:44px;background:#475569;border-radius:3px}\n.pk-arm{position:absolute;left:15px;bottom:42px;width:100px;height:8px;border-radius:4px;transform-origin:4px 50%;transition:transform .6s ease;background:repeating-linear-gradient(90deg,#ef4444 0 14px,#f8fafc 14px 28px)}\n.pk-arm.open{transform:rotate(-80deg)}\n.pk-road{position:absolute;left:0;right:0;bottom:0;height:6px;background:#334155;border-radius:3px}\n.pk-lights{display:flex;flex-direction:column;gap:6px}\n.pk-light{width:14px;height:14px;border-radius:50%;background:#1e293b;border:1px solid #334155}\n.pk-light.red.on{background:#ef4444;box-shadow:0 0 10px #ef4444}\n.pk-light.green.on{background:#22c55e;box-shadow:0 0 10px #22c55e}\n.pk-gate-state{font-size:18px;font-weight:700}\n.pk-gate-sub{font-size:12px;color:#cbd5e1;line-height:1.6}\n.pk-table{width:100%;border-collapse:collapse;font-size:13px}\n.pk-table th{text-align:left;color:#94a3b8;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:6px 8px;border-bottom:1px solid #1e293b}\n.pk-table td{padding:6px 8px;border-bottom:1px solid #162033;white-space:nowrap}\n.pk-table td:last-child{white-space:normal;color:#cbd5e1}\n.pk-table tr:first-child td{animation:pkflash 1.2s ease}\n@keyframes pkflash{from{background:rgba(56,189,248,.18)}to{background:transparent}}\n.pk-mono{font-family:Consolas,monospace;font-weight:600}\n.pk-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid}\n.pk-badge.ok{color:#4ade80;border-color:#166534;background:rgba(34,197,94,.1)}\n.pk-badge.info{color:#7dd3fc;border-color:#0369a1;background:rgba(56,189,248,.1)}\n.pk-badge.warn{color:#fbbf24;border-color:#b45309;background:rgba(245,158,11,.1)}\n.pk-badge.danger{color:#f87171;border-color:#b91c1c;background:rgba(239,68,68,.12)}\n.pk-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;height:100%}\n.pk-stat{background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:8px 12px}\n.pk-stat b{display:block;font-size:20px;margin-top:2px}\n.pk-stat span{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px}\n.pk-dbnote{display:flex;align-items:center;height:100%;font-size:12px;color:#94a3b8;padding:0 4px}\n.pk-dbnote .fa{margin-right:8px;color:#38bdf8;flex:none}\n.pk-dbnote code{background:#1e293b;color:#7dd3fc;padding:2px 6px;border-radius:4px;font-family:Consolas,monospace;font-size:11px;margin:0 2px}\n@media (max-width:760px){.pk-kpis,.pk-stats{grid-template-columns:repeat(2,1fr)}}\nmd-toast .md-toast-content{font-family:'Segoe UI',Roboto,Arial,sans-serif}\n</style>",
+    "format": "<style>\n.pk-wrap{font-family:'Segoe UI',Roboto,Arial,sans-serif;color:#e2e8f0;height:100%;box-sizing:border-box;overflow-y:auto}\n.pk-muted{color:#94a3b8}\n.pk-nav{display:inline-flex;gap:6px;margin-left:auto;align-items:center}\n.pk-nav-btn{color:#cbd5e1;background:rgba(30,41,59,.85);border:1px solid #334155;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .2s}\n.pk-nav-btn:hover{background:#1e293b;color:#fff;border-color:#38bdf8}\n.pk-nav-btn.active{background:#0284c7;color:#fff;border-color:#38bdf8;box-shadow:0 0 10px rgba(56,189,248,.25)}\n.pk-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;height:100%}\n.pk-kpi{background:#0f172a;border:1px solid #1e293b;border-left:4px solid #38bdf8;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;justify-content:space-between;min-width:0}\n.pk-kpi.ok{border-left-color:#22c55e}.pk-kpi.warn{border-left-color:#f59e0b}.pk-kpi.danger{border-left-color:#ef4444}\n.pk-kpi-head{font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:#94a3b8;font-weight:600}\n.pk-kpi-head .fa{margin-right:6px;color:#38bdf8}\n.pk-kpi-value{font-size:28px;font-weight:700;line-height:1.1;white-space:nowrap}\n.pk-kpi-value small{font-size:15px;color:#94a3b8;font-weight:600}\n.pk-kpi-value.txt{font-size:16px}\n.pk-kpi-sub{font-size:12px;color:#cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\n.pk-bar{height:6px;background:#1e293b;border-radius:3px;overflow:hidden}\n.pk-bar div{height:100%;background:#38bdf8;transition:width .4s}\n.pk-kpi.danger .pk-bar div{background:#ef4444}\n.pk-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;vertical-align:middle;background:#ef4444;box-shadow:0 0 8px #ef4444}\n.pk-dot.on{background:#22c55e;box-shadow:0 0 8px #22c55e}\n.pk-slots{display:grid;grid-template-columns:1fr 1fr;gap:10px;height:100%}\n.pk-slot{position:relative;border-radius:12px;padding:12px;text-align:center;border:2px dashed #22c55e;background:rgba(34,197,94,.06);display:flex;flex-direction:column;justify-content:center;transition:all .3s}\n.pk-slot.busy{border:2px solid #38bdf8;background:linear-gradient(160deg,#0c2a4a,#0f172a)}\n.pk-slot.late{border-color:#f59e0b;background:linear-gradient(160deg,#3a2606,#0f172a)}\n.pk-slot-id{position:absolute;top:8px;left:12px;font-size:12px;font-weight:700;color:#94a3b8;letter-spacing:.5px}\n.pk-slot-empty{color:#22c55e;font-weight:700;letter-spacing:1px}\n.pk-slot-empty .fa{font-size:34px;display:block;margin-bottom:6px}\n.pk-slot .fa-motorcycle{font-size:30px;color:#38bdf8;margin-bottom:4px}\n.pk-slot.late .fa-motorcycle{color:#f59e0b}\n.pk-plate{display:inline-block;font-family:Consolas,monospace;font-size:18px;font-weight:700;background:#f8fafc;color:#0f172a;border-radius:4px;padding:2px 10px;margin:4px auto 6px;border:2px solid #334155}\n.pk-line{font-size:12px;color:#cbd5e1;line-height:1.5}\n.pk-timer{margin-top:4px;font-size:13px;font-weight:700;color:#e2e8f0}\n.pk-tag{position:absolute;top:8px;right:10px;background:#f59e0b;color:#111827;font-size:10px;font-weight:800;padding:2px 6px;border-radius:4px}\n.pk-tag.mo{background:#0284c7;color:#fff;right:auto;left:42px}\n.pk-banner{display:flex;align-items:center;gap:12px;border-radius:10px;padding:10px 14px;background:rgba(34,197,94,.12);border:1px solid #166534;transition:all .3s}\n.pk-banner .fa{font-size:24px;color:#22c55e;width:26px;text-align:center}\n.pk-banner.lv-warn{background:rgba(245,158,11,.14);border-color:#b45309}.pk-banner.lv-warn .fa{color:#f59e0b}\n.pk-banner.lv-danger{background:rgba(239,68,68,.16);border-color:#b91c1c}.pk-banner.lv-danger .fa{color:#ef4444}\n.pk-banner.lv-info{background:rgba(56,189,248,.12);border-color:#0369a1}.pk-banner.lv-info .fa{color:#38bdf8}\n.pk-banner-title{font-weight:700;font-size:14px}\n.pk-banner-text{font-size:12px;color:#cbd5e1}\n.pk-gate{display:flex;align-items:center;gap:16px;margin-top:12px;padding:10px 14px;background:#0f172a;border:1px solid #1e293b;border-radius:10px}\n.pk-scene{position:relative;width:120px;height:70px;flex:none}\n.pk-post{position:absolute;left:8px;bottom:6px;width:14px;height:44px;background:#475569;border-radius:3px}\n.pk-arm{position:absolute;left:15px;bottom:42px;width:100px;height:8px;border-radius:4px;transform-origin:4px 50%;transition:transform .6s ease;background:repeating-linear-gradient(90deg,#ef4444 0 14px,#f8fafc 14px 28px)}\n.pk-arm.open{transform:rotate(-80deg)}\n.pk-road{position:absolute;left:0;right:0;bottom:0;height:6px;background:#334155;border-radius:3px}\n.pk-lights{display:flex;flex-direction:column;gap:6px}\n.pk-light{width:14px;height:14px;border-radius:50%;background:#1e293b;border:1px solid #334155}\n.pk-light.red.on{background:#ef4444;box-shadow:0 0 10px #ef4444}\n.pk-light.green.on{background:#22c55e;box-shadow:0 0 10px #22c55e}\n.pk-gate-state{font-size:18px;font-weight:700}\n.pk-gate-sub{font-size:12px;color:#cbd5e1;line-height:1.6}\n.pk-table{width:100%;border-collapse:collapse;font-size:13px}\n.pk-table th{text-align:left;color:#94a3b8;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:6px 8px;border-bottom:1px solid #1e293b}\n.pk-table td{padding:6px 8px;border-bottom:1px solid #162033;white-space:nowrap}\n.pk-table td.wrap{white-space:normal;color:#cbd5e1}\n.pk-table tr:first-child td{animation:pkflash 1.2s ease}\n@keyframes pkflash{from{background:rgba(56,189,248,.18)}to{background:transparent}}\n.pk-mono{font-family:Consolas,monospace;font-weight:600}\n.pk-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid}\n.pk-badge.ok{color:#4ade80;border-color:#166534;background:rgba(34,197,94,.1)}\n.pk-badge.info{color:#7dd3fc;border-color:#0369a1;background:rgba(56,189,248,.1)}\n.pk-badge.warn{color:#fbbf24;border-color:#b45309;background:rgba(245,158,11,.1)}\n.pk-badge.danger{color:#f87171;border-color:#b91c1c;background:rgba(239,68,68,.12)}\n.pk-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;height:100%}\n.pk-stat{background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:8px 12px}\n.pk-stat b{display:block;font-size:20px;margin-top:2px}\n.pk-stat span{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px}\n.pk-dbnote{display:flex;align-items:center;height:100%;font-size:12px;color:#94a3b8;padding:0 4px;line-height:1.7}\n.pk-dbnote .fa{margin-right:8px;color:#38bdf8;flex:none}\n.pk-dbnote code{background:#1e293b;color:#7dd3fc;padding:2px 6px;border-radius:4px;font-family:Consolas,monospace;font-size:11px;margin:0 2px}\n.pk-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px}\n.pk-field{display:flex;flex-direction:column;gap:4px}\n.pk-field.full{grid-column:1 / -1}\n.pk-field label{font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.4px}\n.pk-input{background:#0b1120;border:1px solid #334155;border-radius:6px;padding:7px 10px;color:#f8fafc;font-size:13px;outline:none;width:100%;box-sizing:border-box}\n.pk-input:focus{border-color:#38bdf8}\n.pk-input::placeholder{color:#475569}\n.pk-input[readonly]{background:#172033;color:#94a3b8}\n.pk-row-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}\n.pk-btn{border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:#fff;background:#0284c7;transition:opacity .15s}\n.pk-btn:hover{opacity:.9}\n.pk-btn.ok{background:#16a34a}.pk-btn.warn{background:#d97706}.pk-btn.danger{background:#dc2626}.pk-btn.ghost{background:#334155;color:#e2e8f0}\n.pk-btn.sm{padding:4px 8px;font-size:11px;border-radius:5px}\n.pk-btn:disabled{opacity:.4;cursor:not-allowed}\n.pk-hint{display:flex;align-items:center;justify-content:space-between;background:rgba(245,158,11,.14);border:1px solid #b45309;border-radius:7px;padding:7px 10px;margin-bottom:8px;font-size:12px;color:#fde68a}\n.pk-toolbar-bar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap}\n.pk-seg{display:inline-flex;background:#0b1120;border:1px solid #334155;border-radius:7px;overflow:hidden}\n.pk-seg button{border:none;background:transparent;color:#94a3b8;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer}\n.pk-seg button.active{background:#0284c7;color:#fff}\n@media (max-width:760px){.pk-kpis,.pk-stats,.pk-form{grid-template-columns:repeat(2,1fr)}.pk-nav{display:none}}\nmd-toast .md-toast-content{font-family:'Segoe UI',Roboto,Arial,sans-serif}\n</style>\n<script>\n(function(){\n  var TABS=[{n:'Giám sát bãi xe',i:'fa-dashboard'},{n:'Quản lý Thẻ & Bảng giá',i:'fa-id-card'},{n:'Lịch sử Giao dịch',i:'fa-history'}];\n  function syncNav(){\n    var row=document.querySelector('#nr-dashboard-toolbar');\n    if(!row) return;\n    var nav=row.querySelector('.pk-nav');\n    if(!nav){\n      nav=document.createElement('div');\n      nav.className='pk-nav';\n      TABS.forEach(function(t,idx){\n        var b=document.createElement('button');\n        b.type='button';\n        b.className='pk-nav-btn';\n        b.innerHTML='<i class=\"fa '+t.i+'\"></i>'+t.n;\n        b.onclick=function(){ location.hash='!/'+idx; setTimeout(syncNav,50); };\n        nav.appendChild(b);\n      });\n      row.appendChild(nav);\n    }\n    var h=location.hash||'#!/0';\n    nav.querySelectorAll('.pk-nav-btn').forEach(function(b,idx){\n      var act=(h.indexOf('!/'+idx)!==-1)||(idx===0&&(h===''||h==='#'||h==='#!'||h==='#!/'));\n      b.classList.toggle('active', act);\n    });\n  }\n  setInterval(syncNav, 350);\n})();\n</script>",
     "storeOutMessages": false,
     "fwdInMessages": false,
     "resendOnRefresh": false,
     "templateScope": "global",
     "className": "",
-    "x": 1420,
+    "x": 1450,
     "y": 40,
     "wires": [
       []
@@ -669,13 +764,13 @@
     "order": 1,
     "width": "12",
     "height": "3",
-    "format": "<div class=\"pk-wrap pk-kpis\">\n  <div class=\"pk-kpi\" ng-class=\"msg.payload.full ? 'danger' : ''\">\n    <div class=\"pk-kpi-head\"><i class=\"fa fa-motorcycle\"></i>Xe trong bãi</div>\n    <div class=\"pk-kpi-value\">{{msg.payload.occupied}}<small> / {{msg.payload.capacity}}</small></div>\n    <div class=\"pk-bar\"><div ng-style=\"{width: msg.payload.percent + '%'}\"></div></div>\n    <div class=\"pk-kpi-sub\">{{msg.payload.full ? 'Bãi đã đầy' : 'Còn ' + msg.payload.free + ' chỗ trống'}}</div>\n  </div>\n  <div class=\"pk-kpi\" ng-class=\"msg.payload.gate.blocked ? 'warn' : (msg.payload.gate.open ? 'ok' : '')\">\n    <div class=\"pk-kpi-head\"><i class=\"fa fa-road\"></i>Barie</div>\n    <div class=\"pk-kpi-value txt\">{{msg.payload.gate.open ? 'ĐANG MỞ' : 'ĐÃ ĐÓNG'}}</div>\n    <div class=\"pk-kpi-sub\">{{msg.payload.gate.detail}}</div>\n  </div>\n  <div class=\"pk-kpi\" ng-class=\"msg.payload.online ? 'ok' : 'danger'\">\n    <div class=\"pk-kpi-head\"><i class=\"fa fa-microchip\"></i>Thiết bị ESP32</div>\n    <div class=\"pk-kpi-value txt\"><span class=\"pk-dot\" ng-class=\"{on: msg.payload.online}\"></span>{{msg.payload.online ? 'TRỰC TUYẾN' : 'NGOẠI TUYẾN'}}</div>\n    <div class=\"pk-kpi-sub\">Broker: {{msg.payload.broker ? 'đã kết nối' : 'mất kết nối'}}</div>\n  </div>\n  <div class=\"pk-kpi\">\n    <div class=\"pk-kpi-head\"><i class=\"fa fa-money\"></i>Doanh thu</div>\n    <div class=\"pk-kpi-value\">{{msg.payload.revenue}}<small>đ</small></div>\n    <div class=\"pk-kpi-sub\">{{msg.payload.checkins}} lượt vào · {{msg.payload.checkouts}} lượt ra</div>\n  </div>\n</div>",
+    "format": "<div class=\"pk-wrap pk-kpis\">\n  <div class=\"pk-kpi\" ng-class=\"msg.payload.full ? 'danger' : ''\">\n    <div class=\"pk-kpi-head\"><i class=\"fa fa-motorcycle\"></i>Xe trong bãi</div>\n    <div class=\"pk-kpi-value\">{{msg.payload.occupied}}<small> / {{msg.payload.capacity}}</small></div>\n    <div class=\"pk-bar\"><div ng-style=\"{width: msg.payload.percent + '%'}\"></div></div>\n    <div class=\"pk-kpi-sub\">{{msg.payload.full ? 'Bãi đã đầy' : 'Còn ' + msg.payload.free + ' chỗ trống'}}</div>\n  </div>\n  <div class=\"pk-kpi\" ng-class=\"msg.payload.gate.blocked ? 'warn' : (msg.payload.gate.open ? 'ok' : '')\">\n    <div class=\"pk-kpi-head\"><i class=\"fa fa-road\"></i>Barie</div>\n    <div class=\"pk-kpi-value txt\">{{msg.payload.gate.open ? 'ĐANG MỞ' : 'ĐÃ ĐÓNG'}}</div>\n    <div class=\"pk-kpi-sub\">{{msg.payload.gate.detail}}</div>\n  </div>\n  <div class=\"pk-kpi\" ng-class=\"msg.payload.online ? 'ok' : 'danger'\">\n    <div class=\"pk-kpi-head\"><i class=\"fa fa-microchip\"></i>Thiết bị ESP32</div>\n    <div class=\"pk-kpi-value txt\"><span class=\"pk-dot\" ng-class=\"{on: msg.payload.online}\"></span>{{msg.payload.online ? 'TRỰC TUYẾN' : 'NGOẠI TUYẾN'}}</div>\n    <div class=\"pk-kpi-sub\">Broker: {{msg.payload.broker ? 'đã kết nối' : 'mất kết nối'}}</div>\n  </div>\n  <div class=\"pk-kpi\">\n    <div class=\"pk-kpi-head\"><i class=\"fa fa-money\"></i>Doanh thu</div>\n    <div class=\"pk-kpi-value\">{{msg.payload.revenue}}<small>đ</small></div>\n    <div class=\"pk-kpi-sub\">{{msg.payload.revenueSub}}</div>\n  </div>\n</div>",
     "storeOutMessages": true,
     "fwdInMessages": false,
     "resendOnRefresh": true,
     "templateScope": "local",
     "className": "",
-    "x": 1420,
+    "x": 1450,
     "y": 80,
     "wires": [
       []
@@ -691,14 +786,14 @@
     "order": 1,
     "width": "6",
     "height": "5",
-    "format": "<div class=\"pk-wrap pk-slots\">\n  <div class=\"pk-slot\" ng-repeat=\"s in msg.payload.slots track by s.slot\" ng-class=\"{busy: s.occupied, late: s.overstay}\">\n    <div class=\"pk-slot-id\">Ô {{s.slot}}</div>\n    <div class=\"pk-tag\" ng-if=\"s.overstay\">QUÁ GIỜ</div>\n    <div ng-if=\"s.occupied\">\n      <i class=\"fa fa-motorcycle\"></i>\n      <div><span class=\"pk-plate\">{{s.plate}}</span></div>\n      <div class=\"pk-line\">{{s.owner}}</div>\n      <div class=\"pk-line\">Vào lúc {{s.timeIn}}</div>\n      <div class=\"pk-timer\"><i class=\"fa fa-clock-o\"></i> {{s.duration}}</div>\n    </div>\n    <div ng-if=\"!s.occupied\" class=\"pk-slot-empty\"><i class=\"fa fa-check-circle-o\"></i>TRỐNG</div>\n  </div>\n</div>",
+    "format": "<div class=\"pk-wrap pk-slots\">\n  <div class=\"pk-slot\" ng-repeat=\"s in msg.payload.slots track by s.slot\" ng-class=\"{busy: s.occupied, late: s.overstay}\">\n    <div class=\"pk-slot-id\">Ô {{s.slot}}</div>\n    <div class=\"pk-tag mo\" ng-if=\"s.occupied && s.monthly\">VÉ THÁNG</div>\n    <div class=\"pk-tag\" ng-if=\"s.overstay\">QUÁ GIỜ</div>\n    <div ng-if=\"s.occupied\">\n      <i class=\"fa fa-motorcycle\"></i>\n      <div><span class=\"pk-plate\">{{s.plate}}</span></div>\n      <div class=\"pk-line\">{{s.owner}}</div>\n      <div class=\"pk-line\">Vào lúc {{s.timeIn}}</div>\n      <div class=\"pk-timer\"><i class=\"fa fa-clock-o\"></i> {{s.duration}}</div>\n    </div>\n    <div ng-if=\"!s.occupied\" class=\"pk-slot-empty\"><i class=\"fa fa-check-circle-o\"></i>TRỐNG</div>\n  </div>\n</div>",
     "storeOutMessages": true,
     "fwdInMessages": false,
     "resendOnRefresh": true,
     "templateScope": "local",
     "className": "",
-    "x": 1420,
-    "y": 120,
+    "x": 1450,
+    "y": 118,
     "wires": [
       []
     ]
@@ -719,8 +814,8 @@
     "resendOnRefresh": true,
     "templateScope": "local",
     "className": "",
-    "x": 1420,
-    "y": 160,
+    "x": 1450,
+    "y": 156,
     "wires": [
       []
     ]
@@ -735,14 +830,14 @@
     "order": 1,
     "width": "12",
     "height": "10",
-    "format": "<div class=\"pk-wrap\">\n  <table class=\"pk-table\">\n    <thead><tr><th style=\"width:90px\">Thời gian</th><th style=\"width:220px\">Sự kiện</th><th style=\"width:140px\">Biển số / Mã thẻ</th><th>Chi tiết</th></tr></thead>\n    <tbody>\n      <tr ng-repeat=\"e in msg.payload track by e.id\">\n        <td class=\"pk-mono pk-muted\">{{e.time}}</td>\n        <td><span class=\"pk-badge\" ng-class=\"e.level\">{{e.title}}</span></td>\n        <td class=\"pk-mono\">{{e.plate || '—'}}</td>\n        <td>{{e.text}}</td>\n      </tr>\n      <tr ng-if=\"!msg.payload.length\"><td colspan=\"4\" class=\"pk-muted\">Chưa có sự kiện. Quẹt thẻ trên Wokwi để bắt đầu.</td></tr>\n    </tbody>\n  </table>\n</div>",
+    "format": "<div class=\"pk-wrap\">\n  <table class=\"pk-table\">\n    <thead><tr><th style=\"width:90px\">Thời gian</th><th style=\"width:220px\">Sự kiện</th><th style=\"width:140px\">Biển số / Mã thẻ</th><th>Chi tiết</th></tr></thead>\n    <tbody>\n      <tr ng-repeat=\"e in msg.payload track by e.id\">\n        <td class=\"pk-mono pk-muted\">{{e.time}}</td>\n        <td><span class=\"pk-badge\" ng-class=\"e.level\">{{e.title}}</span></td>\n        <td class=\"pk-mono\">{{e.plate || '—'}}</td>\n        <td class=\"wrap\">{{e.text}}</td>\n      </tr>\n      <tr ng-if=\"!msg.payload.length\"><td colspan=\"4\" class=\"pk-muted\">Chưa có sự kiện. Quẹt thẻ trên Wokwi để bắt đầu.</td></tr>\n    </tbody>\n  </table>\n</div>",
     "storeOutMessages": true,
     "fwdInMessages": false,
     "resendOnRefresh": true,
     "templateScope": "local",
     "className": "",
-    "x": 1420,
-    "y": 200,
+    "x": 1450,
+    "y": 194,
     "wires": [
       []
     ]
@@ -763,8 +858,8 @@
     "resendOnRefresh": true,
     "templateScope": "local",
     "className": "",
-    "x": 1420,
-    "y": 240,
+    "x": 1450,
+    "y": 232,
     "wires": [
       []
     ]
@@ -808,8 +903,8 @@
     "outputs": 1,
     "useDifferentColor": false,
     "className": "",
-    "x": 1415,
-    "y": 280,
+    "x": 1445,
+    "y": 270,
     "wires": [
       []
     ]
@@ -853,8 +948,8 @@
     "outputs": 1,
     "useDifferentColor": false,
     "className": "",
-    "x": 1415,
-    "y": 320,
+    "x": 1445,
+    "y": 308,
     "wires": [
       []
     ]
@@ -869,14 +964,108 @@
     "order": 4,
     "width": "9",
     "height": "1",
-    "format": "<div class=\"pk-dbnote\"><i class=\"fa fa-database\"></i><span>Tự động lưu nhật ký ra <code>parking_log.txt</code> và trạng thái ra <code>parking_database.json</code></span></div>",
+    "format": "<div class=\"pk-dbnote\"><i class=\"fa fa-database\"></i><span>Tự động lưu nhật ký ra <code>data/parking_log.txt</code> và cấu hình/giao dịch ra <code>data/parking_database.json</code></span></div>",
     "storeOutMessages": false,
     "fwdInMessages": false,
     "resendOnRefresh": false,
     "templateScope": "local",
     "className": "",
-    "x": 1420,
-    "y": 360,
+    "x": 1450,
+    "y": 346,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "ui_pricing",
+    "g": "g_ui",
+    "type": "ui_template",
+    "group": "uig_cfg_left",
+    "name": "Cấu hình bảng giá",
+    "order": 1,
+    "width": "12",
+    "height": "6",
+    "format": "<div class=\"pk-wrap\">\n  <div class=\"pk-toolbar-bar\">\n    <span class=\"pk-muted\" style=\"font-size:12px\">Chế độ tính phí (mô phỏng theo giây, đồng bộ ngay xuống ESP32):</span>\n    <div class=\"pk-seg\">\n      <button type=\"button\" ng-class=\"{active: p.enabled}\" ng-click=\"p.enabled = true\">Thu phí tự động</button>\n      <button type=\"button\" ng-class=\"{active: !p.enabled}\" ng-click=\"p.enabled = false\">Miễn phí (0 đ)</button>\n    </div>\n  </div>\n  <div class=\"pk-form\">\n    <div class=\"pk-field\"><label>Ngưỡng mức 1 (giây)</label><input class=\"pk-input\" type=\"number\" min=\"1\" ng-model=\"p.t1Sec\" ng-disabled=\"!p.enabled\"></div>\n    <div class=\"pk-field\"><label>Phí mức 1 (&lt; {{p.t1Sec}}s) [VNĐ]</label><input class=\"pk-input\" type=\"number\" min=\"0\" step=\"1000\" ng-model=\"p.t1Fee\" ng-disabled=\"!p.enabled\"></div>\n    <div class=\"pk-field\"><label>Ngưỡng mức 2 (giây)</label><input class=\"pk-input\" type=\"number\" min=\"2\" ng-model=\"p.t2Sec\" ng-disabled=\"!p.enabled\"></div>\n    <div class=\"pk-field\"><label>Phí mức 2 ({{p.t1Sec}}-{{p.t2Sec}}s) [VNĐ]</label><input class=\"pk-input\" type=\"number\" min=\"0\" step=\"1000\" ng-model=\"p.t2Fee\" ng-disabled=\"!p.enabled\"></div>\n    <div class=\"pk-field\"><label>Phí mức 3 (&gt; {{p.t2Sec}}s) [VNĐ]</label><input class=\"pk-input\" type=\"number\" min=\"0\" step=\"1000\" ng-model=\"p.t3Fee\" ng-disabled=\"!p.enabled\"></div>\n    <div class=\"pk-field\"><label>Ngưỡng quá giờ Rule 1 (giây)</label><input class=\"pk-input\" type=\"number\" min=\"5\" ng-model=\"p.overstaySec\"></div>\n  </div>\n  <div class=\"pk-row-actions\">\n    <button type=\"button\" class=\"pk-btn ok\" ng-click=\"savePricing()\"><i class=\"fa fa-check\"></i>Áp dụng & Đồng bộ ESP32</button>\n    <button type=\"button\" class=\"pk-btn ghost\" ng-click=\"resetPricing()\"><i class=\"fa fa-undo\"></i>Mặc định (3k/5k/9k)</button>\n  </div>\n</div>\n<script>\n(function(scope){\n  scope.p = {enabled:true,t1Sec:10,t1Fee:3000,t2Sec:30,t2Fee:5000,t3Fee:9000,overstaySec:30};\n  scope.$watch('msg.payload', function(v){ if(v) scope.p = angular.copy(v); });\n  scope.savePricing = function(){ scope.send({payload:{action:'save_pricing', pricing: scope.p}}); };\n  scope.resetPricing = function(){ scope.send({payload:{action:'preset_default_pricing'}}); };\n})(scope);\n</script>",
+    "storeOutMessages": true,
+    "fwdInMessages": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1450,
+    "y": 384,
+    "wires": [
+      [
+        "fn_config"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "ui_card_form",
+    "g": "g_ui",
+    "type": "ui_template",
+    "group": "uig_cfg_left",
+    "name": "Form thêm / sửa thẻ",
+    "order": 2,
+    "width": "12",
+    "height": "5",
+    "format": "<div class=\"pk-wrap\">\n  <div class=\"pk-hint\" ng-if=\"unknownUid\">\n    <span><i class=\"fa fa-exclamation-triangle\"></i> Thẻ chưa đăng ký vừa quẹt: <b class=\"pk-mono\">{{unknownUid}}</b></span>\n    <button type=\"button\" class=\"pk-btn warn sm\" ng-click=\"pickUnknown()\">Lấy UID này</button>\n  </div>\n  <div class=\"pk-form\">\n    <div class=\"pk-field\"><label>Mã UID RFID</label><input class=\"pk-input pk-mono\" type=\"text\" placeholder=\"VD: AA BB CC DD\" ng-model=\"f.uid\" ng-readonly=\"editing\"></div>\n    <div class=\"pk-field\"><label>Biển số xe</label><input class=\"pk-input pk-mono\" type=\"text\" placeholder=\"VD: 30H-456.78\" ng-model=\"f.plate\"></div>\n    <div class=\"pk-field\"><label>Chủ xe</label><input class=\"pk-input\" type=\"text\" placeholder=\"VD: Phạm Minh D\" ng-model=\"f.owner\"></div>\n    <div class=\"pk-field\"><label>Loại vé</label>\n      <div class=\"pk-seg\">\n        <button type=\"button\" ng-class=\"{active: !f.monthly}\" ng-click=\"f.monthly = false\">Vé lượt</button>\n        <button type=\"button\" ng-class=\"{active: f.monthly}\" ng-click=\"f.monthly = true\">Vé tháng (0đ)</button>\n      </div>\n    </div>\n  </div>\n  <div class=\"pk-row-actions\">\n    <button type=\"button\" class=\"pk-btn ok\" ng-click=\"saveCard()\"><i class=\"fa fa-save\"></i>{{editing ? 'Cập nhật thẻ' : 'Thêm thẻ & Đồng bộ ESP32'}}</button>\n    <button type=\"button\" class=\"pk-btn ghost\" ng-click=\"clearForm()\"><i class=\"fa fa-eraser\"></i>Làm mới</button>\n  </div>\n</div>\n<script>\n(function(scope){\n  scope.f = {uid:'',plate:'',owner:'',monthly:false,active:true};\n  scope.editing = false;\n  scope.unknownUid = null;\n  scope.$watch('msg.payload', function(v){\n    if(!v) return;\n    scope.unknownUid = v.lastUnknownUid || null;\n    if(v.editCard){\n      scope.f = angular.copy(v.editCard);\n      scope.editing = true;\n    }\n  });\n  scope.pickUnknown = function(){ scope.editing = false; scope.f.uid = scope.unknownUid; };\n  scope.clearForm = function(){ scope.editing = false; scope.f = {uid:'',plate:'',owner:'',monthly:false,active:true}; };\n  scope.saveCard = function(){\n    scope.send({payload:{action:'save_card', card: scope.f}});\n    scope.clearForm();\n  };\n})(scope);\n</script>",
+    "storeOutMessages": true,
+    "fwdInMessages": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1450,
+    "y": 422,
+    "wires": [
+      [
+        "fn_config"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "ui_card_list",
+    "g": "g_ui",
+    "type": "ui_template",
+    "group": "uig_card_list",
+    "name": "Danh sách thẻ RFID",
+    "order": 1,
+    "width": "12",
+    "height": "11",
+    "format": "<div class=\"pk-wrap\">\n  <div class=\"pk-toolbar-bar\">\n    <div>Tổng: <b>{{data.total}} / {{data.max}}</b> thẻ · Hoạt động: <b style=\"color:#4ade80\">{{data.activeCount}}</b> · Vé tháng: <b style=\"color:#38bdf8\">{{data.monthlyCount}}</b></div>\n  </div>\n  <table class=\"pk-table\">\n    <thead><tr><th>Mã UID</th><th>Biển số</th><th>Chủ xe</th><th>Loại vé</th><th>Trạng thái</th><th style=\"text-align:right\">Thao tác</th></tr></thead>\n    <tbody>\n      <tr ng-repeat=\"c in data.cards track by c.uid\">\n        <td class=\"pk-mono\">{{c.uid}}</td>\n        <td class=\"pk-mono\">{{c.plate}}</td>\n        <td>{{c.owner}}</td>\n        <td><span class=\"pk-badge\" ng-class=\"c.monthly ? 'info' : 'ok'\">{{c.monthly ? 'Vé tháng' : 'Vé lượt'}}</span></td>\n        <td>\n          <span class=\"pk-badge info\" ng-if=\"c.parkedSlot\">Đang gửi (Ô {{c.parkedSlot}})</span>\n          <span class=\"pk-badge ok\" ng-if=\"!c.parkedSlot && c.active\">Hoạt động</span>\n          <span class=\"pk-badge danger\" ng-if=\"!c.parkedSlot && !c.active\">Đã khóa</span>\n        </td>\n        <td style=\"text-align:right\">\n          <button type=\"button\" class=\"pk-btn sm\" ng-click=\"edit(c.uid)\" title=\"Sửa\"><i class=\"fa fa-pencil\"></i> Sửa</button>\n          <button type=\"button\" class=\"pk-btn sm warn\" ng-click=\"toggleLock(c.uid)\" title=\"Khóa/Mở\"><i class=\"fa\" ng-class=\"c.active ? 'fa-lock' : 'fa-unlock'\"></i> {{c.active ? 'Khóa' : 'Mở'}}</button>\n          <button type=\"button\" class=\"pk-btn sm danger\" ng-click=\"del(c.uid)\" ng-disabled=\"c.parkedSlot > 0\" title=\"Xóa\"><i class=\"fa fa-trash\"></i></button>\n        </td>\n      </tr>\n    </tbody>\n  </table>\n</div>\n<script>\n(function(scope){\n  scope.data = {total:0,max:16,activeCount:0,monthlyCount:0,cards:[]};\n  scope.$watch('msg.payload', function(v){ if(v) scope.data = v; });\n  scope.edit = function(uid){ scope.send({payload:{action:'edit_card', uid:uid}}); };\n  scope.toggleLock = function(uid){ scope.send({payload:{action:'toggle_lock', uid:uid}}); };\n  scope.del = function(uid){ scope.send({payload:{action:'delete_card', uid:uid}}); };\n})(scope);\n</script>",
+    "storeOutMessages": true,
+    "fwdInMessages": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1450,
+    "y": 460,
+    "wires": [
+      [
+        "fn_config"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "ui_history",
+    "g": "g_ui",
+    "type": "ui_template",
+    "group": "uig_history",
+    "name": "Bảng lịch sử giao dịch",
+    "order": 1,
+    "width": "24",
+    "height": "14",
+    "format": "<div class=\"pk-wrap\">\n  <div class=\"pk-toolbar-bar\">\n    <div style=\"display:flex;gap:8px;align-items:center;flex:1;min-width:260px\">\n      <input class=\"pk-input\" style=\"max-width:280px\" type=\"text\" placeholder=\"Tìm biển số, UID, chủ xe...\" ng-model=\"q\">\n      <div class=\"pk-seg\">\n        <button type=\"button\" ng-class=\"{active: st==='all'}\" ng-click=\"st='all'\">Tất cả ({{rows.length}})</button>\n        <button type=\"button\" ng-class=\"{active: st==='Đang gửi'}\" ng-click=\"st='Đang gửi'\">Đang gửi</button>\n        <button type=\"button\" ng-class=\"{active: st==='Hoàn tất'}\" ng-click=\"st='Hoàn tất'\">Hoàn tất</button>\n      </div>\n    </div>\n    <button type=\"button\" class=\"pk-btn ok\" ng-click=\"exportCsv()\"><i class=\"fa fa-download\"></i>Xuất CSV (Excel)</button>\n  </div>\n  <table class=\"pk-table\">\n    <thead><tr><th>Mã GD</th><th>Biển số</th><th>Chủ xe</th><th>UID</th><th>Loại vé</th><th>Ô</th><th>Giờ vào</th><th>Giờ ra</th><th>Thời lượng</th><th>Cước phí</th><th>Trạng thái</th></tr></thead>\n    <tbody>\n      <tr ng-repeat=\"r in filtered() track by r.id\">\n        <td class=\"pk-mono pk-muted\">{{r.id}}</td>\n        <td class=\"pk-mono\">{{r.plate}}</td>\n        <td>{{r.owner}}</td>\n        <td class=\"pk-mono pk-muted\">{{r.uid}}</td>\n        <td><span class=\"pk-badge\" ng-class=\"r.ticketType==='Vé tháng' ? 'info' : 'ok'\">{{r.ticketType}}</span></td>\n        <td>Ô {{r.slot}}</td>\n        <td class=\"pk-mono\">{{r.timeIn}}</td>\n        <td class=\"pk-mono\">{{r.timeOut}}</td>\n        <td>{{r.duration}}</td>\n        <td class=\"pk-mono\">{{r.fee}}</td>\n        <td><span class=\"pk-badge\" ng-class=\"r.status==='Hoàn tất' ? 'ok' : 'warn'\">{{r.status}}</span></td>\n      </tr>\n      <tr ng-if=\"!filtered().length\"><td colspan=\"11\" class=\"pk-muted\">Không có giao dịch phù hợp.</td></tr>\n    </tbody>\n  </table>\n</div>\n<script>\n(function(scope){\n  scope.rows = [];\n  scope.q = '';\n  scope.st = 'all';\n  scope.$watch('msg.payload', function(v){ if(Array.isArray(v)) scope.rows = v; });\n  scope.filtered = function(){\n    var q = (scope.q || '').trim().toLowerCase();\n    return scope.rows.filter(function(r){\n      if(scope.st !== 'all' && r.status !== scope.st) return false;\n      if(!q) return true;\n      return (r.plate+' '+r.uid+' '+r.owner+' '+r.id).toLowerCase().indexOf(q) !== -1;\n    });\n  };\n  scope.exportCsv = function(){\n    var head = ['Ma GD','Bien so','Chu xe','UID','Loai ve','O','Gio vao','Gio ra','Thoi luong','Cuoc phi','Trang thai'];\n    var lines = [head.join(',')];\n    scope.filtered().forEach(function(r){\n      var row = [r.id,r.plate,r.owner,r.uid,r.ticketType,'O '+r.slot,r.timeIn,r.timeOut,r.duration,r.feeRaw,r.status]\n        .map(function(x){ return '\"'+String(x||'').replace(/\"/g,'\"\"')+'\"'; });\n      lines.push(row.join(','));\n    });\n    var blob = new Blob([String.fromCharCode(0xFEFF)+lines.join('\\n')], {type:'text/csv;charset=utf-8;'});\n    var a = document.createElement('a');\n    a.href = URL.createObjectURL(blob);\n    a.download = 'lich_su_bai_xe.csv';\n    a.click();\n  };\n})(scope);\n</script>",
+    "storeOutMessages": true,
+    "fwdInMessages": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1450,
+    "y": 498,
     "wires": [
       []
     ]
@@ -887,7 +1076,7 @@
     "g": "g_ui",
     "type": "ui_toast",
     "name": "Thông báo cảnh báo",
-    "position": "top right",
+    "position": "bottom right",
     "displayTime": "5",
     "highlight": "",
     "sendall": true,
@@ -897,7 +1086,7 @@
     "raw": false,
     "className": "",
     "topic": "",
-    "x": 1185,
+    "x": 1205,
     "y": 400,
     "wires": []
   },
@@ -913,8 +1102,8 @@
     "createDir": true,
     "overwriteFile": "false",
     "encoding": "utf8",
-    "x": 1185,
-    "y": 450,
+    "x": 1205,
+    "y": 455,
     "wires": [
       []
     ]
@@ -931,8 +1120,8 @@
     "createDir": true,
     "overwriteFile": "true",
     "encoding": "utf8",
-    "x": 1195,
-    "y": 500,
+    "x": 1215,
+    "y": 510,
     "wires": [
       []
     ]
@@ -1001,7 +1190,7 @@
     "g": "g_down",
     "type": "function",
     "name": "Lệnh từ Dashboard",
-    "func": "// Lenh tu nut bam Dashboard -> downlink MQTT (chi ghi bang neu thiet bi offline, tranh trung dong xac nhan)\nconst park = flow.get('park');\nif (!park) return null;\nconst cmd = msg.payload && msg.payload.cmd;\nif (!cmd) return null;\nconst label = cmd === 'open' ? 'Lệnh mở barie' : 'Lệnh đóng barie';\nconst ev = park.online\n    ? { level: 'info', title: label, text: 'Gửi từ Dashboard qua MQTT', table: false }\n    : { level: 'warn', title: label, text: 'ESP32 đang ngoại tuyến, lệnh có thể không được thực hiện', toast: true };\nreturn [{ payload: { cmd: cmd, src: 'dashboard' } }, { events: [ev] }];",
+    "func": "const park = flow.get('park');\nif (!park) return null;\nconst cmd = msg.payload && msg.payload.cmd;\nif (!cmd) return null;\nconst label = cmd === 'open' ? 'Lệnh mở barie' : 'Lệnh đóng barie';\nconst ev = park.online\n    ? { level: 'info', title: label, text: 'Gửi từ Dashboard qua MQTT', table: false }\n    : { level: 'warn', title: label, text: 'ESP32 đang ngoại tuyến, lệnh có thể không được thực hiện', toast: true };\nreturn [{ payload: { cmd: cmd, src: 'dashboard' } }, { events: [ev] }];",
     "outputs": 2,
     "timeout": 0,
     "noerr": 0,
@@ -1086,7 +1275,7 @@
     "topic": "",
     "topicType": "str",
     "x": 145,
-    "y": 850,
+    "y": 855,
     "wires": [
       [
         "fn_reset"
@@ -1099,7 +1288,7 @@
     "g": "g_down",
     "type": "function",
     "name": "Đặt lại thống kê",
-    "func": "const park = flow.get('park');\nif (!park) return null;\npark.stats = { revenue: 0, checkins: 0, checkouts: 0, durationSec: 0 };\npark.transactions = [];\npark.events = [];\npark.alert = null;\nflow.set('park', park);\nreturn { events: [{ level: 'info', title: 'Đặt lại thống kê', text: 'Bắt đầu phiên thống kê mới' }], save: true, resetCharts: true, forceRender: true };",
+    "func": "const park = flow.get('park');\nif (!park) return null;\npark.stats = { revenue: 0, checkins: 0, checkouts: 0, durationSec: 0 };\npark.transactions = [];\npark.events = [];\npark.alert = null;\nflow.set('park', park);\nreturn { events: [{ level: 'info', title: 'Đặt lại thống kê', text: 'Bắt đầu phiên thống kê mới (giữ nguyên danh sách thẻ và bảng giá)' }], save: true, resetCharts: true, forceRender: true };",
     "outputs": 1,
     "timeout": 0,
     "noerr": 0,
@@ -1107,12 +1296,55 @@
     "finalize": "",
     "libs": [],
     "x": 385,
-    "y": 850,
+    "y": 855,
     "wires": [
       [
         "fn_dispatch"
       ]
     ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "fn_config",
+    "g": "g_down",
+    "type": "function",
+    "name": "Quản lý thẻ & bảng giá",
+    "func": "// Xu ly CRUD the RFID va chinh sua bang gia tu Tab 2, dong bo retained xuong ESP32\nconst park = flow.get('park');\nif (!park) return null;\nconst p = msg.payload || {};\nconst act = p.action;\nconst normUid = s => {\n    const clean = String(s || '').replace(/[^0-9A-Fa-f]/g, '').toUpperCase();\n    if (clean.length < 8 || clean.length % 2 !== 0) return '';\n    return clean.match(/.{2}/g).join(' ');\n};\nconst toast = (title, text, level) => ({ topic: title, payload: text, highlight: level === 'danger' ? '#ef4444' : level === 'warn' ? '#f59e0b' : '#22c55e' });\n\nif (act === 'edit_card') {\n    const c = park.cards.find(x => x.uid === p.uid);\n    if (!c) return null;\n    park.editCard = Object.assign({}, c);\n    flow.set('park', park);\n    return [{ events: [] }, null];\n}\n\nif (act === 'save_card') {\n    const c = p.card || {};\n    const uid = normUid(c.uid);\n    const plate = String(c.plate || '').trim().toUpperCase();\n    const owner = String(c.owner || '').trim() || 'Khách gửi xe';\n    if (!uid) return [null, toast('Mã UID không hợp lệ', 'Nhập đủ 8 ký tự hex (ví dụ AA BB CC DD)', 'warn')];\n    if (!plate) return [null, toast('Thiếu biển số xe', 'Vui lòng nhập biển số trước khi lưu', 'warn')];\n\n    const existing = park.cards.find(x => x.uid === uid);\n    let title;\n    if (existing) {\n        existing.plate = plate;\n        existing.owner = owner;\n        existing.monthly = !!c.monthly;\n        if (c.active !== undefined) existing.active = !!c.active;\n        title = 'Cập nhật thẻ';\n    } else {\n        if (park.cards.length >= 16) return [null, toast('Đạt giới hạn thẻ', 'Tối đa 16 thẻ tại cổng ESP32', 'warn')];\n        park.cards.push({ uid, plate, owner, active: c.active !== false, monthly: !!c.monthly });\n        title = 'Thêm thẻ mới';\n    }\n    if (park.lastUnknownUid === uid) park.lastUnknownUid = null;\n    flow.set('park', park);\n    return [{ events: [{ level: 'ok', title, plate, text: 'UID ' + uid + ' · ' + owner + (c.monthly ? ' (Vé tháng)' : ' (Vé lượt)'), toast: true }], save: true, pushConfig: true }, null];\n}\n\nif (act === 'toggle_lock') {\n    const c = park.cards.find(x => x.uid === p.uid);\n    if (!c) return null;\n    c.active = !c.active;\n    flow.set('park', park);\n    return [{ events: [{ level: c.active ? 'ok' : 'warn', title: c.active ? 'Mở khóa thẻ' : 'Khóa thẻ', plate: c.plate, text: 'UID ' + c.uid + ' · đồng bộ xuống cổng', toast: true }], save: true, pushConfig: true }, null];\n}\n\nif (act === 'delete_card') {\n    const parked = park.slots.find(s => s.uid === p.uid);\n    if (parked) {\n        return [null, toast('Không thể xóa thẻ', 'Xe ' + parked.plate + ' đang gửi ở Ô ' + parked.slot + '. Cho xe ra trước khi xóa!', 'warn')];\n    }\n    const c = park.cards.find(x => x.uid === p.uid);\n    if (!c) return null;\n    park.cards = park.cards.filter(x => x.uid !== p.uid);\n    flow.set('park', park);\n    return [{ events: [{ level: 'warn', title: 'Xóa thẻ', plate: c.plate, text: 'Đã xóa UID ' + c.uid + ' khỏi hệ thống', toast: true }], save: true, pushConfig: true }, null];\n}\n\nif (act === 'save_pricing' || act === 'preset_default_pricing') {\n    if (act === 'preset_default_pricing') {\n        park.pricing = { enabled: true, t1Sec: 10, t1Fee: 3000, t2Sec: 30, t2Fee: 5000, t3Fee: 9000, overstaySec: 30 };\n    } else {\n        const pr = p.pricing || {};\n        const t1Sec = Math.max(1, parseInt(pr.t1Sec, 10) || 10);\n        const t2Sec = Math.max(t1Sec + 1, parseInt(pr.t2Sec, 10) || 30);\n        park.pricing = {\n            enabled: !!pr.enabled,\n            t1Sec,\n            t1Fee: Math.max(0, parseInt(pr.t1Fee, 10) || 0),\n            t2Sec,\n            t2Fee: Math.max(0, parseInt(pr.t2Fee, 10) || 0),\n            t3Fee: Math.max(0, parseInt(pr.t3Fee, 10) || 0),\n            overstaySec: Math.max(5, parseInt(pr.overstaySec, 10) || 30)\n        };\n    }\n    flow.set('park', park);\n    const pr = park.pricing;\n    const summary = pr.enabled ? `${pr.t1Fee.toLocaleString('vi-VN')} / ${pr.t2Fee.toLocaleString('vi-VN')} / ${pr.t3Fee.toLocaleString('vi-VN')} đ` : 'Chế độ miễn phí (0 đ)';\n    return [{ events: [{ level: 'info', title: 'Cập nhật bảng giá', text: summary + ' · Quá giờ ' + pr.overstaySec + 's', toast: true }], save: true, pushConfig: true }, null];\n}\n\nreturn null;",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 650,
+    "y": 855,
+    "wires": [
+      [
+        "fn_dispatch"
+      ],
+      [
+        "ui_toast"
+      ]
+    ]
+  },
+  {
+    "z": "tab_parking",
+    "id": "out_config",
+    "g": "g_down",
+    "type": "mqtt out",
+    "name": "parking_n4/config (retained)",
+    "topic": "parking_n4/config",
+    "qos": "1",
+    "retain": "true",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "broker_hivemq",
+    "x": 960,
+    "y": 760,
+    "wires": []
   },
   {
     "z": "tab_parking",
@@ -1133,7 +1365,7 @@
     "payload": "",
     "payloadType": "date",
     "x": 130,
-    "y": 940,
+    "y": 955,
     "wires": [
       [
         "fn_dbpath"
@@ -1154,7 +1386,7 @@
     "finalize": "",
     "libs": [],
     "x": 315,
-    "y": 940,
+    "y": 955,
     "wires": [
       [
         "file_read"
@@ -1175,7 +1407,7 @@
     "encoding": "utf8",
     "allProps": false,
     "x": 540,
-    "y": 940,
+    "y": 955,
     "wires": [
       [
         "fn_restore"
@@ -1193,7 +1425,7 @@
     ],
     "uncaught": false,
     "x": 540,
-    "y": 995,
+    "y": 1010,
     "wires": [
       [
         "fn_restore"
@@ -1206,7 +1438,7 @@
     "g": "g_boot",
     "type": "function",
     "name": "Khôi phục dữ liệu",
-    "func": "// Khoi phuc thong ke + lich su tu parking_database.json sau khi Node-RED khoi dong lai\nconst park = flow.get('park');\nif (!park) return null;\nif (msg.error || typeof msg.payload !== 'string') {\n    node.status({ fill: 'grey', shape: 'ring', text: 'chưa có dữ liệu cũ' });\n    return { events: [], forceRender: true };\n}\ntry {\n    const db = JSON.parse(msg.payload);\n    if (db.stats) park.stats = Object.assign(park.stats, db.stats);\n    if (Array.isArray(db.transactions)) park.transactions = db.transactions.slice(0, 100);\n    if (Array.isArray(db.events)) {\n        park.events = db.events.slice(0, 12).map((e, i) => Object.assign({ id: ++park.seq || (i + 1) }, e));\n    }\n    flow.set('park', park);\n    node.status({ fill: 'green', shape: 'dot', text: 'đã khôi phục ' + park.transactions.length + ' giao dịch' });\n} catch (e) {\n    node.status({ fill: 'red', shape: 'ring', text: 'file hỏng, bỏ qua' });\n}\nreturn { events: [], charts: true, forceRender: true };",
+    "func": "const park = flow.get('park');\nif (!park) return null;\nif (msg.error || typeof msg.payload !== 'string') {\n    node.status({ fill: 'grey', shape: 'ring', text: 'dùng cấu hình mặc định' });\n    return { events: [], save: true, pushConfig: true, forceRender: true };\n}\ntry {\n    const db = JSON.parse(msg.payload);\n    if (Array.isArray(db.cards) && db.cards.length) park.cards = db.cards;\n    if (db.pricing) park.pricing = Object.assign(park.pricing, db.pricing);\n    if (db.stats) park.stats = Object.assign(park.stats, db.stats);\n    if (Array.isArray(db.transactions)) park.transactions = db.transactions.slice(0, 100);\n    if (Array.isArray(db.events)) {\n        park.events = db.events.slice(0, 12).map((e, i) => Object.assign({ id: ++park.seq || (i + 1) }, e));\n    }\n    flow.set('park', park);\n    node.status({ fill: 'green', shape: 'dot', text: park.cards.length + ' thẻ · ' + park.transactions.length + ' GD' });\n} catch (e) {\n    node.status({ fill: 'red', shape: 'ring', text: 'file hỏng, dùng mặc định' });\n}\nreturn { events: [], pushConfig: true, forceRender: true };",
     "outputs": 1,
     "timeout": 0,
     "noerr": 0,
@@ -1214,7 +1446,7 @@
     "finalize": "",
     "libs": [],
     "x": 770,
-    "y": 940,
+    "y": 955,
     "wires": [
       [
         "fn_dispatch"
@@ -1259,6 +1491,7 @@
       "fn_gate",
       "sw_alert",
       "fn_rule3",
+      "fn_locked",
       "fn_obstacle",
       "fn_rule1",
       "fn_rule4",
@@ -1273,8 +1506,8 @@
     },
     "x": 306,
     "y": 65,
-    "w": 523,
-    "h": 520
+    "w": 533,
+    "h": 530
   },
   {
     "id": "g_ui",
@@ -1293,6 +1526,10 @@
       "ui_chart_rev",
       "ui_chart_occ",
       "ui_dbnote",
+      "ui_pricing",
+      "ui_card_form",
+      "ui_card_list",
+      "ui_history",
       "ui_toast",
       "file_log",
       "file_db"
@@ -1304,16 +1541,16 @@
       "fill-opacity": "0.35",
       "color": "#059669"
     },
-    "x": 846,
+    "x": 861,
     "y": -15,
-    "w": 729,
-    "h": 550
+    "w": 744,
+    "h": 560
   },
   {
     "id": "g_down",
     "type": "group",
     "z": "tab_parking",
-    "name": "4. DOWNLINK · Điều khiển xuống ESP32",
+    "name": "4. DOWNLINK · Điều khiển & Cấu hình xuống ESP32",
     "nodes": [
       "btn_open",
       "btn_close",
@@ -1321,7 +1558,9 @@
       "out_cmd",
       "inj_sync",
       "btn_reset",
-      "fn_reset"
+      "fn_reset",
+      "fn_config",
+      "out_config"
     ],
     "style": {
       "label": true,
@@ -1332,8 +1571,8 @@
     },
     "x": 20,
     "y": 645,
-    "w": 750,
-    "h": 240
+    "w": 1095,
+    "h": 245
   },
   {
     "id": "g_boot",
@@ -1355,7 +1594,7 @@
       "color": "#64748b"
     },
     "x": 46,
-    "y": 885,
+    "y": 900,
     "w": 838,
     "h": 145
   }

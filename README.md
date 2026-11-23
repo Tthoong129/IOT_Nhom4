@@ -1,7 +1,7 @@
 # HỆ THỐNG BÃI GIỮ XE MÁY TỰ QUẢN SỬ DỤNG RFID
 
 Đồ án **Internet of Things (IoT)** — **Nhóm 4**.  
-Mô phỏng hệ thống bãi giữ xe máy tự quản theo kiến trúc IoT 4 tầng: đọc thẻ RFID và điều khiển barie tại cổng trên Wokwi (ESP32), truyền dữ liệu hai chiều qua MQTT, xử lý 4 rule tự động trên Node-RED và giám sát qua Web Dashboard.
+Mô phỏng hệ thống bãi giữ xe máy tự quản theo kiến trúc IoT 4 tầng: ESP32 xử lý quẹt thẻ và chống kẹp xe tại cổng trên Wokwi, truyền thông MQTT hai chiều qua HiveMQ public broker, Node-RED chạy 4 rule tự động và cung cấp Web Dashboard 3 tab (Giám sát thời gian thực, Quản lý Thẻ & Bảng giá động, Lịch sử Giao dịch & Xuất CSV).
 
 ---
 
@@ -9,13 +9,15 @@ Mô phỏng hệ thống bãi giữ xe máy tự quản theo kiến trúc IoT 4 
 
 ```mermaid
 flowchart TD
-    subgraph L4["TẦNG 4: APPLICATION"]
-        DASH["Node-RED Web Dashboard (/ui)<br/>Tổng quan 2 ô đỗ, nhật ký sự kiện, thống kê & nút Mở/Đóng barie"]
+    subgraph L4["TẦNG 4: APPLICATION (Node-RED Dashboard - 3 Tabs)"]
+        T1["Tab 1: Giám sát bãi xe (Tổng quan, 2 Ô đỗ, Điều khiển Barie, Nhật ký, Biểu đồ)"]
+        T2["Tab 2: Quản lý Thẻ RFID (Thêm/Sửa/Khóa/Xóa, Vé tháng) & Bảng giá động"]
+        T3["Tab 3: Lịch sử Giao dịch (Tìm kiếm, Lọc, Xuất CSV Excel)"]
     end
 
-    subgraph L3["TẦNG 3: MIDDLEWARE (Node-RED)"]
-        SYNC["Đồng bộ snapshot ESP32 & lưu data/parking_database.json, data/parking_log.txt"]
-        R1["Rule 1: Xe gửi quá giờ (>30 giây)"]
+    subgraph L3["TẦNG 3: MIDDLEWARE (Node-RED Engine)"]
+        SYNC["Đồng bộ snapshot ESP32, cấu hình retained & lưu data/parking_database.json"]
+        R1["Rule 1: Xe gửi quá giờ (ngưỡng cấu hình động, mặc định 30s)"]
         R2["Rule 2: Bãi đầy (2/2 xe)"]
         R3["Rule 3: Quẹt thẻ lạ >= 3 lần / 60 giây"]
         R4["Rule 4: Barie mở >10 giây -> tự gửi lệnh đóng"]
@@ -33,13 +35,11 @@ flowchart TD
     SENS --> ACT
     ACT -->|Uplink MQTT| WIFI
     WIFI --> SYNC & R1 & R2 & R3 & R4
-    SYNC & R1 & R2 & R3 & R4 --> DASH
-    DASH -->|Downlink: mở / đóng| WIFI
-    R4 -.->|Downlink: tự đóng| WIFI
-    WIFI -->|parking_n4/barie/cmd| ACT
+    SYNC & R1 & R2 & R3 & R4 --> T1 & T2 & T3
+    T1 & R4 -->|Downlink barie/cmd| WIFI
+    T2 -->|Downlink config retained| WIFI
+    WIFI -->|cmd + config| ACT
 ```
-
-**Nguyên tắc đồng bộ:** ESP32 là nguồn dữ liệu gốc (source of truth) quyết định vào/ra/từ chối ngay tại cổng kể cả khi mất mạng; Node-RED đồng bộ trạng thái qua MQTT (`retained` + Last Will), chạy 4 rule, hiển thị lên Dashboard và tự khôi phục thống kê khi khởi động lại.
 
 ---
 
@@ -50,10 +50,10 @@ flowchart TD
 | **RFID-RC522** | SDA / SCK / MOSI / MISO / RST | GPIO 5 / 18 / 23 / 19 / 4 | 3.3V | Đọc UID thẻ RFID 13.56 MHz (SPI) |
 | **HC-SR04** | TRIG / ECHO | GPIO 27 / GPIO 32 | 5.0V | Đo khoảng cách chống kẹp xe (< 15 cm hoãn đóng) |
 | **Servo SG90** | PWM | GPIO 13 | 5.0V | Nâng/hạ thanh chắn barie ($0^\circ - 90^\circ$) |
-| **LED Đỏ** | Anode (+) | GPIO 25 | 3.3V | Báo cổng đóng / bãi đầy / thẻ lạ |
+| **LED Đỏ** | Anode (+) | GPIO 25 | 3.3V | Báo cổng đóng / bãi đầy / thẻ lạ / thẻ khóa |
 | **LED Xanh** | Anode (+) | GPIO 26 | 3.3V | Báo cổng mở, mời xe qua |
-| **Active Buzzer** | Signal | GPIO 14 | 3.3V | Còi báo (kênh LEDC riêng, không chặn `loop()`) |
-| **LCD 1602 I2C** | SDA / SCL | GPIO 21 / GPIO 22 | 5.0V | Hiển thị chỗ trống, biển số, cước phí (`0x27`) |
+| **Active Buzzer** | Signal | GPIO 14 | 3.3V | Còi báo không chặn vòng lặp (kênh LEDC 15) |
+| **LCD 1602 I2C** | SDA / SCL | GPIO 21 / GPIO 22 | 5.0V | Hiển thị chỗ trống, biển số, UID lạ, vé tháng, cước phí |
 
 ---
 
@@ -63,66 +63,34 @@ flowchart TD
 
 | Topic | Chiều | Retained | Nội dung |
 | :--- | :---: | :---: | :--- |
-| `parking_n4/rfid/scan` | Uplink | Không | Sự kiện `check_in` / `check_out`, biển số, ô đỗ (`1..2`), thời gian gửi, cước phí |
+| `parking_n4/rfid/scan` | Uplink | Không | Lượt xe `check_in` / `check_out`, biển số, loại vé (`monthly`), ô đỗ (`1..2`), phí |
 | `parking_n4/barie/status` | Uplink | Có | Trạng thái barie (`open`/`closed`), góc servo, chế độ (`auto`/`hold`), nguồn |
-| `parking_n4/alert` | Uplink | Không | Cảnh báo `INVALID_CARD`, `LOT_FULL`, `ANTI_PINCH` (kèm khoảng cách `cm`) |
-| `parking_n4/status` | Uplink | Có + LWT | Snapshot toàn bộ bãi xe (online/offline, danh sách xe trong 2 ô) |
+| `parking_n4/alert` | Uplink | Không | Cảnh báo `INVALID_CARD`, `LOCKED_CARD`, `LOT_FULL`, `ANTI_PINCH` |
+| `parking_n4/status` | Uplink | Có + LWT | Snapshot toàn bộ bãi xe (online/offline, danh sách xe đang gửi trong 2 ô) |
 | `parking_n4/barie/cmd` | Downlink | Không | Lệnh điều khiển `open`, `close`, `sync` từ Dashboard hoặc Rule 4 |
+| `parking_n4/config` | Downlink | Có | Danh sách tối đa 16 thẻ RFID (loại vé, khóa/mở) & bảng giá động đồng bộ xuống ESP32 |
 
 ---
 
-## 4. Hướng dẫn chạy hệ thống
+## 4. Tính năng nổi bật
 
-### 4.1. Khởi chạy Node-RED & Dashboard (Docker)
+* **Quản lý Thẻ RFID động tại Web Dashboard (không cần nạp lại code):** Thêm thẻ mới (hỗ trợ nút **Lấy UID này** ngay sau khi quẹt thẻ lạ), sửa biển số/chủ xe, chuyển **Vé lượt / Vé tháng (0đ)**, **Khóa / Mở khóa** tức thì và **Xóa thẻ** (tự khóa xóa nếu xe đang nằm trong bãi).
+* **Bảng giá động & Chế độ miễn phí:** Tùy chỉnh ngưỡng giây, đơn giá 3 mức, ngưỡng Rule 1 quá giờ hoặc chuyển sang **Miễn phí (0 đ)**; mọi thay đổi lưu vào `data/parking_database.json` và đẩy `retained` xuống ESP32 qua `parking_n4/config`.
+* **Đối soát giao dịch & Xuất Excel CSV:** Ghép cặp giờ vào/giờ ra từng lượt gửi xe, tìm kiếm theo biển số/UID/chủ xe, lọc trạng thái và tải trực tiếp file `.csv`.
+
+---
+
+## 5. Hướng dẫn chạy hệ thống
+
+### 5.1. Khởi chạy Node-RED & Dashboard (Docker)
 ```bash
 docker compose up -d --build
-# Hoặc chạy script: start_docker.bat
+# Hoặc nhấp đúp: start_docker.bat
 ```
 * **Web Dashboard:** [http://localhost:1880/ui](http://localhost:1880/ui)
 * **Node-RED Flow Editor:** [http://localhost:1880](http://localhost:1880)
-* **Thư mục lưu dữ liệu:** `data/parking_log.txt` và `data/parking_database.json`
 
-### 4.2. Biên dịch firmware và chạy mô phỏng Wokwi
-1. Biên dịch firmware bằng PlatformIO (tạo `.pio/build/esp32dev/firmware.bin`):
-   ```bash
-   pio run
-   ```
-2. Mở dự án trong VS Code (extension **Wokwi Simulator**), mở [diagram.json](diagram.json) và bấm **Play**.
-3. Thao tác kiểm thử trên Wokwi (chạm thẻ mẫu trên MFRC522 hoặc nhập Serial Monitor):
-   * Phím `1` / thẻ **Blue** (`01 02 03 04`): Xe `29A-123.45` (Nguyễn Văn A) vào/ra.
-   * Phím `2` / thẻ **Green** (`11 22 33 44`): Xe `51F-999.88` (Trần Thị B) vào/ra.
-   * Phím `3` / thẻ **Yellow** (`55 66 77 88`): Xe `43C-678.90` (Lê Văn C) dùng thử khi bãi đầy.
-   * Phím `4` / thẻ **Red** (`AA BB CC DD`) hoặc `scan 99 99 99 99`: Thẻ chưa đăng ký (bị từ chối).
-   * `open`, `close`, `sonar`, `status`: Kiểm tra barie, khoảng cách siêu âm và trạng thái thiết bị.
-
----
-
-## 5. Cấu trúc thư mục
-
-```text
-├── data/
-│   ├── parking_database.json           # Lưu trữ trạng thái & thống kê bền vững (runtime)
-│   └── parking_log.txt                 # Nhật ký từng sự kiện theo thời gian (runtime)
-├── docker/
-│   ├── mosquitto/config/mosquitto.conf # Cấu hình Mosquitto MQTT Broker dự phòng
-│   └── nodered/
-│       ├── Dockerfile                  # Cài sẵn node-red-dashboard@^3.6.6
-│       └── flows.json                  # Flow Node-RED dùng trong container
-├── include/
-│   ├── Config.h                        # Chân GPIO, ngưỡng demo, cấu hình Wi-Fi & MQTT
-│   ├── GateController.h                # Điều khiển barie, đèn giao thông và chống kẹp HC-SR04
-│   ├── MqttService.h                   # Kết nối Wi-Fi/MQTT, LWT và tự kết nối lại mỗi 5 giây
-│   └── ParkingSystem.h                 # Danh sách thẻ, ô đỗ, tính phí, LCD và Buzzer
-├── src/
-│   ├── GateController.cpp
-│   ├── MqttService.cpp
-│   ├── ParkingSystem.cpp
-│   └── main.cpp                        # Vòng lặp điều phối chính (non-blocking)
-├── diagram.json                        # Sơ đồ mạch phần cứng Wokwi
-├── docker-compose.yml                  # Đóng gói dịch vụ Node-RED & Mosquitto
-├── nodered_flow.json                   # Bản đồng bộ flow Node-RED
-├── platformio.ini                      # Cấu hình biên dịch ESP32 DevKit V1
-├── start_docker.bat
-├── stop_docker.bat
-└── wokwi.toml                          # Liên kết firmware cho Wokwi
-```
+### 5.2. Biên dịch firmware và chạy mô phỏng Wokwi
+1. Biên dịch firmware bằng PlatformIO: `pio run` (tạo `.pio/build/esp32dev/firmware.bin`).
+2. Mở dự án bằng **Wokwi Simulator** trong VS Code, mở [diagram.json](diagram.json) và bấm **Play**.
+3. Lệnh Serial kiểm thử nhanh trên Wokwi: `1` (Blue), `2` (Green), `3` (Yellow), `4` (Red), `scan <uid>`, `open`, `close`, `sonar`, `cards`, `price`, `status`.

@@ -1,19 +1,32 @@
 #pragma once
 #include <Arduino.h>
 #include <LiquidCrystal_I2C.h>
+#include <ArduinoJson.h>
 #include "Config.h"
 
-// Quan ly the da dang ky, o do, tinh phi, man hinh LCD va coi buzzer (khong blocking).
+// Quan ly the da dang ky, o do, bieu phi dong, man hinh LCD va coi buzzer (khong blocking).
 struct VehicleCard {
-    const char* uid;
-    const char* licensePlate;
-    const char* ownerName;     // UTF-8, chi gui len MQTT (LCD chi hien bien so)
-    int  slot;                 // 0 = khong trong bai, 1..PARKING_CAPACITY = o dang do
+    String uid;
+    String licensePlate;
+    String ownerName;      // UTF-8, chi gui len MQTT (LCD chi hien bien so)
+    bool   active;         // false = the bi khoa tam thoi
+    bool   monthly;        // true = ve thang (mien phi 0d khi ra vao)
+    int    slot;           // 0 = khong trong bai, 1..PARKING_CAPACITY = o dang do
     unsigned long entryTime;
+};
+
+struct PricingConfig {
+    bool          enabled;   // false = mien phi gui xe (0d)
+    unsigned long tier1Sec;
+    uint32_t      tier1Fee;
+    unsigned long tier2Sec;
+    uint32_t      tier2Fee;
+    uint32_t      tier3Fee;
 };
 
 enum CardProcessResult {
     CARD_NOT_FOUND,
+    CARD_LOCKED,
     CARD_CHECK_IN,
     CARD_CHECK_OUT,
     CARD_PARKING_FULL
@@ -24,32 +37,36 @@ struct CardScanEvent {
     String uid;
     String licensePlate;
     String ownerName;
-    int slot;
+    bool   monthly;
+    int    slot;
     unsigned long durationSec;
     uint32_t fee;
 };
 
 class ParkingSystem {
 public:
-    static const int CARD_COUNT = 3;
-
     ParkingSystem(uint8_t lcdAddr, int buzzerPin);
 
     void begin();
-    void update();                                  // Goi trong loop(): buzzer + LCD tu ve man hinh chinh
+    void update();                                   // Goi trong loop(): buzzer + LCD tu ve man hinh chinh
     CardScanEvent processCard(const String& rawUid);
+    void applyConfig(const JsonDocument& doc);       // Cap nhat dong danh sach the + bang gia tu MQTT
 
     int  getOccupiedCount() const;
+    int  getCardCount() const { return _cardCount; }
     int  getCapacity() const { return PARKING_CAPACITY; }
     bool isFull() const { return getOccupiedCount() >= PARKING_CAPACITY; }
-    const VehicleCard* cardInSlot(int slot) const;  // slot 1..PARKING_CAPACITY
+    const VehicleCard* cardInSlot(int slot) const;
+    const VehicleCard& cardAt(int i) const { return _cards[i]; }
+    const PricingConfig& pricing() const { return _pricing; }
 
     // LCD
     void showHome();
-    void showCheckIn(const String& plate, int slot);
-    void showCheckOut(const String& plate, unsigned long durationSec, uint32_t fee);
+    void showCheckIn(const String& plate, int slot, bool monthly);
+    void showCheckOut(const String& plate, unsigned long durationSec, uint32_t fee, bool monthly);
     void showLotFull();
-    void showDenied();
+    void showDenied(const String& uid);
+    void showLocked(const String& plate);
     void showObstacle(float distCm);
     void showRemoteOpen();
     void showMessage(const char* line1, const char* line2, unsigned long autoHomeMs = 0);
@@ -59,8 +76,10 @@ public:
 
 private:
     LiquidCrystal_I2C _lcd;
-    int _buzzerPin;
-    VehicleCard _cards[CARD_COUNT];
+    int           _buzzerPin;
+    VehicleCard   _cards[MAX_CARDS];
+    int           _cardCount;
+    PricingConfig _pricing;
 
     unsigned long _homeAt;     // 0 = khong hen gio
     int  _beepLeft;
@@ -70,5 +89,5 @@ private:
 
     int  findCardIndex(const String& uid) const;
     int  findFreeSlot() const;
-    static uint32_t calcFee(unsigned long durationSec);
+    uint32_t calcFee(unsigned long durationSec, bool monthly) const;
 };

@@ -2,7 +2,7 @@
 #include <Arduino.h>
 
 // ============================================================================
-// 1. Pin mapping (ESP32 DevKit V1) - phai khop voi diagram.json
+// 1. Pin mapping (ESP32 DevKit V1) - khop voi diagram.json
 // ============================================================================
 #define PIN_SS          5    // RC522 SDA (SPI CS)
 #define PIN_RST         4    // RC522 RST
@@ -28,21 +28,22 @@ const int   BUZZER_LEDC_CH    = 15;     // Kenh LEDC rieng (timer 3), khong dung
 const int   BUZZER_FREQ_HZ    = 2000;
 
 // ============================================================================
-// 3. Business rules (gia tri demo, rut ngan de trinh bay nhanh)
+// 3. Business rule defaults (co the cap nhat dong tu Dashboard qua MQTT config)
 // ============================================================================
 const int           PARKING_CAPACITY   = 2;       // Suc chua bai (so o do)
+const int           MAX_CARDS          = 16;      // So the toi da luu tai cong
 const unsigned long GATE_HOLD_MS       = 3000;    // Barie tu dong dong sau 3 giay (khi quet the)
 const unsigned long ANTI_PINCH_RECHECK = 300;     // Chu ky do lai khi co vat can
 const float         ANTI_PINCH_DIST_CM = 15.0;    // Vat can < 15 cm -> hoan dong
 const unsigned long CARD_DEBOUNCE_MS   = 1500;    // Cung 1 the phai roi dau doc 1.5 s moi doc lai
 const unsigned long LCD_MESSAGE_MS     = 2000;    // Thoi gian hien thong bao tu choi tren LCD
 
-// Bieu phi demo (giay): < 10 s: 3.000d | 10-30 s: 5.000d | > 30 s: 9.000d
-const unsigned long FEE_TIER1_SEC = 10;
-const unsigned long FEE_TIER2_SEC = 30;
-const uint32_t      FEE_TIER1_VND = 3000;
-const uint32_t      FEE_TIER2_VND = 5000;
-const uint32_t      FEE_TIER3_VND = 9000;
+// Bieu phi mac dinh (giay): < 10 s: 3.000d | 10-30 s: 5.000d | > 30 s: 9.000d
+const unsigned long DEFAULT_TIER1_SEC  = 10;
+const unsigned long DEFAULT_TIER2_SEC  = 30;
+const uint32_t      DEFAULT_TIER1_FEE  = 3000;
+const uint32_t      DEFAULT_TIER2_FEE  = 5000;
+const uint32_t      DEFAULT_TIER3_FEE  = 9000;
 
 // ============================================================================
 // 4. Network parameters
@@ -54,8 +55,9 @@ const int         MQTT_PORT   = 1883;
 const unsigned long MQTT_RETRY_MS = 5000;         // Tu ket noi lai moi 5 giay
 
 #define MQTT_PREFIX           "parking_n4/"
-#define MQTT_TOPIC_SCAN       MQTT_PREFIX "rfid/scan"     // Uplink : luot xe vao/ra hop le
-#define MQTT_TOPIC_BARIE_STAT MQTT_PREFIX "barie/status"  // Uplink : trang thai barie (retained)
-#define MQTT_TOPIC_ALERT      MQTT_PREFIX "alert"         // Uplink : the la, bai day, vat can
-#define MQTT_TOPIC_STATUS     MQTT_PREFIX "status"        // Uplink : snapshot thiet bi (retained + LWT)
+#define MQTT_TOPIC_SCAN       MQTT_PREFIX "rfid/scan"     // Uplink  : luot xe vao/ra hop le
+#define MQTT_TOPIC_BARIE_STAT MQTT_PREFIX "barie/status"  // Uplink  : trang thai barie (retained)
+#define MQTT_TOPIC_ALERT      MQTT_PREFIX "alert"         // Uplink  : the la, the khoa, bai day, vat can
+#define MQTT_TOPIC_STATUS     MQTT_PREFIX "status"        // Uplink  : snapshot thiet bi (retained + LWT)
 #define MQTT_TOPIC_CMD        MQTT_PREFIX "barie/cmd"     // Downlink: open / close / sync
+#define MQTT_TOPIC_CONFIG     MQTT_PREFIX "config"        // Downlink: danh sach the & bang gia (retained)
