@@ -31,6 +31,7 @@ services:
       - PARKING_DATA_DIR=/data/storage
     volumes:
       - ./docker/nodered/flows.json:/data/flows.json
+      - ./docker/nodered/settings.js:/data/settings.js:ro
       - nodered_data:/data
       - ./data:/data/storage
     depends_on:

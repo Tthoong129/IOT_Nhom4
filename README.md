@@ -87,8 +87,9 @@ flowchart TD
 docker compose up -d --build
 # Hoặc nhấp đúp: start_docker.bat
 ```
-* **Web Dashboard:** [http://localhost:1880/ui](http://localhost:1880/ui)
-* **Node-RED Flow Editor:** [http://localhost:1880](http://localhost:1880)
+* **Web Dashboard (`/ui`):** [http://localhost:1880/ui](http://localhost:1880/ui) (bảo vệ bằng `httpNodeAuth` HTTP Basic Auth trong `docker/nodered/settings.js`).
+* **Node-RED Flow Editor (`/`):** [http://localhost:1880](http://localhost:1880) (bảo vệ bằng `adminAuth` tài khoản băm bcrypt).
+* Đổi mật khẩu bằng cách đặt biến môi trường `NODERED_UI_PASS_HASH` và `NODERED_ADMIN_PASS_HASH` (tạo bằng `bcryptjs` từ Node.js).
 
 ### 5.2. Biên dịch firmware và chạy mô phỏng Wokwi
 1. Biên dịch firmware bằng PlatformIO: `pio run` (tạo `.pio/build/esp32dev/firmware.bin`).
