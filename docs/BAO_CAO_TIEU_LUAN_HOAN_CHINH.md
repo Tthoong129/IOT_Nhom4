@@ -41,11 +41,11 @@
 
 ### DANH MỤC HÌNH
 
-* **Hình 3.1:** Sơ đồ Use Case tổng quát của hệ thống bãi giữ xe RFID (`fig_3_1_usecase.png`)
-* **Hình 3.2:** Sơ đồ kiến trúc 4 tầng IoT và luồng dữ liệu hai chiều (`fig_3_2_arch_4layer.png`)
-* **Hình 3.3:** Lưu đồ thuật toán xử lý quẹt thẻ RFID tại cổng ESP32 (`fig_3_3_flow_rfid.png`)
-* **Hình 3.4:** Lưu đồ chống kẹp xe (HC-SR04) và máy trạng thái Barie (`fig_3_4_flow_antipinch_fsm.png`)
-* **Hình 3.5:** Lưu đồ xử lý sự kiện, đồng bộ và 4 rule trên Node-RED (`fig_3_5_flow_checkcard_nodered.png`)
+* **Hình 3.1:** Sơ đồ Use Case tổng quát của hệ thống bãi giữ xe RFID *(Sơ đồ Mermaid)*
+* **Hình 3.2:** Sơ đồ kiến trúc 4 tầng IoT và luồng dữ liệu hai chiều *(Sơ đồ Mermaid)*
+* **Hình 3.3:** Lưu đồ thuật toán xử lý quẹt thẻ RFID tại cổng ESP32 *(Sơ đồ Mermaid)*
+* **Hình 3.4:** Lưu đồ chống kẹp xe (HC-SR04) và máy trạng thái Barie *(Sơ đồ Mermaid)*
+* **Hình 3.5:** Lưu đồ xử lý sự kiện, đồng bộ và 4 rule trên Node-RED *(Sơ đồ Mermaid)*
 * **Hình 4.1:** Mạch mô phỏng Wokwi khi xe ra tính phí và kích hoạt chống kẹp xe (`minh_chung_anti_pinch_wokwi.png`)
 * **Hình 4.2:** Giao diện luồng xử lý Node-RED thực tế chia theo 4 cụm và cụm khởi động (`nodered_flow.png`)
 * **Hình 4.3:** Giao diện Web Dashboard Tab 1 giám sát bãi xe và điều khiển barie (`dashboard_demo.png`)
@@ -250,7 +250,37 @@ Hệ thống gồm ba nhóm tác nhân tương tác chính:
 2. **Người quản lý:** Đăng nhập Dashboard giám sát số chỗ trống, trạng thái các ô đỗ, cảnh báo an ninh, điều khiển đóng/mở barie từ xa; sử dụng thêm các công cụ mở rộng như quản lý thẻ, chỉnh bảng giá và tra cứu giao dịch.
 3. **Tác nhân tự động (ESP32 Timer / Node-RED Timer):** Tự động kiểm tra cảm biến chống kẹp xe dưới barie mỗi 0,3 giây khi có yêu cầu đóng, tự động quét 4 rule trên Node-RED mỗi 1 giây và ghi nhận lịch sử ra tệp.
 
-![Hình 3.1: Sơ đồ Use Case tổng quát của hệ thống bãi giữ xe RFID](figures/fig_3_1_usecase.png)
+```mermaid
+flowchart LR
+    U1(["Người gửi xe"])
+    U2(["Người quản lý"])
+    U3(["Tác nhân tự động (ESP32 / Node-RED Timer)"])
+
+    subgraph SYS["HỆ THỐNG BÃI GIỮ XE MÁY TỰ QUẢN RFID"]
+        direction TB
+        UC1(["Quẹt thẻ RFID gửi / lấy xe"])
+        UC2(["Xem LCD & LED tại cổng"])
+        UC3(["Giám sát 2 ô đỗ & nhật ký"])
+        UC4(["Mở / Đóng barie từ xa"])
+        UC7(["Quản lý thẻ & Giá (Mở rộng)"])
+        UC8(["Giao dịch & Xuất CSV (Mở rộng)"])
+        UC5(["Chống kẹp xe khi đóng barie (< 15 cm)"])
+        UC6(["Chạy 4 rule cảnh báo & ghi log/JSON"])
+    end
+
+    U1 --- UC1
+    U1 --- UC2
+    UC3 --- U2
+    UC4 --- U2
+    UC7 --- U2
+    UC8 --- U2
+    UC5 --- U3
+    UC6 --- U3
+
+    classDef ext stroke-dasharray: 5 5
+    class UC7,UC8 ext
+```
+
 *Hình 3.1: Sơ đồ Use Case tổng quát của hệ thống bãi giữ xe RFID.*
 
 #### 3.1.2. Đặc tả yêu cầu chức năng và phi chức năng
@@ -272,7 +302,42 @@ Hệ thống gồm ba nhóm tác nhân tương tác chính:
 ### 3.2. Kiến trúc tổng thể
 Hệ thống liên kết chặt chẽ qua 4 tầng từ thiết bị phần cứng mô phỏng đến giao diện web như minh họa ở Hình 3.2. Trong thiết kế đồng bộ này, ESP32 đóng vai trò nguồn dữ liệu gốc (source of truth) về trạng thái hai ô đỗ và thanh chắn barie tại cổng; mỗi lần kết nối MQTT, thiết bị gửi bản tin snapshot `retained` để Node-RED cập nhật giao diện khớp nhất quán với hiện trạng tại cổng.
 
-![Hình 3.2: Sơ đồ kiến trúc 4 tầng IoT và luồng dữ liệu hai chiều](figures/fig_3_2_arch_4layer.png)
+```mermaid
+flowchart TD
+    subgraph L4["TẦNG 4: APPLICATION (Node-RED Dashboard · http://localhost:1880/ui)"]
+        T1["Tab 1: Giám sát bãi xe (KPI, Sơ đồ 2 ô, Điều khiển barie, Log)"]
+        T2["Tab 2: Thẻ & Bảng giá (Mở rộng: CRUD 16 thẻ, Vé tháng, Giá động)"]
+        T3["Tab 3: Giao dịch (Mở rộng: Tìm kiếm, Lọc, Xuất CSV Excel)"]
+    end
+
+    subgraph L3["TẦNG 3: MIDDLEWARE & AUTOMATION (Node-RED v5.0.10 trong Docker)"]
+        SYNC["Đồng bộ trạng thái flow.park (Khớp snapshot ESP32, Khôi phục sau restart)"]
+        RULES["4 Quy tắc tự động (R1 >30s · R2 2/2 · R3 >=3/60s · R4 >10s)"]
+        STORE["Lưu trữ data/ (parking_log.txt, parking_database.json)"]
+    end
+
+    subgraph L2["TẦNG 2: NETWORK & CONNECTIVITY (Wi-Fi Wokwi-GUEST + MQTT TCP/1883)"]
+        BROKER["HiveMQ Public Broker (broker.hivemq.com:1883 · parking_n4/ · Retained + LWT)"]
+        MQTT["PubSubClient trên ESP32 (Tự kết nối lại 5s · Uplink: scan, barie/status, alert, status · Downlink: cmd, config)"]
+    end
+
+    subgraph L1["TẦNG 1: SENSING & ACTUATION (ESP32 DevKit V1 trên Wokwi)"]
+        SENS["Khối Cảm biến (RFID-RC522 SPI đọc UID, HC-SR04 chống kẹp < 15 cm)"]
+        EDGE["Xử lý tại cổng Edge (Phân biệt vào/ra, 2 ô, tính phí, Độc lập khi mất mạng)"]
+        ACT["Khối Chấp hành (Servo SG90 0-90°, LED Đỏ/Xanh, LCD 1602 I2C, Buzzer LEDC)"]
+    end
+
+    SENS --> EDGE --> ACT
+    ACT -->|"Uplink: rfid/scan, barie/status, alert, status"| MQTT
+    MQTT -->|"MQTT Broker"| BROKER
+    BROKER -->|"Uplink Data"| SYNC & RULES
+    SYNC & RULES --> STORE
+    SYNC & RULES --> T1 & T2 & T3
+    T1 & RULES -->|"Downlink: barie/cmd"| BROKER
+    T2 -->|"Downlink: config retained"| BROKER
+    BROKER -->|"Lệnh & cấu hình"| MQTT
+```
+
 *Hình 3.2: Sơ đồ kiến trúc 4 tầng IoT và luồng dữ liệu hai chiều.*
 
 ### 3.3. Thiết kế Tầng 1
@@ -302,10 +367,51 @@ Mã nguồn firmware phân tách thành bốn mô-đun theo trách nhiệm trong
 #### 3.4.2. Lưu đồ quẹt thẻ và máy trạng thái chống kẹp xe
 Lưu đồ thuật toán quẹt thẻ RFID thể hiện tại Hình 3.3, còn cơ chế chống kẹp xe kết hợp máy trạng thái barie thể hiện tại Hình 3.4.
 
-![Hình 3.3: Lưu đồ thuật toán xử lý quẹt thẻ RFID tại cổng ESP32](figures/fig_3_3_flow_rfid.png)
+```mermaid
+flowchart TD
+    S0(["Đọc được UID từ RC522 / Serial"]) --> D1{"Barie đóng & hết debounce 1,5s?"}
+    D1 -->|"Không"| B1(["Bỏ qua lần quẹt"])
+    D1 -->|"Có"| D2{"UID có trong danh sách?"}
+    D2 -->|"Không"| B2["Từ chối, còi 3 tiếng, LCD hiện UID, gửi alert INVALID_CARD lên MQTT"]
+    D2 -->|"Có"| D3{"Xe đang gửi trong bãi?"}
+    D3 -->|"Có (Ra)"| A_OUT["Tính thời gian gửi & cước phí, trả ô, mở barie 90°, LCD hiện phí"]
+    D3 -->|"Chưa (Vào)"| D4{"Thẻ hoạt động & còn chỗ?"}
+    D4 -->|"Không"| B3["Cổng không mở, LCD báo & gửi LOT_FULL / LOCKED_CARD"]
+    D4 -->|"Có"| A_IN["Gán ô trống (1..2), lưu entryTime, mở barie 90°, đèn Xanh, còi 1 tiếng"]
+    A_OUT --> PUB["Gửi MQTT rfid/scan, barie/status, status; bắt đầu đếm giữ mở barie 3 giây"]
+    A_IN --> PUB
+    PUB --> W1(["Chờ vòng lặp kế tiếp"])
+```
+
 *Hình 3.3: Lưu đồ thuật toán xử lý quẹt thẻ RFID tại cổng ESP32.*
 
-![Hình 3.4: Lưu đồ chống kẹp xe (HC-SR04) và máy trạng thái Barie](figures/fig_3_4_flow_antipinch_fsm.png)
+**(a) Lưu đồ chống kẹp xe (`HC-SR04`):**
+
+```mermaid
+flowchart TD
+    P1["Yêu cầu đóng barie (_closePending = true)"] --> P2["Đo khoảng cách d (cm) từ HC-SR04"]
+    P2 --> P3{"d < 15 cm?"}
+    P3 -->|"Không"| P4["Hạ barie 0°, bật LED Đỏ, gửi trạng thái closed lên MQTT"]
+    P3 -->|"Có"| P5["Hoãn đóng, giữ servo 90°, gửi ANTI_PINCH, đợi 0,3s đo lại"]
+    P5 --> P2
+```
+
+**(b) Máy trạng thái Barie (`GateController`):**
+
+```mermaid
+stateDiagram-v2
+    GATE_CLOSED: GATE_CLOSED (Servo 0° · LED Đỏ)
+    GATE_OPEN_TIMED: GATE_OPEN_TIMED (Mở 90° · Đợi 3 giây)
+    GATE_OPEN_HOLD: GATE_OPEN_HOLD (Giữ mở · Chờ lệnh đóng)
+
+    [*] --> GATE_CLOSED
+    GATE_CLOSED --> GATE_OPEN_TIMED : Quẹt thẻ hợp lệ
+    GATE_OPEN_TIMED --> GATE_CLOSED : Hết 3s / close (d >= 15 cm)
+    GATE_CLOSED --> GATE_OPEN_HOLD : MQTT cmd=open
+    GATE_OPEN_TIMED --> GATE_OPEN_HOLD : MQTT cmd=open
+    GATE_OPEN_HOLD --> GATE_CLOSED : cmd=close / Rule 4 (d >= 15 cm)
+```
+
 *Hình 3.4: Lưu đồ chống kẹp xe (HC-SR04) và máy trạng thái Barie (`GateController`).*
 
 ### 3.5. Thiết kế Tầng 2
@@ -327,7 +433,30 @@ Hệ thống sử dụng **HiveMQ Public Broker** tại địa chỉ `broker.hiv
 #### 3.6.1. Cấu trúc đối tượng trạng thái tập trung trên Node-RED
 Toàn bộ trạng thái trên Node-RED được quản lý tập trung trong một đối tượng `flow.get('park')` nhằm tránh lệch số liệu giữa các widget (Hình 3.5). Luồng vào gồm 4 node `mqtt in`, node `inject` chu kỳ 1 giây kiểm tra thời gian lưu bãi và thời gian mở barie, node `status` giám sát kết nối broker. Các nhánh hội tụ về hàm `DISPATCH` để cập nhật tối đa 12 sự kiện gần nhất, phát thông báo popup (`ui_toast`), ghi tệp lưu trữ và chuyển qua hàm `RENDER` (chỉ phát bản tin cho từng widget nếu chuỗi JSON đầu ra thay đổi).
 
-![Hình 3.5: Lưu đồ xử lý sự kiện, đồng bộ và 4 rule trên Node-RED](figures/fig_3_5_flow_checkcard_nodered.png)
+```mermaid
+flowchart LR
+    I1["parking_n4/status (Snapshot & LWT)"] --> H1["SYNC: khớp ô đỗ & online"]
+    I2["parking_n4/rfid/scan (Sự kiện vào / ra)"] --> H2["SCAN + Rule 2 (Bãi đầy 2/2): Cập nhật ô, thống kê, giao dịch"]
+    I3["parking_n4/barie/status (Trạng thái barie)"] --> H3["GATE: cập nhật mốc mở barie"]
+    I4["parking_n4/alert (Thẻ lạ / Khóa / Đầy / Cản)"] --> H4["Switch theo alert.type: Rule 3 (>=3/60s) · Khóa · Kẹp"]
+    I5["Inject mỗi 1 giây (Kiểm tra Rule 1 & Rule 4)"] --> H5["Rule 1 (>30s) & Rule 4 (>10s): Rule 4 gửi MQTT barie/cmd=close"]
+    I6["Thao tác Dashboard (Nút Mở/Đóng, Thẻ, Giá)"] --> H6["CONFIG_ACTION / COMMAND: Xác thực & phát cmd / config"]
+
+    H1 --> D["DISPATCH: Gom sự kiện, nhật ký & trạng thái"]
+    H2 --> D
+    H3 --> D
+    H4 --> D
+    H5 --> D
+    H6 --> D
+
+    D --> O1["RENDER (3 Tabs UI): Chỉ gửi khối có đổi"]
+    D --> O2["Thông báo Popup (Toast)"]
+    D --> O3["Lưu tệp dữ liệu (parking_log.txt & .json)"]
+    D --> O4["Downlink MQTT Out (barie/cmd & config)"]
+    H5 --> O4
+    H6 --> O4
+```
+
 *Hình 3.5: Lưu đồ xử lý sự kiện, đồng bộ và 4 rule trên Node-RED.*
 
 #### 3.6.2. Bộ 4 quy tắc tự động hóa (ngưỡng demo và thực tế)
@@ -740,7 +869,7 @@ Nhóm 4 xin chân thành cảm ơn **Thầy Võ Hoàng Hải** đã tận tình 
   23/11/2026 18:12:17 | Rule 1 · Xe gửi quá giờ      | 51F-999.88   | Ô 2 đã gửi 31 giây (ngưỡng 30 giây)
   ```
 * **Phương pháp kiểm tra tự động luồng và giao diện (Chrome Headless CDP):** Kết nối trình duyệt tới `http://127.0.0.1:1880/` (đã bật `adminAuth`) kiểm tra `RED.nodes.eachNode(n => !n.valid)` ghi nhận mảng rỗng (`0` node lỗi trên 69 phần tử); truy cập 3 tab tại `http://127.0.0.1:1880/ui/` (qua `httpNodeAuth` Basic Auth, độ phân giải `1440x1080`) lắng nghe `Runtime.exceptionThrown` (`0` ngoại lệ JS) và kiểm tra `scrollWidth <= window.innerWidth` (`[false, false, false]`).
-* **Bộ ảnh minh chứng đi kèm (`docs/`):** `minh_chung_anti_pinch_wokwi.png`, `nodered_flow.png`, `dashboard_demo.png`, `nodered_admin_login.png`, `dashboard_cards_pricing.png`, `dashboard_history.png` và 5 sơ đồ thiết kế tại `docs/figures/`.
+* **Bộ ảnh minh chứng đi kèm (`docs/`):** `minh_chung_anti_pinch_wokwi.png`, `nodered_flow.png`, `dashboard_demo.png`, `nodered_admin_login.png`, `dashboard_cards_pricing.png`, `dashboard_history.png`; 5 sơ đồ thiết kế (`Hình 3.1`–`3.5`) hiển thị trực tiếp bằng Mermaid trong tệp Markdown (bản ảnh PNG xuất sẵn lưu cục bộ tại `docs/figures/`).
 
 ### Phụ lục E. Liên kết video demo
 * **Video demo chính thức (đủ 9 phân cảnh Wokwi thật + Dashboard):** `[Chưa quay — gắn link Google Drive / YouTube sau khi chạy quay 9 bước trực tiếp với Wokwi thật]`
