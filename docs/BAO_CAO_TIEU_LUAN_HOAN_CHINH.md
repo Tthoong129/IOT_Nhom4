@@ -35,7 +35,7 @@
 * Chương 5: Kiểm thử và đánh giá
 * Chương 6: Kết luận và hướng phát triển
 * Tài liệu tham khảo
-* Phụ lục A – G
+* Phụ lục A – F
 
 ---
 
@@ -73,8 +73,7 @@
 * **Bảng 5.5:** Kết quả kiểm thử đầu-cuối (End-to-End) theo 9 phân cảnh demo
 * **Bảng 5.6:** Bảng đối chiếu kết quả với các mốc yêu cầu học phần (M1–M4 và điều kiện Pass)
 * **Bảng 5.7:** Số liệu đo kiểm tài nguyên Firmware ESP32 và thời gian phản hồi quan sát
-* **Bảng A.1:** Bảng phân công nhiệm vụ các thành viên trong Nhóm 4
-* **Bảng D.1:** Danh sách thẻ RFID mẫu sử dụng trong mô phỏng Wokwi
+* **Bảng C.1:** Danh sách thẻ RFID mẫu sử dụng trong mô phỏng Wokwi
 
 ---
 
@@ -413,7 +412,7 @@ Luồng xử lý tại cổng trong `src/main.cpp` (`handleCardScan()`) và `src
    * **Xe ra (`CARD_CHECK_OUT`):** tính thời gian đỗ và cước phí (miễn phí `0đ` nếu là vé tháng), hiển thị lên LCD trong 2 giây rồi quay lại màn hình chờ, kêu còi 2 tiếng, mở barie 3 giây và cập nhật MQTT.
    * **Từ chối tại chỗ:** giữ thanh chắn ở `0°`, bật LED đỏ, phát còi 2–3 tiếng và gửi cảnh báo tương ứng (`LOT_FULL`, `LOCKED_CARD`, `INVALID_CARD`).
 
-Khi hết thời gian giữ mở `3 giây` (`GATE_HOLD_MS = 3000`) hoặc nhận lệnh đóng từ xa, hàm `GateController::update()` trong `src/GateController.cpp` đặt cờ `_closePending = true` và đo khoảng cách siêu âm mỗi `300 ms` theo đoạn xử lý trọng tâm sau (mã đầy đủ xem ở Phụ lục B):
+Khi hết thời gian giữ mở `3 giây` (`GATE_HOLD_MS = 3000`) hoặc nhận lệnh đóng từ xa, hàm `GateController::update()` trong `src/GateController.cpp` đặt cờ `_closePending = true` và đo khoảng cách siêu âm mỗi `300 ms` theo đoạn xử lý trọng tâm sau (mã đầy đủ xem ở Phụ lục A):
 
 ```cpp
 if (!_closePending) return EVT_NONE;
@@ -446,7 +445,7 @@ Thành phần cốt lõi của Tầng 3 là dịch vụ **Node-RED Middleware** 
 #### 4.4.2. Triển khai bộ điều phối trung tâm và 4 quy tắc tự động
 Thay vì để từng widget xử lý rời rạc, các node sự kiện MQTT đi qua nút chuẩn hóa rồi hội tụ về `DISPATCH` để cập nhật đối tượng trạng thái chung `flow.get('park')`, lưu tối đa 12 nhật ký, ghi đồng bộ ra tệp và chuyển sang `RENDER` (chỉ phát dữ liệu cập nhật cho những widget có thay đổi).
 
-Các quy tắc tự động hóa vận hành trên xung quét `1 giây`: `RULE1` kiểm tra thời gian lưu bãi của từng ô đỗ so với ngưỡng `overstaySec` động; `RULE2` theo dõi đủ `2/2` xe và cờ từ chối `LOT_FULL`; `RULE3` đếm số lần nhận `INVALID_CARD` trong cửa sổ 60 giây và nâng mức báo động từ lần thứ 3; `RULE4` kiểm tra barie giữ mở quá 10 giây theo đoạn điều kiện lõi dưới đây để phát lệnh đóng tự động (toàn bộ mã JavaScript của luồng đặt tại Phụ lục C):
+Các quy tắc tự động hóa vận hành trên xung quét `1 giây`: `RULE1` kiểm tra thời gian lưu bãi của từng ô đỗ so với ngưỡng `overstaySec` động; `RULE2` theo dõi đủ `2/2` xe và cờ từ chối `LOT_FULL`; `RULE3` đếm số lần nhận `INVALID_CARD` trong cửa sổ 60 giây và nâng mức báo động từ lần thứ 3; `RULE4` kiểm tra barie giữ mở quá 10 giây theo đoạn điều kiện lõi dưới đây để phát lệnh đóng tự động (toàn bộ mã JavaScript của luồng đặt tại Phụ lục B):
 
 ```javascript
 if (g.state === 'open' && now - g.since > 10000 && park.online) {
@@ -515,7 +514,7 @@ Hoạt động kiểm thử được thực hiện trên Windows, sử dụng Wo
 Để phân biệt rõ giữa phần chạy trực tiếp trên mạch mô phỏng và phần kiểm thử tự động giao tiếp mạng, nhóm áp dụng ba nhóm thao tác chính:
 1. **Kiểm thử trực tiếp firmware trên Wokwi:** Nạp firmware và thao tác quẹt thẻ mẫu, thay đổi khoảng cách trên thanh trượt siêu âm, đồng thời đối chiếu phản ứng của servo, đèn LED, còi, màn hình LCD và Serial Monitor.
 2. **Kiểm thử MQTT, HTTP Auth và giao diện Dashboard bằng script tự động:** Dùng kịch bản Node.js phát giả lập bản tin Uplink theo đúng cấu trúc của ESP32, theo dõi lệnh Downlink và kiểm tra truy cập `/ui/` với các trường hợp không xác thực, sai mật khẩu và đúng tài khoản.
-3. **Kiểm tra tính hợp lệ của luồng Node-RED, dữ liệu JSON và nhật ký:** Rà soát trạng thái cấu hình các node trong Node-RED Editor, kiểm tra hiển thị 3 tab trên trình duyệt tự động (chi tiết phương pháp kiểm tra giao diện ghi tại Phụ lục E) và đối chiếu tệp lưu trữ trong `data/`.
+3. **Kiểm tra tính hợp lệ của luồng Node-RED, dữ liệu JSON và nhật ký:** Rà soát trạng thái cấu hình các node trong Node-RED Editor, kiểm tra hiển thị 3 tab trên trình duyệt tự động (chi tiết phương pháp kiểm tra giao diện ghi tại Phụ lục D) và đối chiếu tệp lưu trữ trong `data/`.
 
 #### 5.1.3. Quy trình ghi nhận kết quả
 Mỗi ca chỉ đánh dấu `Đạt` khi phản hồi tại cổng hoặc giao diện khớp kỳ vọng kịch bản và dữ liệu tương ứng được cập nhật đúng vào tệp lưu trữ. Các ca dùng script Node.js giả lập tin nhắn ESP32 được ghi chú rõ `Đạt (script)` để tách biệt với phiên chạy trực tiếp trên Wokwi.
@@ -606,7 +605,7 @@ Chuỗi kiểm thử đầu-cuối gồm 9 bước đi qua đầy đủ cả 4 t
 | **Mốc M1: Device Prototype** | Firmware State Machine, chống đọc trùng 1,5s, phân biệt vào/ra, mở rộng chống kẹp `< 15 cm` | Mục 3.4, Bảng 5.2 |
 | **Mốc M2: Connected Device** | MQTT `publish`/`subscribe` qua `broker.hivemq.com`, tự kết nối lại 5s, bổ sung LWT & `retained` | Mục 4.3, Bảng 5.3 |
 | **Mốc M3: Full 4-Layer IoT** | Web Dashboard điều khiển từ xa, biểu đồ thời gian thực và bật đăng nhập `httpNodeAuth` (`401`/`200`) | Mục 4.5, Hình 4.3, 4.4, `T2-05` |
-| **Mốc M4: End-to-End** | Đã kiểm chứng toàn bộ luồng logic 9 bước qua script MQTT + Node-RED thật; **đang hoàn tất quay video 9 bước trực tiếp trên Wokwi thật** | Mục 5.5, Bảng 5.5, Phụ lục F |
+| **Mốc M4: End-to-End** | Đã kiểm chứng toàn bộ luồng logic 9 bước qua script MQTT + Node-RED thật; **đang hoàn tất quay video 9 bước trực tiếp trên Wokwi thật** | Mục 5.5, Bảng 5.5, Phụ lục E |
 | **Automation ($\ge 2$ rule, $\ge 1$ bất thường)** | Đủ 4 rule (quá giờ, bãi đầy, dò thẻ lạ liên tiếp, barie mở quá lâu) và chống kẹp/thẻ khóa | Mục 3.6, Bảng 5.4 |
 
 *Bảng 5.6: Bảng đối chiếu kết quả với các mốc yêu cầu học phần (M1–M4 và điều kiện Pass).*
@@ -696,17 +695,7 @@ Nhóm 4 xin chân thành cảm ơn **Thầy Võ Hoàng Hải** đã tận tình 
 
 ## PHỤ LỤC
 
-### Phụ lục A. Bảng phân công và đóng góp từng thành viên
-
-| STT | Thành viên (MSSV) | Nhiệm vụ chính đảm nhận *(Nhóm xác nhận lại phân công chi tiết trước khi nộp)* | Sản phẩm bàn giao |
-| :---: | :--- | :--- | :--- |
-| 1 | Nguyễn Lê Duy Cương (`2001230069`) | Thiết kế mạch Wokwi, firmware Tầng 1 (`GateController`, `ParkingSystem`, chống kẹp) | `diagram.json`, `src/GateController.cpp`, `src/ParkingSystem.cpp` |
-| 2 | Đinh Tấn Thành (`2001230894`) | Truyền thông Tầng 2 (`MqttService`, LWT, reconnect, topic `config`), Docker Compose & `settings.js` | `src/MqttService.cpp`, `src/main.cpp`, `docker-compose.yml` |
-| 3 | Bùi Tấn Thông (`2001230938`) | Luồng Node-RED Tầng 3 (4 rule, lưu file JSON/log), Dashboard Tầng 4, kiểm thử & tài liệu | `nodered_flow.json`, `README.md`, báo cáo, slide, video |
-
-*Bảng A.1: Bảng phân công nhiệm vụ các thành viên trong Nhóm 4.*
-
-### Phụ lục B. Mã nguồn Firmware ESP32
+### Phụ lục A. Mã nguồn Firmware ESP32
 * **Kho mã nguồn (GitHub công khai):** https://github.com/Tthoong129/IOT_Nhom4.git (nhánh `main`, commit mã nguồn vận hành: `c7b4b0b`; đã rà soát toàn bộ tệp theo dõi không chứa token hay mật khẩu thô).
 * **Cấu trúc tệp mã nguồn:**
   * `include/Config.h` (53 dòng): Khai báo chân GPIO, thông số thời gian/phí mặc định và 6 topic MQTT.
@@ -715,14 +704,14 @@ Nhóm 4 xin chân thành cảm ơn **Thầy Võ Hoàng Hải** đã tận tình 
   * `include/MqttService.h`, `src/MqttService.cpp` (104 dòng): Wi-Fi, MQTT, LWT, nhận lệnh và config `retained`.
   * `src/main.cpp` (276 dòng): Điều phối vòng lặp chính và Serial console.
 
-### Phụ lục C. Tệp Flow Node-RED (JSON)
+### Phụ lục B. Tệp Flow Node-RED (JSON)
 * Tệp đầy đủ lưu tại `nodered_flow.json` và `docker/nodered/flows.json` (đã kiểm tra không chứa token, mật khẩu hay thông tin nhạy cảm); tệp cấu hình xác thực lưu tại `docker/nodered/settings.js` chỉ lưu chuỗi băm `bcrypt`.
 * Để duy trì khả năng lặp lại chính xác cấu hình 69 phần tử (50 node xử lý/UI, 13 config node, 1 tab và 5 khung nhóm), tệp JSON này được import trực tiếp vào Node-RED Editor (`Ctrl + I`) hoặc gắn qua Docker Compose.
 
-### Phụ lục D. Bảng chân GPIO đầy đủ và danh sách thẻ mẫu
+### Phụ lục C. Bảng chân GPIO đầy đủ và danh sách thẻ mẫu
 
 * Bảng chân GPIO đầy đủ đã liệt kê ở **Bảng 3.2 (Mục 3.3)**.
-* Danh sách thẻ mẫu mặc định nạp sẵn trên ESP32 và Node-RED (Bảng D.1):
+* Danh sách thẻ mẫu mặc định nạp sẵn trên ESP32 và Node-RED (Bảng C.1):
 
 | Phím Serial Wokwi | Thẻ mẫu Wokwi MFRC522 | Mã UID | Biển số mặc định | Chủ xe | Trạng thái mặc định |
 | :---: | :--- | :--- | :--- | :--- | :--- |
@@ -731,9 +720,9 @@ Nhóm 4 xin chân thành cảm ơn **Thầy Võ Hoàng Hải** đã tận tình 
 | `3` | Yellow Card | `55 66 77 88` | `43C-678.90` | Lê Văn C | Đã đăng ký (Vé lượt) |
 | `4` | Red Card | `AA BB CC DD` | *(Chưa gán)* | *(Chưa gán)* | Chưa đăng ký (dùng thử Rule 3 hoặc thêm ở Tab 2) |
 
-*Bảng D.1: Danh sách thẻ RFID mẫu sử dụng trong mô phỏng Wokwi.*
+*Bảng C.1: Danh sách thẻ RFID mẫu sử dụng trong mô phỏng Wokwi.*
 
-### Phụ lục E. Nhật ký mẫu và bộ ảnh minh chứng bổ sung
+### Phụ lục D. Nhật ký mẫu và bộ ảnh minh chứng bổ sung
 * **Trích đoạn log hệ thống thực tế (`data/parking_log.txt`) thu từ phiên kiểm thử:**
   ```text
   23/11/2026 18:11:40 | Thiết bị trực tuyến          | -            | ESP32 đã kết nối và đồng bộ trạng thái
@@ -753,11 +742,11 @@ Nhóm 4 xin chân thành cảm ơn **Thầy Võ Hoàng Hải** đã tận tình 
 * **Phương pháp kiểm tra tự động luồng và giao diện (Chrome Headless CDP):** Kết nối trình duyệt tới `http://127.0.0.1:1880/` (đã bật `adminAuth`) kiểm tra `RED.nodes.eachNode(n => !n.valid)` ghi nhận mảng rỗng (`0` node lỗi trên 69 phần tử); truy cập 3 tab tại `http://127.0.0.1:1880/ui/` (qua `httpNodeAuth` Basic Auth, độ phân giải `1440x1080`) lắng nghe `Runtime.exceptionThrown` (`0` ngoại lệ JS) và kiểm tra `scrollWidth <= window.innerWidth` (`[false, false, false]`).
 * **Bộ ảnh minh chứng đi kèm (`docs/`):** `minh_chung_anti_pinch_wokwi.png`, `nodered_flow.png`, `dashboard_demo.png`, `nodered_admin_login.png`, `dashboard_cards_pricing.png`, `dashboard_history.png` và 5 sơ đồ thiết kế tại `docs/figures/`.
 
-### Phụ lục F. Liên kết video demo
+### Phụ lục E. Liên kết video demo
 * **Video demo chính thức (đủ 9 phân cảnh Wokwi thật + Dashboard):** `[Chưa quay — gắn link Google Drive / YouTube sau khi chạy quay 9 bước trực tiếp với Wokwi thật]`
 * **Video dự phòng:** `[Gắn link dự phòng nếu có]`
 
-### Phụ lục G. Hướng dẫn chạy lại hệ thống từ đầu
+### Phụ lục F. Hướng dẫn chạy lại hệ thống từ đầu
 1. Tải mã nguồn về máy:
    ```bash
    git clone https://github.com/Tthoong129/IOT_Nhom4.git
