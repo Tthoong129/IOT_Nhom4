@@ -678,6 +678,13 @@ Lắp cảm biến từ trường hoặc hồng ngoại/siêu âm tại từng v
 #### 6.3.4. Kết nối kênh cảnh báo ngoài và cơ sở dữ liệu đám mây
 Mở rộng Node-RED gửi thông báo sự cố (Rule 3 dò thẻ lạ, thiết bị mất kết nối LWT) qua kênh di động như Telegram Bot, đồng thời chuyển lưu trữ từ tệp JSON cục bộ sang CSDL đám mây (PostgreSQL hoặc MongoDB) kèm MQTT Broker có xác thực TLS khi mở rộng nhiều bãi xe song song.
 
+### 6.4. Lời kết và cảm ơn
+Trải qua 10 tuần tìm hiểu và triển khai đồ án học phần Internet of Things, Nhóm 4 đã xây dựng hoàn chỉnh mô hình mô phỏng **Hệ thống bãi giữ xe máy tự quản sử dụng RFID** theo kiến trúc IoT 4 tầng, đi từ phân tích yêu cầu, thiết kế mạch Wokwi, lập trình firmware đến tích hợp luồng tự động hóa, kiểm thử và đóng gói triển khai. Hệ thống vận hành trên vi điều khiển ESP32 mô phỏng ở Tầng thiết bị (RFID-RC522, cảm biến siêu âm HC-SR04 chống kẹp xe dưới 15 cm, servo SG90, đèn LED giao thông, LCD 1602 I2C và còi buzzer tách kênh LEDC 15), truyền thông hai chiều qua MQTT trên HiveMQ public broker ở Tầng mạng, xử lý trung gian bằng Node-RED với 4 quy tắc tự động hóa và lưu trữ bền vững ra tệp `parking_log.txt`, `parking_database.json`, cùng Web Dashboard 3 tab có xác thực truy cập (`httpNodeAuth`, `adminAuth`), điều khiển barie từ xa, quản lý tới 16 thẻ RFID động, bảng giá động và xuất lịch sử giao dịch CSV.
+
+Bên cạnh việc củng cố kiến thức về hệ thống nhúng và giao thức truyền thông IoT, quá trình thực hiện đề tài còn giúp cả nhóm rèn luyện những thói quen kỹ thuật bài bản trong phát triển phần mềm và phần cứng: phân tách mã nguồn C++ theo mô-đun rõ trách nhiệm (`GateController`, `ParkingSystem`, `MqttService`), xử lý chống dội thẻ, giữ cổng vận hành độc lập khi mất kết nối mạng, quản lý phiên bản mã nguồn bằng Git và đóng gói môi trường chạy đồng nhất qua Docker Compose. Những kỹ năng như đọc hiểu tài liệu kỹ thuật tiếng Anh, chia nhỏ bài toán theo từng mốc tuần từ M1 đến M4, tách bạch kiểm thử giả lập với kiểm chứng thực tế, cũng như phối hợp làm việc nhóm khi tổng hợp báo cáo và thuyết trình đều được từng thành viên tích lũy rõ rệt.
+
+Nhóm 4 xin bày tỏ lòng biết ơn chân thành đến **Thầy Võ Hoàng Hải** đã tận tình hướng dẫn, góp ý cụ thể qua từng báo cáo tuần để nhóm kịp thời bổ sung các cơ chế an toàn, xác thực truy cập và hoàn thiện đề tài đúng tiến độ. Nhóm cũng xin chân thành cảm ơn quý **Thầy Cô Khoa Công nghệ Thông tin — Trường Đại học Công Thương TP. Hồ Chí Minh** đã trang bị nền tảng kiến thức vững chắc để nhóm tự tin tiếp cận và giải quyết các bài toán kỹ thuật trong đồ án.
+
 ---
 
 ## TÀI LIỆU THAM KHẢO
