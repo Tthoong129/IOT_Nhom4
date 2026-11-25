@@ -66,12 +66,13 @@
 * **Bảng 3.4:** Bộ 4 quy tắc tự động hóa trên Node-RED (ngưỡng demo và ngưỡng thực tế)
 * **Bảng 3.5:** Bố cục các thành phần hiển thị trên Web Dashboard
 * **Bảng 4.1:** Môi trường công cụ và phiên bản sử dụng khi triển khai
-* **Bảng 5.1:** Kết quả kiểm thử Tầng 1 (Firmware và mạch mô phỏng Wokwi)
-* **Bảng 5.2:** Kết quả kiểm thử Tầng 2 (Truyền thông MQTT hai chiều và tự kết nối lại)
-* **Bảng 5.3:** Kết quả kiểm thử Tầng 3 (4 rule tự động và lưu trữ bền vững)
-* **Bảng 5.4:** Kết quả kiểm thử đầu-cuối (End-to-End) theo 9 phân cảnh demo
-* **Bảng 5.5:** Bảng đối chiếu kết quả với các mốc yêu cầu học phần (M1–M4 và điều kiện Pass)
-* **Bảng 5.6:** Số liệu đo kiểm tài nguyên Firmware ESP32 và thời gian phản hồi quan sát
+* **Bảng 5.1:** Bộ dữ liệu 4 thẻ RFID mẫu sử dụng trong kiểm thử
+* **Bảng 5.2:** Kết quả kiểm thử Tầng 1 (Firmware và mạch mô phỏng Wokwi)
+* **Bảng 5.3:** Kết quả kiểm thử Tầng 2 (Truyền thông MQTT hai chiều, LWT và xác thực)
+* **Bảng 5.4:** Kết quả kiểm thử Tầng 3 (4 rule tự động và lưu trữ bền vững)
+* **Bảng 5.5:** Kết quả kiểm thử đầu-cuối (End-to-End) theo 9 phân cảnh demo
+* **Bảng 5.6:** Bảng đối chiếu kết quả với các mốc yêu cầu học phần (M1–M4 và điều kiện Pass)
+* **Bảng 5.7:** Số liệu đo kiểm tài nguyên Firmware ESP32 và thời gian phản hồi quan sát
 * **Bảng A.1:** Bảng phân công nhiệm vụ các thành viên trong Nhóm 4
 * **Bảng D.1:** Danh sách thẻ RFID mẫu sử dụng trong mô phỏng Wokwi
 
@@ -499,91 +500,85 @@ Nếu phần cốt lõi của Tầng 3 là chạy Node-RED Middleware để th�
 ### 5.1. Phương pháp
 
 #### 5.1.1. Môi trường kiểm thử và bộ dữ liệu thẻ mẫu
-Hoạt động kiểm thử được thực hiện trên hệ điều hành Windows sử dụng tệp nhị phân `.pio/build/esp32dev/firmware.bin` nạp lên sơ đồ `diagram.json` trong Wokwi Simulator, kết nối qua mạng `Wokwi-GUEST` tới HiveMQ public broker (`broker.hivemq.com:1883`) và máy chủ Node-RED `v5.0.10` (container Docker `iot_parking_middleware` chạy `Node.js v24.22.3` và `node-red-dashboard 3.6.6`).
+Hoạt động kiểm thử được thực hiện trên Windows, sử dụng Wokwi Simulator để mô phỏng phần cứng ESP32 và Docker để triển khai Node-RED `v5.0.10`. Hệ thống truyền thông qua MQTT với HiveMQ public broker tại `broker.hivemq.com:1883`; thông số phiên bản chi tiết và sơ đồ chân đấu nối đã được trình bày ở Chương 3, Chương 4 và Phụ lục. Bộ dữ liệu đầu vào gồm 4 thẻ mẫu trong Bảng 5.1.
 
-Bộ dữ liệu đầu vào gồm 4 thẻ RFID mẫu khớp với đầu đọc MFRC522 trên Wokwi (chi tiết ở Bảng D.1):
-* **Thẻ 1 (Blue Card — phím `1`):** UID `01 02 03 04`, biển số `29A-123.45`, chủ xe `Nguyễn Văn A`, loại `Vé lượt`.
-* **Thẻ 2 (Green Card — phím `2`):** UID `11 22 33 44`, biển số `51F-999.88`, chủ xe `Trần Thị B`, loại `Vé lượt`.
-* **Thẻ 3 (Yellow Card — phím `3`):** UID `55 66 77 88`, biển số `43C-678.90`, chủ xe `Lê Văn C`, loại `Vé lượt`.
-* **Thẻ 4 (Red Card — phím `4`):** UID `AA BB CC DD`, mặc định chưa đăng ký trong danh sách ban đầu để kiểm thử kịch bản thẻ lạ và tính năng thêm thẻ động trên Dashboard.
+| STT | Ký hiệu / Phím Wokwi | Mã UID | Biển số | Chủ xe | Trạng thái ban đầu |
+| :---: | :--- | :--- | :--- | :--- | :--- |
+| 1 | Thẻ 1 (Blue / `1`) | `01 02 03 04` | `29A-123.45` | Nguyễn Văn A | Đã đăng ký (Vé lượt) |
+| 2 | Thẻ 2 (Green / `2`) | `11 22 33 44` | `51F-999.88` | Trần Thị B | Đã đăng ký (Vé lượt) |
+| 3 | Thẻ 3 (Yellow / `3`) | `55 66 77 88` | `43C-678.90` | Lê Văn C | Đã đăng ký (Vé lượt) |
+| 4 | Thẻ 4 (Red / `4`) | `AA BB CC DD` | *(Chưa gán)* | *(Chưa gán)* | Chưa đăng ký |
+
+*Bảng 5.1: Bộ dữ liệu 4 thẻ RFID mẫu sử dụng trong kiểm thử.*
 
 #### 5.1.2. Cách thức kiểm thử theo hai cấp độ độc lập
-Nhằm tách bạch giữa phần chạy trực tiếp trên Wokwi và phần kiểm thử tự động giao tiếp mạng/giao diện, nhóm sử dụng hai phương thức kiểm tra song song:
-1. **Kiểm thử tương tác trên Wokwi Simulator và Serial Monitor (Tầng 1):** Người kiểm thử kích hoạt các thẻ `1`–`4` qua Serial Terminal của Wokwi (`115200 bps`), kéo thanh trượt khoảng cách HC-SR04 dưới và trên ngưỡng `ANTI_PINCH_DIST_CM = 15.0` cm, sau đó quan sát góc quay Servo SG90 (`0°`/`90°`), đèn LED Đỏ/Xanh, số tiếng còi buzzer, hai dòng LCD 1602 và thông báo Serial.
-2. **Kiểm thử kịch bản tự động bằng script Node.js, HTTP và Chrome Headless CDP (Tầng 2, 3, 4):**
-   * Dùng client `mqtt` trong Node.js kết nối `broker.hivemq.com:1883` để **giả lập** các gói tin Uplink đúng cấu trúc firmware (`status`, `rfid/scan`, `barie/status`, `alert`), đồng thời lắng nghe lệnh Downlink trên `barie/cmd` và cấu hình trên `config`.
-   * Kiểm tra lớp bảo vệ `httpNodeAuth` bằng ba nhóm yêu cầu HTTP tới `/ui/`: không kèm xác thực, sai mật khẩu và đúng tài khoản Basic Auth.
-   * Điều khiển Chrome headless qua Chrome DevTools Protocol (CDP): đăng nhập Node-RED Editor (`adminAuth`) tại `http://127.0.0.1:1880/` và chạy `RED.nodes.eachNode(n => !n.valid)` để kiểm tra thuộc tính hợp lệ của toàn bộ 69 phần tử; truy cập 3 tab Dashboard (`/ui/`) ở độ phân giải `1440x1080` để ghi nhận `Runtime.exceptionThrown`, kiểm tra `scrollWidth <= window.innerWidth` và đối chiếu trực tiếp dữ liệu lưu tại `data/parking_database.json`, `data/parking_log.txt`.
+Để phân biệt rõ giữa phần chạy trực tiếp trên mạch mô phỏng và phần kiểm thử tự động giao tiếp mạng, nhóm áp dụng ba nhóm thao tác chính:
+1. **Kiểm thử trực tiếp firmware trên Wokwi:** Nạp firmware và thao tác quẹt thẻ mẫu, thay đổi khoảng cách trên thanh trượt siêu âm, đồng thời đối chiếu phản ứng của servo, đèn LED, còi, màn hình LCD và Serial Monitor.
+2. **Kiểm thử MQTT, HTTP Auth và giao diện Dashboard bằng script tự động:** Dùng kịch bản Node.js phát giả lập bản tin Uplink theo đúng cấu trúc của ESP32, theo dõi lệnh Downlink và kiểm tra truy cập `/ui/` với các trường hợp không xác thực, sai mật khẩu và đúng tài khoản.
+3. **Kiểm tra tính hợp lệ của luồng Node-RED, dữ liệu JSON và nhật ký:** Rà soát trạng thái cấu hình các node trong Node-RED Editor, kiểm tra hiển thị 3 tab trên trình duyệt tự động (chi tiết phương pháp kiểm tra giao diện ghi tại Phụ lục E) và đối chiếu tệp lưu trữ trong `data/`.
 
-#### 5.1.3. Quy trình ghi nhận và đối soát kết quả
-Kết quả kiểm thử chỉ được đánh dấu `Đạt` khi đồng thời thỏa mãn hai điều kiện: phản hồi ngoại vi/giao diện đúng với kỳ vọng kịch bản và dữ liệu JSON/nhật ký tương ứng được ghi nhận nhất quán (tính hợp lệ của cấu trúc JSON, đếm số xe, doanh thu và dấu vết sự kiện trong `data/`). Những ca chạy bằng kịch bản Node.js giả lập ESP32 được chú thích rõ `Đạt (script)` để phân biệt với thao tác trực tiếp trên mạch Wokwi thật.
+#### 5.1.3. Quy trình ghi nhận kết quả
+Mỗi ca chỉ đánh dấu `Đạt` khi phản hồi tại cổng hoặc giao diện khớp kỳ vọng kịch bản và dữ liệu tương ứng được cập nhật đúng vào tệp lưu trữ. Các ca dùng script Node.js giả lập tin nhắn ESP32 được ghi chú rõ `Đạt (script)` để tách biệt với phiên chạy trực tiếp trên Wokwi.
 
 ### 5.2. Kiểm thử Tầng 1
 
 #### 5.2.1. Kiểm thử nghiệp vụ vào/ra, bãi đầy, thẻ lạ và chống đọc trùng
-Các ca kiểm thử `T1-01`, `T1-02`, `T1-04`, `T1-05` và `T1-06` xác minh khả năng xử lý độc lập tại cổng của `ParkingSystem` và `main.cpp` dựa trên cấu hình mặc định trong `Config.h`: sức chứa `PARKING_CAPACITY = 2`, giữ mở `GATE_HOLD_MS = 3000` (3 giây), chống đọc lặp `CARD_DEBOUNCE_MS = 1500` (1,5 giây) và biểu phí mặc định (`< 10s`: `3.000đ`, `10–30s`: `5.000đ`, `> 30s`: `9.000đ`).
+Nhóm ca `T1-01`, `T1-02`, `T1-04`, `T1-05` và `T1-06` kiểm chứng khả năng xử lý độc lập tại cổng của ESP32 với sức chứa `PARKING_CAPACITY = 2`, thời gian giữ mở 3 giây và khóa chống đọc trùng `CARD_DEBOUNCE_MS = 1500` (1,5 giây).
 
-#### 5.2.2. Kiểm thử an toàn chống kẹp xe (HC-SR04) và tổng hợp kết quả
-Ca `T1-03` kiểm tra nhánh `GateController::update()` khi hết 3 giây giữ mở: cứ mỗi chu kỳ `ANTI_PINCH_RECHECK = 300` ms, ESP32 đo khoảng cách siêu âm dưới cần chắn. Khi kéo thanh trượt về `10,0 cm` (`< 15,0 cm`), thanh chắn giữ nguyên góc `90°`, LCD hiển thị cảnh báo tạm hoãn đóng và chỉ hạ về `0°` khi kéo thanh trượt vượt ngưỡng `15,0 cm`. Kết quả toàn bộ 6 ca của Tầng 1 trình bày tại Bảng 5.1.
+#### 5.2.2. Kiểm thử an toàn chống kẹp xe và tổng hợp kết quả
+Ca `T1-03` kiểm tra cảm biến siêu âm theo chu kỳ đo lại `ANTI_PINCH_RECHECK = 300` ms khi có yêu cầu đóng barie, xác nhận thanh chắn giữ nguyên ở $90^\circ$ lúc khoảng cách dưới `15 cm` và chỉ hạ xuống $0^\circ$ khi thông thoáng (Bảng 5.2).
 
 | Ca kiểm thử | Phương thức | Đầu vào mô phỏng | Kết quả kỳ vọng | Kết quả quan sát thực tế | Trạng thái |
 | :--- | :---: | :--- | :--- | :--- | :---: |
 | **T1-01:** Xe vào hợp lệ | Wokwi thật | Quẹt thẻ Blue (`1`) khi bãi `0/2` | Barie $90^\circ$, LED Xanh, còi 1 tiếng, LCD hiện `VAO: 29A-123.45` / `O so 1`, tự đóng sau 3s | Đúng kỳ vọng; Serial in `[IN ] 29A-123.45 \| 01 02 03 04 \| slot 1 \| GUEST` | Đạt |
-| **T1-02:** Xe ra & tính cước | Wokwi thật | Quẹt lại thẻ Blue sau 35s | Barie $90^\circ$, còi 2 tiếng, LCD hiện `RA: 29A-123.45` / `T:35s 9000d` | Đúng kỳ vọng (ảnh minh chứng Hình 4.1) | Đạt |
-| **T1-03:** Chống kẹp xe | Wokwi thật | Thanh trượt HC-SR04 ở `10,0 cm` lúc hết giờ giữ mở | Barie giữ $90^\circ$, LCD hiện `TAM HOAN DONG` / `Vat can 10cm`; kéo >15 cm barie hạ xuống `0°` | Đúng kỳ vọng (Hình 4.1, Serial in `[GATE] Anti-pinch triggered (dist=10.0cm). Holding barrier open.`) | Đạt |
+| **T1-02:** Xe ra & tính cước | Wokwi thật | Quẹt lại thẻ Blue sau 35s | Barie $90^\circ$, còi 2 tiếng, LCD hiện `RA: 29A-123.45` / `T:35s 9000d` | Đúng kỳ vọng (Hình 4.1) | Đạt |
+| **T1-03:** Chống kẹp xe | Wokwi thật | Thanh trượt HC-SR04 ở `10,0 cm` lúc hết giờ giữ mở | Barie giữ $90^\circ$, LCD hiện `TAM HOAN DONG` / `Vat can 10cm`; kéo >15 cm barie hạ xuống `0°` | Đúng kỳ vọng (Hình 4.1, Serial in `Anti-pinch triggered (dist=10.0cm)`) | Đạt |
 | **T1-04:** Bãi đầy (2/2) | Wokwi thật | 2 xe đang trong bãi, quẹt tiếp thẻ Yellow (`3`) | Cổng từ chối, Servo giữ $0^\circ$, LED Đỏ sáng, còi 2 tiếng, LCD báo `BAI XE DA DAY!` | Đúng kỳ vọng, từ chối ngay tại ESP32 | Đạt |
 | **T1-05:** Thẻ lạ | Wokwi thật | Quẹt thẻ Red (`4` / `AA BB CC DD`) chưa đăng ký | Cổng đóng, còi 3 tiếng, LCD hiện `THE CHUA DANG KY` / `UID:AA BB CC DD` | Đúng kỳ vọng | Đạt |
 | **T1-06:** Chống đọc trùng | Wokwi thật | Quẹt lặp cùng thẻ trong `< 1,5 giây` | Bỏ qua lần đọc lặp, không tính nhầm thành lượt ra | Đúng kỳ vọng theo khóa `CARD_DEBOUNCE_MS = 1500` | Đạt |
 
-*Bảng 5.1: Kết quả kiểm thử Tầng 1 (Firmware và mạch mô phỏng Wokwi).*
-
-**Nhận xét Tầng 1:** Toàn bộ 6 kịch bản hoạt động tại cổng đều xử lý ngay trong vi điều khiển ESP32 mà không bị chặn bởi kết nối mạng hay chu kỳ phát còi (`ParkingSystem::beep()` chạy qua kênh LEDC 15 độc lập với `ESP32Servo`).
+*Bảng 5.2: Kết quả kiểm thử Tầng 1 (Firmware và mạch mô phỏng Wokwi).*
 
 ### 5.3. Kiểm thử Tầng 2
 
 #### 5.3.1. Kiểm thử truyền thông Uplink, Downlink và cấu hình `retained`
-Các ca `T2-01` đến `T2-03` dùng script Node.js giả lập bản tin ESP32 kết hợp thao tác giao diện qua Chrome CDP trên Docker Node-RED `v5.0.10` qua broker `broker.hivemq.com:1883`. Kết quả xác nhận chuỗi JSON truyền đi giữa client mô phỏng và Node-RED khớp đầy đủ tên trường dữ liệu của 6 topic, riêng bản tin cấu hình `parking_n4/config` giữ được cờ `retain = true` trên broker.
+Các ca `T2-01` đến `T2-03` kiểm tra truyền thông MQTT hai chiều và đồng bộ cấu hình `retained` bằng script Node.js kết hợp Node-RED thực tế.
 
-#### 5.3.2. Kiểm thử mất kết nối LWT và xác thực truy cập `httpNodeAuth`
-Ca `T2-04` ngắt kết nối TCP đột ngột của client mô phỏng đã khai báo di chúc (`willQos = 1`, `willRetain = true`), xác nhận HiveMQ tự phát `{"online":false}` trên `parking_n4/status` giúp Dashboard chuyển trạng thái thiết bị sang `NGOẠI TUYẾN`. Ca `T2-05` kiểm tra trực tiếp lớp bảo vệ `httpNodeAuth` bật trong `docker/nodered/settings.js` trên container Docker Node-RED (Bảng 5.2).
+#### 5.3.2. Kiểm thử mất kết nối LWT và xác thực truy cập
+Ca `T2-04` kiểm tra phản ứng khi client ngắt kết nối đột ngột không gửi thông điệp thoát, còn `T2-05` xác minh phản hồi HTTP của lớp bảo vệ `httpNodeAuth` trên Dashboard `/ui/` (Bảng 5.3).
 
 | Ca kiểm thử | Phương thức | Kịch bản thực hiện | Kết quả quan sát được | Trạng thái |
 | :--- | :---: | :--- | :--- | :---: |
-| **T2-01:** Uplink sự kiện & snapshot | Script MQTT giả lập ESP32 + Node-RED thật | Gửi sự kiện vào/ra, barie, alert qua `broker.hivemq.com:1883` | Node-RED nhận đủ thông điệp trên 4 topic Uplink; số xe trên Dashboard khớp theo kịch bản | Đạt *(script)* |
-| **T2-02:** Downlink điều khiển | Script MQTT + Chrome CDP trên Node-RED thật | Nhấn nút `MỞ BARIE` rồi `ĐÓNG BARIE` trên Dashboard | Broker nhận `{"cmd":"open","src":"dashboard"}` và `{"cmd":"close","src":"dashboard"}` trên `parking_n4/barie/cmd` | Đạt *(script)* |
-| **T2-03:** Downlink cấu hình `retained` | Script MQTT + Chrome CDP trên Node-RED thật | Thay đổi bảng giá & thêm thẻ trên Tab 2 | Gói tin JSON cập nhật xuất hiện ngay trên `parking_n4/config` với cờ `retain = true` | Đạt *(script)* |
-| **T2-04:** Ngắt kết nối & LWT | Script MQTT giả lập ESP32 + Node-RED thật | Ngắt kết nối client mô phỏng đột ngột không gửi logout | Broker phát LWT `{"online":false}` trên `parking_n4/status`; Dashboard chuyển sang `NGOẠI TUYẾN` và ghi log | Đạt *(script)* |
-| **T2-05:** Xác thực Dashboard (`httpNodeAuth`) | Kiểm thử HTTP thực tế tới Docker Node-RED (`v5.0.10`) | Gửi `GET /ui/` không xác thực, sai mật khẩu và đúng tài khoản Basic Auth | Trả `401 Unauthorized` (`WWW-Authenticate: Basic realm="Authorization Required"`) khi thiếu hoặc sai mật khẩu; trả `200 OK` khi đúng | Đạt |
+| **T2-01:** Uplink sự kiện & snapshot | Script MQTT giả lập ESP32 + Node-RED thật | Gửi sự kiện vào/ra, barie, alert lên MQTT | Node-RED nhận đủ thông điệp trên 4 topic Uplink; số xe trên Dashboard khớp theo kịch bản | Đạt *(script)* |
+| **T2-02:** Downlink điều khiển | Script MQTT + trình duyệt trên Node-RED thật | Nhấn nút `MỞ BARIE` rồi `ĐÓNG BARIE` trên Dashboard | Broker nhận `{"cmd":"open","src":"dashboard"}` và `{"cmd":"close","src":"dashboard"}` trên `parking_n4/barie/cmd` | Đạt *(script)* |
+| **T2-03:** Downlink cấu hình `retained` | Script MQTT + trình duyệt trên Node-RED thật | Thay đổi bảng giá & thêm thẻ trên Tab 2 | Gói tin JSON cập nhật xuất hiện ngay trên `parking_n4/config` với cờ `retain = true` | Đạt *(script)* |
+| **T2-04:** Ngắt kết nối & LWT | Script MQTT giả lập ESP32 + Node-RED thật | Ngắt kết nối client mô phỏng đột ngột không gửi logout | Broker phát LWT `{"online":false}` trên `parking_n4/status`; Dashboard chuyển `NGOẠI TUYẾN` và ghi log | Đạt *(script)* |
+| **T2-05:** Xác thực Dashboard (`httpNodeAuth`) | Kiểm thử HTTP thực tế tới Node-RED | Gửi `GET /ui/` không xác thực, sai mật khẩu và đúng tài khoản Basic Auth | Trả `401 Unauthorized` (`WWW-Authenticate: Basic`) khi thiếu hoặc sai mật khẩu; trả `200 OK` khi đúng | Đạt |
 
-*Bảng 5.2: Kết quả kiểm thử Tầng 2 (Truyền thông MQTT hai chiều, LWT và xác thực truy cập).*
+*Bảng 5.3: Kết quả kiểm thử Tầng 2 (Truyền thông MQTT hai chiều, LWT và xác thực).*
 
 ### 5.4. Kiểm thử Tầng 3
 
-#### 5.4.1. Kiểm thử 4 quy tắc tự động với timeout, threshold và kịch bản bất thường
-Các ca `T3-01` đến `T3-04` kiểm tra luồng xử lý Node-RED dưới hai nhóm điều kiện: vượt ngưỡng thời gian (Rule 1 quá `30 giây`, Rule 4 mở barie quá `10 giây`) và tình huống bất thường (Rule 2 đạt `2/2` xe kèm `LOT_FULL`, Rule 3 nhận `INVALID_CARD` `3 lần` trong cửa sổ `60 giây`).
+#### 5.4.1. Kiểm thử 4 quy tắc tự động với timeout và bất thường
+Các ca `T3-01` đến `T3-04` kiểm tra phản ứng của 4 rule tự động trên Node-RED trước ngưỡng thời gian (`30 giây` quá giờ, `10 giây` mở barie) và kịch bản bất thường (đủ `2/2` xe, quẹt thẻ lạ `3 lần` trong `60 giây`).
 
-#### 5.4.2. Kiểm thử khôi phục dữ liệu, log vận hành và tính hợp lệ của luồng
-Ca `T3-05` thực hiện khởi động lại dịch vụ Node-RED khi đã phát sinh giao dịch và doanh thu để đối chiếu khả năng đọc lại từ `data/parking_database.json`, kết hợp đối chiếu nhật ký ghi nối tiếp `data/parking_log.txt` (mẫu thực tế đưa tại Phụ lục E). Kết quả kiểm thử Tầng 3 trình bày trong Bảng 5.3.
+#### 5.4.2. Kiểm thử khôi phục dữ liệu, log và tính hợp lệ của luồng
+Ca `T3-05` xác minh khả năng khôi phục doanh thu và giao dịch từ `data/parking_database.json` sau khi khởi động lại dịch vụ, đồng thời đối chiếu bản ghi trên `data/parking_log.txt` (Bảng 5.4). Kiểm tra tự động sau khi bật xác thực xác nhận toàn bộ `69` phần tử luồng hợp lệ và cả 3 tab Dashboard hiển thị đúng, không phát sinh lỗi JavaScript hay tràn khung ngang ở `1440x1080`.
 
 | Ca kiểm thử | Phương thức | Điều kiện kiểm thử | Kết quả ghi nhận trong `data/` và UI | Trạng thái |
 | :--- | :---: | :--- | :--- | :---: |
-| **T3-01:** Rule 1 quá giờ | Script MQTT giả lập ESP32 + Node-RED thật | Gửi check-in `51F-999.88` và giữ trạng thái quá 30 giây | Ở giây 31, Node-RED phát cảnh báo `Rule 1 · Xe gửi quá giờ`, gắn nhãn `QUÁ GIỜ` trên Ô 2 và ghi vào `parking_log.txt` | Đạt *(script)* |
+| **T3-01:** Rule 1 quá giờ | Script MQTT giả lập ESP32 + Node-RED thật | Gửi check-in `51F-999.88` và giữ trạng thái quá 30 giây | Ở giây 31, Node-RED phát cảnh báo `Rule 1 · Xe gửi quá giờ`, gắn nhãn `QUÁ GIỜ` trên Ô 2 và ghi log | Đạt *(script)* |
 | **T3-02:** Rule 2 bãi đầy | Script MQTT giả lập ESP32 + Node-RED thật | Gửi 2 lượt check-in (`2/2`) và gửi thêm `LOT_FULL` cho xe `43C-678.90` | Thẻ Tổng quan chuyển đỏ, log ghi `Rule 2 · Bãi đã đầy` và `Rule 2 · Từ chối do bãi đầy` | Đạt *(script)* |
 | **T3-03:** Rule 3 dò thẻ lạ | Script MQTT giả lập ESP32 + Node-RED thật | Gửi cảnh báo `INVALID_CARD` 3 lần trong `< 3 giây` | Lần 1–2 ghi `Thẻ lạ bị từ chối`, lần 3 kích hoạt `Rule 3 · Nghi vấn dò thẻ` và lưu UID `AA BB CC DD` sang Tab 2 | Đạt *(script)* |
-| **T3-04:** Rule 4 barie mở lâu | Script MQTT giả lập ESP32 + Node-RED thật | Gửi `barie/status` mở ở chế độ `hold` và chờ 11,5 giây | Sau mốc 10 giây, Node-RED tự gửi lệnh `{"cmd":"close","src":"rule4"}` xuống topic `parking_n4/barie/cmd` và ghi log | Đạt *(script)* |
-| **T3-05:** Khởi động lại Node-RED | Thực tế trên Node-RED + `parking_database.json` | Khởi động lại runtime khi đang có doanh thu 5.000đ và 3 giao dịch | Dashboard nạp lại nguyên `5.000đ` và `3` giao dịch từ `parking_database.json` | Đạt |
+| **T3-04:** Rule 4 barie mở lâu | Script MQTT giả lập ESP32 + Node-RED thật | Gửi `barie/status` mở ở chế độ `hold` và chờ 11,5 giây | Sau mốc 10 giây, Node-RED tự gửi lệnh `{"cmd":"close","src":"rule4"}` xuống `parking_n4/barie/cmd` và ghi log | Đạt *(script)* |
+| **T3-05:** Khởi động lại Node-RED | Thực tế trên Node-RED + `parking_database.json` | Khởi động lại dịch vụ khi đang có doanh thu 5.000đ và 3 giao dịch | Dashboard nạp lại nguyên `5.000đ` và `3` giao dịch từ `parking_database.json` | Đạt |
 
-*Bảng 5.3: Kết quả kiểm thử Tầng 3 (4 rule tự động và lưu trữ bền vững).*
-
-**Kiểm tra cấu trúc luồng và giao diện sau khi bật `httpNodeAuth`:** Khi truy vấn Node-RED Editor (`adminAuth`) và Web Dashboard (`Basic Auth`) trên container Docker `iot_parking_middleware` bằng Chrome headless CDP, kiểm tra `RED.nodes.eachNode(n => !n.valid)` ghi nhận mảng rỗng (`0` node lỗi cấu hình trong 69 phần tử JSON); cả 3 tab Dashboard mở ổn định, lắng nghe `Runtime.exceptionThrown` ghi nhận `0` ngoại lệ JavaScript và `scrollWidth <= window.innerWidth` ở độ phân giải `1440x1080` (`overflows: [false, false, false]`).
+*Bảng 5.4: Kết quả kiểm thử Tầng 3 (4 rule tự động và lưu trữ bền vững).*
 
 ### 5.5. Kiểm thử end-to-end
 
-#### 5.5.1. Kịch bản 9 phân cảnh liên thông hai chiều qua 4 tầng
-Chuỗi kiểm thử đầu-cuối gồm 9 bước đi từ khâu xác thực và khởi động hệ thống, quẹt xe vào (Uplink), kích hoạt chống kẹp HC-SR04, kích hoạt lần lượt 4 rule tự động, thử nghiệm tính năng mở rộng đồng bộ cấu hình thẻ/bảng giá (`config` Downlink) đến cho xe ra, tính phí và đối soát `data/parking_log.txt` cùng xuất CSV.
-
-#### 5.5.2. Tách bạch kết quả giữa script giả lập MQTT và Wokwi thật kèm video
-Tại thời điểm hoàn thiện báo cáo, toàn bộ luồng nghiệp vụ 9 bước giữa MQTT – Node-RED – Dashboard 3 tab đã được xác nhận thông qua hai script tự động (`test_e2e_mqtt.js`, `test_v3_full.js`) và kiểm tra HTTP Auth. Đối với phiên chạy liên hoàn đủ 9 bước trực tiếp trên mạch Wokwi thật kết hợp quay video nghiệm thu (Phụ lục F), hai bước Tầng 1 đã có log/ảnh minh chứng riêng lẻ, còn toàn chuỗi 9 bước liên hoàn đang được nhóm hoàn tất quay video trước khi nghiệm thu (Bảng 5.4).
+#### 5.5.1. Kịch bản 9 phân cảnh qua 4 tầng và phân định kết quả thực nghiệm
+Chuỗi kiểm thử đầu-cuối gồm 9 bước đi qua đầy đủ cả 4 tầng được tổng hợp tại Bảng 5.5. Trong đó, cột kết quả bằng script phản ánh quá trình kiểm chứng tự động qua MQTT kết hợp Node-RED thật, còn cột chạy Wokwi thật kèm quay video ghi nhận trung thực tiến độ hoàn thiện trước khi nghiệm thu.
 
 | Bước | Thao tác | Luồng qua 4 tầng | Qua script MQTT + Node-RED thật | Chạy Wokwi thật + quay video |
 | :---: | :--- | :--- | :---: | :---: |
@@ -597,46 +592,42 @@ Tại thời điểm hoàn thiện báo cáo, toàn bộ luồng nghiệp vụ 9
 | 8 | Bấm `MỞ BARIE` giữ mở >10 giây | Tầng 4/3 (Rule 4) $\rightarrow$ 2 $\rightarrow$ 1 (Downlink) | Đạt *(script)* | Chờ chạy & quay video |
 | 9 | Cho xe ra, kiểm tra Tab 3 và tệp `parking_log.txt` | Tầng 1 $\rightarrow$ 2 $\rightarrow$ 3 (`file` + `history`) $\rightarrow$ 4 | Đạt *(script)* | Chờ chạy & quay video |
 
-*Bảng 5.4: Kết quả kiểm thử đầu-cuối (End-to-End) theo 9 phân cảnh demo.*
+*Bảng 5.5: Kết quả kiểm thử đầu-cuối (End-to-End) theo 9 phân cảnh demo.*
 
 ### 5.6. Đối chiếu yêu cầu
 
 #### 5.6.1. Bảng đối chiếu các mốc M1–M4 và điều kiện Pass
-Toàn bộ tiêu chí đánh giá học phần từ M1 đến M4, điều kiện có mô phỏng hoạt động, đủ 4 tầng, có truyền thông hai chiều Uplink/Downlink và yêu cầu Automation được đối chiếu trực tiếp tại Bảng 5.5.
 
 | Yêu cầu môn học | Minh chứng đã thực hiện | Vị trí tham chiếu |
 | :--- | :--- | :--- |
-| **Có mô phỏng hoạt động (Simulation)** | Mạch Wokwi đọc thẻ RFID, kiểm tra vật cản HC-SR04, điều khiển Servo/LCD/LED/Buzzer | Mục 4.2, Hình 4.1, Bảng 5.1 |
+| **Có mô phỏng hoạt động (Simulation)** | Mạch Wokwi đọc thẻ RFID, kiểm tra vật cản HC-SR04, điều khiển Servo/LCD/LED/Buzzer | Mục 4.2, Hình 4.1, Bảng 5.2 |
 | **Đủ 4 tầng IoT** | Tầng 1 (ESP32 Wokwi), Tầng 2 (MQTT), Tầng 3 (Node-RED), Tầng 4 (Dashboard + Auth) | Mục 3.2, Hình 3.2 |
 | **Có Uplink và Downlink** | Quẹt thẻ/cảnh báo gửi lên Dashboard; nút Mở/Đóng, Rule 4 và `config` gửi xuống Broker | Mục 5.3 (`T2-01`..`T2-03`), Hình 4.2, 4.3 |
-| **Mốc M1: Device Prototype** | Firmware State Machine, chống đọc trùng 1,5s, phân biệt vào/ra, mở rộng chống kẹp `< 15 cm` | Mục 3.4, Bảng 5.1 |
-| **Mốc M2: Connected Device** | MQTT `publish`/`subscribe` qua `broker.hivemq.com`, tự kết nối lại 5s, bổ sung LWT & `retained` | Mục 4.3, Bảng 5.2 |
+| **Mốc M1: Device Prototype** | Firmware State Machine, chống đọc trùng 1,5s, phân biệt vào/ra, mở rộng chống kẹp `< 15 cm` | Mục 3.4, Bảng 5.2 |
+| **Mốc M2: Connected Device** | MQTT `publish`/`subscribe` qua `broker.hivemq.com`, tự kết nối lại 5s, bổ sung LWT & `retained` | Mục 4.3, Bảng 5.3 |
 | **Mốc M3: Full 4-Layer IoT** | Web Dashboard điều khiển từ xa, biểu đồ thời gian thực và bật đăng nhập `httpNodeAuth` (`401`/`200`) | Mục 4.5, Hình 4.3, 4.4, `T2-05` |
-| **Mốc M4: End-to-End** | Đã kiểm chứng toàn bộ luồng logic 9 bước qua script MQTT + Node-RED thật; **đang hoàn tất quay video 9 bước trực tiếp trên Wokwi thật** | Mục 5.5, Bảng 5.4, Phụ lục F |
-| **Automation ($\ge 2$ rule, $\ge 1$ bất thường)** | Đủ 4 rule (quá giờ, bãi đầy, dò thẻ lạ liên tiếp, barie mở quá lâu) và chống kẹp/thẻ khóa | Mục 3.6, Bảng 5.3 |
+| **Mốc M4: End-to-End** | Đã kiểm chứng toàn bộ luồng logic 9 bước qua script MQTT + Node-RED thật; **đang hoàn tất quay video 9 bước trực tiếp trên Wokwi thật** | Mục 5.5, Bảng 5.5, Phụ lục F |
+| **Automation ($\ge 2$ rule, $\ge 1$ bất thường)** | Đủ 4 rule (quá giờ, bãi đầy, dò thẻ lạ liên tiếp, barie mở quá lâu) và chống kẹp/thẻ khóa | Mục 3.6, Bảng 5.4 |
 
-*Bảng 5.5: Bảng đối chiếu kết quả với các mốc yêu cầu học phần (M1–M4 và điều kiện Pass).*
+*Bảng 5.6: Bảng đối chiếu kết quả với các mốc yêu cầu học phần (M1–M4 và điều kiện Pass).*
 
 #### 5.6.2. Đánh giá chung mức độ hoàn thành
-Hệ thống đáp ứng đầy đủ các tiêu chí kỹ thuật về mô phỏng, cấu trúc 4 tầng, truyền thông hai chiều Uplink/Downlink, xác thực truy cập `httpNodeAuth` và 4 quy tắc tự động hóa; hạng mục còn lại cần hoàn tất trước thời điểm nộp cuối cùng là chạy lại trọn vẹn 9 phân cảnh giữa Wokwi thật với Dashboard để xuất video minh chứng gắn vào Phụ lục F và cập nhật cột cuối Bảng 5.4.
+Kết quả kiểm thử cho thấy hệ thống đã đáp ứng các tiêu chí kỹ thuật về mô phỏng, kiến trúc IoT 4 tầng, truyền thông hai chiều, xác thực truy cập và tự động hóa. Toàn bộ luồng nghiệp vụ 9 bước đã được kiểm chứng bằng script MQTT kết hợp Node-RED thực tế. Nhóm đang tiếp tục hoàn thiện việc kiểm thử liên hoàn trực tiếp trên Wokwi và quay video minh chứng trước khi nộp báo cáo.
 
 ### 5.7. Số đo
 
-#### 5.7.1. Tài nguyên bộ nhớ của Firmware ESP32
-Sau khi biên dịch sạch (`pio run -t clean` và `pio run`) trên PlatformIO Core 6.2.0 cho board `esp32dev`, mức tiêu thụ bộ nhớ ghi nhận là **Flash 62,7%** (`821.629 / 1.310.720 bytes`) và **RAM tĩnh 14,3%** (`46.764 / 327.680 bytes`). Dung lượng còn dư cho phép bộ đệm `PubSubClient` cấp `2560 bytes` để tiếp nhận cấu hình danh sách tối đa `16` thẻ và bảng giá động mà không gây thiếu bộ nhớ tĩnh.
-
-#### 5.7.2. Chu kỳ xử lý và phân tích độ trễ truyền thông MQTT
-Bảng 5.6 trình bày chi tiết các thông số chu kỳ lấy mẫu, độ trễ vòng mạng MQTT (RTT) đo bằng script Node.js tới broker và giới hạn độ phân giải của nhật ký hệ thống: vì `data/parking_log.txt` chỉ lưu mốc thời gian đến đơn vị **giây (`HH:MM:SS`)**, nhóm không suy đoán độ trễ mili giây cho chặng Wokwi–Dashboard khi chưa gắn đồng hồ `millis()` đồng bộ hai đầu.
+#### 5.7.1. Tài nguyên bộ nhớ và độ trễ truyền tin quan sát
+Bảng 5.7 tổng hợp mức chiếm dụng bộ nhớ sau khi biên dịch firmware và các thông số thời gian thu được. Vì nhật ký `data/parking_log.txt` có độ phân giải **1 giây (`HH:MM:SS`)**, nhóm không kết luận độ trễ mili giây cho toàn tuyến Wokwi–Dashboard mà chỉ ghi nhận riêng độ trễ vòng mạng MQTT đo từ Node.js tới broker (`167–172 ms`).
 
 | Đại lượng đo | Giá trị đo thực tế | Công cụ và cách đo |
 | :--- | :--- | :--- |
 | **Bộ nhớ Flash tiêu thụ** | `821.629 / 1.310.720 bytes` (**62,7%**) | Đo trực tiếp từ kết quả liên kết của PlatformIO Core 6.2.0 (`pio run -t clean; pio run`) |
 | **Bộ nhớ RAM tĩnh (DRAM)** | `46.764 / 327.680 bytes` (**14,3%**) | Đo trực tiếp từ kết quả biên dịch PlatformIO (`pio run`) |
-| **Chu kỳ kiểm tra Rule & Chống kẹp** | Rule Node-RED: **1 giây**; HC-SR04 recheck: **0,3 giây** | Giá trị thiết lập trong timer `tick_1s` và hằng số `ANTI_PINCH_RECHECK = 300` (`Config.h`) |
-| **Độ trễ vòng mạng MQTT tới Broker** | `167–172 ms` (5 mẫu đo liên tiếp) | Đo từ Node.js (`Date.now()`) gửi/nhận echo QoS 0 qua `broker.hivemq.com:1883` (RTT mạng máy chủ–broker, chưa bao gồm Wokwi) |
-| **Độ phân giải log Wokwi–Dashboard** | Độ phân giải **1 giây** (`HH:MM:SS`) | Log trong `parking_log.txt` chỉ ghi chính xác tới giây, nên chưa gắn mốc `millis()` đồng bộ hai đầu để đo độ trễ mili giây từ Wokwi |
+| **Chu kỳ kiểm tra Rule & Chống kẹp** | Rule Node-RED: **1 giây**; HC-SR04 recheck: **0,3 giây** | Giá trị cài đặt trong luồng quét 1s và chu kỳ đo siêu âm `300 ms` |
+| **Độ trễ vòng mạng MQTT tới Broker** | `167–172 ms` (5 mẫu đo liên tiếp) | Đo từ Node.js (`Date.now()`) gửi/nhận echo QoS 0 qua `broker.hivemq.com:1883` (chưa gồm Wokwi) |
+| **Độ phân giải log Wokwi–Dashboard** | Độ phân giải **1 giây** (`HH:MM:SS`) | Log trong `parking_log.txt` chỉ làm tròn tới giây nên chưa đo được độ trễ mili giây từ Wokwi |
 
-*Bảng 5.6: Số liệu đo kiểm tài nguyên Firmware ESP32 và thời gian phản hồi quan sát.*
+*Bảng 5.7: Số liệu đo kiểm tài nguyên Firmware ESP32 và thời gian phản hồi quan sát.*
 
 ---
 
@@ -644,25 +635,25 @@ Bảng 5.6 trình bày chi tiết các thông số chu kỳ lấy mẫu, độ t
 
 ### 6.1. Kết quả đạt được
 
-#### 6.1.1. Hoàn chỉnh hệ thống mô phỏng 4 tầng IoT
-Nhóm đã hoàn thiện mô phỏng bãi giữ xe máy tự quản đủ 4 tầng gồm mạch Wokwi (ESP32, RC522, HC-SR04, Servo SG90, LED Đỏ/Xanh, LCD 1602 I2C, Buzzer), truyền thông MQTT hai chiều qua `broker.hivemq.com`, Node-RED xử lý 4 rule tự động (`69` phần tử JSON với `50` node xử lý/UI) và Web Dashboard điều hành.
+#### 6.1.1. Hoàn chỉnh mô hình mô phỏng 4 tầng IoT và cơ chế tại cổng
+Nhóm đã hoàn thiện mô phỏng bãi giữ xe máy tự quản đủ 4 tầng gồm mạch Wokwi (ESP32, RC522, HC-SR04, Servo SG90, LED Đỏ/Xanh, LCD 1602 I2C, Buzzer), truyền thông MQTT 6 topic qua `broker.hivemq.com`, Node-RED xử lý 4 rule tự động (`69` phần tử JSON) và Web Dashboard. Toàn bộ thao tác vào/ra, từ chối và chống kẹp `< 15 cm` đều xử lý độc lập tại ESP32 ngay cả khi mất mạng.
 
-#### 6.1.2. Xử lý độc lập tại cổng, đồng bộ hai chiều và xác thực truy cập
-Cổng ESP32 tự quyết định vào/ra/từ chối và duy trì cơ chế chống kẹp xe `< 15 cm` khi mất kết nối mạng, đồng thời đồng bộ lại trạng thái và cấu hình thông qua hai bản tin `retained` (`parking_n4/status` và `parking_n4/config`) cùng LWT (`willQos = 1`). Phía ứng dụng web và trình soạn thảo luồng đã bật xác thực mật khẩu băm `bcrypt` thông qua `httpNodeAuth` (`/ui`) và `adminAuth` (`/`) trong `docker/nodered/settings.js`.
+#### 6.1.2. Đồng bộ hai chiều và xác thực truy cập
+Hệ thống đồng bộ trạng thái và cấu hình thông qua hai bản tin `retained` (`parking_n4/status` và `parking_n4/config`) cùng LWT (`willQos = 1`). Web Dashboard (`/ui`) và Flow Editor (`/`) đã bật xác thực mật khẩu băm `bcrypt` thông qua `httpNodeAuth` và `adminAuth`.
 
 #### 6.1.3. Tính năng mở rộng và khả năng duy trì dữ liệu bền vững
-Các phần mở rộng đã chạy kiểm thử gồm quản lý tối đa 16 thẻ động (hỗ trợ vé tháng `0đ`, khóa thẻ và lấy nhanh UID vừa quẹt), bảng giá động 3 mức, đối soát lịch sử giao dịch xuất CSV và đóng gói chạy một lệnh qua Docker Compose. Khi kiểm thử khởi động lại dịch vụ Node-RED, số xe, doanh thu và các giao dịch lưu trong `data/parking_database.json` được nạp lại nguyên vẹn.
+Các phần mở rộng đã kiểm thử gồm quản lý tối đa 16 thẻ động (vé tháng `0đ`, khóa thẻ, lấy nhanh UID), bảng giá động 3 mức, đối soát giao dịch xuất CSV và đóng gói bằng Docker Compose. Khi khởi động lại Node-RED, số xe, doanh thu và giao dịch trong `data/parking_database.json` được nạp lại nguyên vẹn.
 
 ### 6.2. Hạn chế
 
 #### 6.2.1. Giới hạn của môi trường mô phỏng Wokwi
-Hệ thống mới dừng ở mô phỏng phần cứng trên Wokwi Simulator, chưa lắp mạch vật lý thật để đánh giá độ ổn định cơ khí cần chắn barie, nguồn cấp servo hay nhiễu sóng của đầu đọc RFID và cảm biến siêu âm ngoài trời.
+Hệ thống mới chạy mô phỏng phần cứng, chưa thử nghiệm thực tế để đánh giá sai số cơ khí của thanh chắn hay nhiễu cảm biến ngoài trời.
 
 #### 6.2.2. Phụ thuộc public broker và chưa cấu hình HTTPS/TLS
-Kênh truyền tin sử dụng `broker.hivemq.com:1883` dùng chung nên phụ thuộc đường truyền Internet và chưa bật mã hóa TLS cho MQTT. Tương tự, xác thực `httpNodeAuth` trên Dashboard hiện phục vụ qua HTTP cục bộ (`http://localhost:1880/ui`), cần bổ sung reverse proxy HTTPS nếu triển khai qua mạng công cộng.
+Kênh truyền tin dùng public broker `broker.hivemq.com:1883` chưa mã hóa TLS, còn giao diện Dashboard đang dùng xác thực Basic Auth qua HTTP cục bộ (`http://localhost:1880/ui`) nên cần bổ sung HTTPS nếu triển khai qua Internet.
 
 #### 6.2.3. Quy mô bãi xe, ngưỡng demo và tiến độ quay video
-Sức chứa mô phỏng giới hạn ở 2 ô đỗ (`PARKING_CAPACITY = 2`) và các ngưỡng thời gian rút gọn phục vụ kiểm thử nhanh (giữ mở 3 giây, quá giờ 30 giây, mở lâu 10 giây). Bên cạnh đó, chuỗi 9 phân cảnh liên hoàn mới được kiểm thử tự động bằng script Node.js giả lập MQTT trên Docker Node-RED; nhóm cần hoàn thành quay video 9 bước chạy trực tiếp trên Wokwi thật trước khi nộp.
+Sức chứa giới hạn ở 2 ô đỗ cùng các ngưỡng thời gian demo rút gọn (giữ mở 3s, quá giờ 30s, mở lâu 10s). Chuỗi 9 bước liên hoàn mới hoàn tất kiểm thử qua script MQTT/Node-RED; nhóm cần chạy lại 9 bước trực tiếp trên Wokwi thật và quay video minh chứng trước khi nộp.
 
 ### 6.3. Hướng phát triển
 
@@ -679,11 +670,11 @@ Lắp cảm biến từ trường hoặc hồng ngoại/siêu âm tại từng v
 Mở rộng Node-RED gửi thông báo sự cố (Rule 3 dò thẻ lạ, thiết bị mất kết nối LWT) qua kênh di động như Telegram Bot, đồng thời chuyển lưu trữ từ tệp JSON cục bộ sang CSDL đám mây (PostgreSQL hoặc MongoDB) kèm MQTT Broker có xác thực TLS khi mở rộng nhiều bãi xe song song.
 
 ### 6.4. Lời kết và cảm ơn
-Trải qua 10 tuần tìm hiểu và triển khai đồ án học phần Internet of Things, Nhóm 4 đã xây dựng hoàn chỉnh mô hình mô phỏng **Hệ thống bãi giữ xe máy tự quản sử dụng RFID** theo kiến trúc IoT 4 tầng, đi từ phân tích yêu cầu, thiết kế mạch Wokwi, lập trình firmware đến tích hợp luồng tự động hóa, kiểm thử và đóng gói triển khai. Hệ thống vận hành trên vi điều khiển ESP32 mô phỏng ở Tầng thiết bị (RFID-RC522, cảm biến siêu âm HC-SR04 chống kẹp xe dưới 15 cm, servo SG90, đèn LED giao thông, LCD 1602 I2C và còi buzzer tách kênh LEDC 15), truyền thông hai chiều qua MQTT trên HiveMQ public broker ở Tầng mạng, xử lý trung gian bằng Node-RED với 4 quy tắc tự động hóa và lưu trữ bền vững ra tệp `parking_log.txt`, `parking_database.json`, cùng Web Dashboard 3 tab có xác thực truy cập (`httpNodeAuth`, `adminAuth`), điều khiển barie từ xa, quản lý tới 16 thẻ RFID động, bảng giá động và xuất lịch sử giao dịch CSV.
+Sau 10 tuần tìm hiểu và triển khai đồ án học phần Internet of Things, Nhóm 4 đã hoàn thành mô hình mô phỏng hệ thống bãi giữ xe máy tự quản sử dụng RFID theo kiến trúc IoT 4 tầng. Đề tài giúp nhóm củng cố kiến thức về hệ thống nhúng, giao thức MQTT, tự động hóa và phát triển ứng dụng IoT; đồng thời rèn luyện kỹ năng lập trình, kiểm thử, quản lý mã nguồn và làm việc nhóm.
 
-Bên cạnh việc củng cố kiến thức về hệ thống nhúng và giao thức truyền thông IoT, quá trình thực hiện đề tài còn giúp cả nhóm rèn luyện những thói quen kỹ thuật bài bản trong phát triển phần mềm và phần cứng: phân tách mã nguồn C++ theo mô-đun rõ trách nhiệm (`GateController`, `ParkingSystem`, `MqttService`), xử lý chống dội thẻ, giữ cổng vận hành độc lập khi mất kết nối mạng, quản lý phiên bản mã nguồn bằng Git và đóng gói môi trường chạy đồng nhất qua Docker Compose. Những kỹ năng như đọc hiểu tài liệu kỹ thuật tiếng Anh, chia nhỏ bài toán theo từng mốc tuần từ M1 đến M4, tách bạch kiểm thử giả lập với kiểm chứng thực tế, cũng như phối hợp làm việc nhóm khi tổng hợp báo cáo và thuyết trình đều được từng thành viên tích lũy rõ rệt.
+Mặc dù hệ thống vẫn còn một số hạn chế về phần cứng thực tế và bảo mật truyền thông, kết quả đạt được là nền tảng để nhóm tiếp tục mở rộng và hoàn thiện trong tương lai.
 
-Nhóm 4 xin bày tỏ lòng biết ơn chân thành đến **Thầy Võ Hoàng Hải** đã tận tình hướng dẫn, góp ý cụ thể qua từng báo cáo tuần để nhóm kịp thời bổ sung các cơ chế an toàn, xác thực truy cập và hoàn thiện đề tài đúng tiến độ. Nhóm cũng xin chân thành cảm ơn quý **Thầy Cô Khoa Công nghệ Thông tin — Trường Đại học Công Thương TP. Hồ Chí Minh** đã trang bị nền tảng kiến thức vững chắc để nhóm tự tin tiếp cận và giải quyết các bài toán kỹ thuật trong đồ án.
+Nhóm 4 xin chân thành cảm ơn **Thầy Võ Hoàng Hải** đã tận tình hướng dẫn, góp ý và hỗ trợ nhóm trong suốt quá trình thực hiện đồ án. Nhóm cũng xin cảm ơn quý **Thầy Cô Khoa Công nghệ Thông tin – Trường Đại học Công Thương TP. Hồ Chí Minh** đã trang bị kiến thức và tạo điều kiện để nhóm hoàn thành đề tài.
 
 ---
 
@@ -759,6 +750,7 @@ Nhóm 4 xin bày tỏ lòng biết ơn chân thành đến **Thầy Võ Hoàng H
   23/11/2026 18:12:01 | Xe ra                        | 29A-123.45   | 15 giây · 5.000 đ
   23/11/2026 18:12:17 | Rule 1 · Xe gửi quá giờ      | 51F-999.88   | Ô 2 đã gửi 31 giây (ngưỡng 30 giây)
   ```
+* **Phương pháp kiểm tra tự động luồng và giao diện (Chrome Headless CDP):** Kết nối trình duyệt tới `http://127.0.0.1:1880/` (đã bật `adminAuth`) kiểm tra `RED.nodes.eachNode(n => !n.valid)` ghi nhận mảng rỗng (`0` node lỗi trên 69 phần tử); truy cập 3 tab tại `http://127.0.0.1:1880/ui/` (qua `httpNodeAuth` Basic Auth, độ phân giải `1440x1080`) lắng nghe `Runtime.exceptionThrown` (`0` ngoại lệ JS) và kiểm tra `scrollWidth <= window.innerWidth` (`[false, false, false]`).
 * **Bộ ảnh minh chứng đi kèm (`docs/`):** `minh_chung_anti_pinch_wokwi.png`, `nodered_flow.png`, `dashboard_demo.png`, `nodered_admin_login.png`, `dashboard_cards_pricing.png`, `dashboard_history.png` và 5 sơ đồ thiết kế tại `docs/figures/`.
 
 ### Phụ lục F. Liên kết video demo
