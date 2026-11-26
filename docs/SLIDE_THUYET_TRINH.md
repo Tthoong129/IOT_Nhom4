@@ -1,376 +1,270 @@
-# KỊCH BẢN VÀ NỘI DUNG SLIDE THUYẾT TRÌNH (17 SLIDES)
+# KỊCH BẢN VÀ NỘI DUNG SLIDE THUYẾT TRÌNH (13 SLIDES)
 **Đề tài: Hệ thống bãi giữ xe máy tự quản sử dụng RFID (Mô hình IoT 4 tầng)**  
-*Thời lượng trình bày dự kiến: 12 – 15 phút*
+*Thời lượng trình bày dự kiến: 8 – 10 phút (kèm demo trực tiếp sau phần trình bày)*
 
 ---
 
 ## SLIDE 1: TRANG MỞ ĐẦU
 * **Tên đề tài**: HỆ THỐNG BÃI GIỮ XE MÁY TỰ QUẢN SỬ DỤNG RFID
-* **Mô hình**: Kiến trúc IoT 4 tầng — Mô phỏng phần cứng trên Wokwi & Xử lý bằng Node-RED / Docker
+* **Mô hình**: Kiến trúc IoT 4 tầng — Mô phỏng Wokwi & Node-RED trên Docker
 * **Trường / Khoa**: Trường Đại học Công Thương TP. Hồ Chí Minh (HUIT) — Khoa Công nghệ Thông tin
 * **Học phần**: Internet of Things (IoT)
 * **Giảng viên hướng dẫn**: Thầy Võ Hoàng Hải
 * **Nhóm thực hiện**: Nhóm 4 — `2001230069` Nguyễn Lê Duy Cương · `2001230894` Đinh Tấn Thành · `2001230938` Bùi Tấn Thông
 
 > **Lời nói gợi ý:**  
-> Dạ em chào thầy Hải và các bạn. Hôm nay Nhóm 4 tụi em xin trình bày đề tài **Hệ thống bãi giữ xe máy tự quản dùng thẻ RFID**. Bài báo cáo gồm 4 phần chính: nhóm đặt ra bài toán gì, dùng linh kiện và phần mềm nào, từng tầng đã làm chạy được những gì kèm ảnh thực tế, và cuối cùng là kết quả kiểm thử cùng những chỗ còn hạn chế.
+> Em chào thầy Hải và các bạn. Hôm nay Nhóm 4 xin trình bày đề tài **Hệ thống bãi giữ xe máy tự quản dùng thẻ RFID**. Phần trình bày gồm: bài toán và công nghệ sử dụng, kiến trúc 4 tầng, kết quả kiểm thử thực tế, hạn chế và sau đó nhóm em sẽ demo trực tiếp hệ thống.
 
 > **Chuyển ý:**  
-> Trước hết em xin nói qua lý do làm đề tài và phạm vi nhóm tụi em thực hiện ạ.
+> Trước hết, nhóm em xin trình bày bài toán đặt ra và phạm vi thực hiện.
 
 ---
 
-## SLIDE 2: BÀI TOÁN, MỤC TIÊU & PHẠM VI MÔ PHỎNG (*Nhóm làm gì?*)
+## SLIDE 2: BÀI TOÁN, MỤC TIÊU & PHẠM VI
 
 ![Sơ đồ Use Case tổng quát của hệ thống bãi giữ xe RFID](figures/fig_3_1_usecase.png)
 
-* **Vấn đề thực tế cần giải quyết**:
-  * Ghi vé giấy và nhập biển số bằng tay dễ kẹt xe giờ cao điểm.
-  * Barie hạ theo giờ cố định dễ va trúng xe đang đi qua.
-  * Người quản lý không thấy được số chỗ trống và lịch sử ra/vào trên web.
-* **Phạm vi hệ thống nhóm xây dựng**:
-  * Mô phỏng bãi giữ xe quy mô `2` ô đỗ, hỗ trợ quản lý tối đa `16` thẻ RFID và `1` cổng barie.
-  * Đủ quy trình: quẹt thẻ vào/ra, chống kẹp dưới `15 cm`, đồng bộ MQTT, cảnh báo tự động trên Node-RED và khóa đăng nhập Web Dashboard.
+* **Vấn đề**: Ở bãi xe truyền thống, ghi vé tay vừa chậm, vừa khó đối soát; barie đóng cứng theo giây dễ va chạm xe.
+* **Mục tiêu**: Tự động nhận diện xe vào/ra bằng RFID, chống kẹp dưới `15 cm`, giám sát từ xa và khóa đăng nhập web.
+* **Phạm vi mô phỏng**: Bãi giữ xe `2` ô đỗ, quản lý tối đa `16` thẻ RFID và `1` cổng barie trên Wokwi.
 
 > **Lời nói gợi ý:**  
-> Ngoài bãi xe truyền thống thì ghi vé tay vừa chậm vừa khó đối soát khi mất xe, còn barie đóng cứng theo giây thì dễ hạ trúng xe đang chạy qua. Trong đồ án này tụi em dựng mô hình 2 ô đỗ, quản lý tối đa 16 thẻ và 1 cổng barie: xe quẹt thẻ tự mở cổng, có cảm biến chống kẹp ở dưới, đẩy dữ liệu lên web có đăng nhập để người quản lý theo dõi và bấm mở/đóng barie từ xa.
+> Ở bãi xe truyền thống, ghi vé tay vừa chậm, vừa khó đối soát khi có sự cố. Ngoài ra, barie đóng theo thời gian cố định dễ hạ trúng xe đang đi qua. Vì vậy, nhóm em xây dựng mô hình mô phỏng 2 ô đỗ dùng thẻ RFID, có cảm biến siêu âm chống kẹp và đồng bộ dữ liệu lên web có đăng nhập.
 
 > **Chuyển ý:**  
-> Để chạy được hệ thống này thì nhóm em sử dụng những linh kiện và công cụ sau ạ.
+> Để làm hệ thống này, nhóm em sử dụng các linh kiện và phần mềm sau.
 
 ---
 
-## SLIDE 3: LINH KIỆN & CÔNG CỤ SỬ DỤNG (*Nhóm dùng gì?*)
+## SLIDE 3: THIẾT BỊ & CÔNG CỤ SỬ DỤNG
 
-![Mạch mô phỏng phần cứng Wokwi với đầy đủ 7 linh kiện](minh_chung_anti_pinch_wokwi.png)
+![Mạch mô phỏng phần cứng trên Wokwi](minh_chung_anti_pinch_wokwi.png)
 
-| Tầng | Thiết bị / Phần mềm nhóm dùng | Vai trò |
+| Tầng | Thiết bị / Công cụ sử dụng | Vai trò chính |
 | :--- | :--- | :--- |
-| **Tầng 1 (Cổng)** | **ESP32 DevKit V1** (trên **Wokwi**, code bằng **PlatformIO**) | Xử lý quẹt thẻ, tính phí, điều khiển cổng tại chỗ |
-| | **RFID-RC522**, **HC-SR04**, **Servo SG90**, **LCD 1602 I2C**, **LED Đỏ/Xanh**, **Buzzer** | Đọc thẻ, đo vật cản, nâng hạ barie, hiện LCD, đèn và còi |
-| **Tầng 2 (Mạng)** | **Wi-Fi (`Wokwi-GUEST`)** + **MQTT (`broker.hivemq.com`)** | Truyền tin hai chiều giữa ESP32 và Node-RED |
-| **Tầng 3 (Xử lý)** | **Node-RED**, tệp `parking_database.json` & `parking_log.txt`, **Docker Compose** | Gom trạng thái, chạy 4 luật tự động và lưu dữ liệu |
-| **Tầng 4 (Web)** | **Node-RED Dashboard (3 tab)** + **Basic Auth (`bcrypt`)** | Xem trực tiếp bãi xe, quản lý thẻ/giá, xuất CSV và khóa truy cập |
+| **Tầng 1 (Cổng)** | **ESP32 DevKit V1** (Wokwi, PlatformIO), **RFID-RC522**, **HC-SR04**, **Servo SG90**, **LCD 1602 I2C**, **LED Đỏ/Xanh**, **Buzzer** | Đọc thẻ, đo vật cản, đóng/mở barie, hiện LCD và báo còi/đèn |
+| **Tầng 2 (Mạng)** | **Wi-Fi (`Wokwi-GUEST`)** + **MQTT (`broker.hivemq.com`)** | Truyền tin hai chiều giữa cổng và phần mềm |
+| **Tầng 3 (Xử lý)** | **Node-RED** (Docker), `parking_log.txt` & `parking_database.json` | Đồng bộ dữ liệu, chạy 4 rule tự động và lưu lịch sử |
+| **Tầng 4 (Web)** | **Web Dashboard 3 tab** + **Basic Auth (`bcrypt`)** | Theo dõi bãi xe, điều khiển barie, quản lý thẻ/giá, xuất CSV |
 
 > **Lời nói gợi ý:**  
-> Đây là toàn bộ thiết bị và công cụ tụi em dùng trong bài. Phần cứng làm trên Wokwi gồm ESP32 nối với đầu đọc thẻ RC522, cảm biến siêu âm HC-SR04, servo làm barie, màn hình LCD, đèn xanh đỏ và còi. Dữ liệu gửi qua MQTT trên HiveMQ lên Node-RED đóng gói bằng Docker, lưu ra 2 file JSON và text rồi đưa lên Web Dashboard có đăng nhập.
+> Phần cứng mô phỏng trên Wokwi gồm ESP32 kết nối đầu đọc thẻ RC522, cảm biến siêu âm HC-SR04, servo làm barie, màn hình LCD, đèn và còi. Dữ liệu gửi qua MQTT trên HiveMQ về Node-RED chạy trong Docker để xử lý tự động, lưu ra hai tệp dữ liệu và hiển thị lên Web Dashboard có đăng nhập.
 
 > **Chuyển ý:**  
-> Tiếp theo em xin trình bày cách 4 tầng này nối với nhau và truyền dữ liệu qua lại.
+> Tiếp theo là kiến trúc kết nối giữa bốn tầng của hệ thống.
 
 ---
 
-## SLIDE 4: KIẾN TRÚC 4 TẦNG & LUỒNG DỮ LIỆU HAI CHIỀU
+## SLIDE 4: KIẾN TRÚC 4 TẦNG & LUỒNG HAI CHIỀU
 
 ![Sơ đồ kiến trúc 4 tầng IoT và luồng dữ liệu hai chiều](figures/fig_3_2_arch_4layer.png)
 
-* **Hai luồng dữ liệu tách biệt**:
-  * **Uplink (Đi lên)**: ESP32 gửi sự kiện quẹt thẻ, trạng thái barie, cảnh báo và snapshot bãi xe qua MQTT lên Node-RED và Web Dashboard.
-  * **Downlink (Đi xuống)**: Web Dashboard hoặc luật tự động gửi lệnh mở/đóng barie, danh sách thẻ và bảng giá mới xuống ESP32.
-* **Xử lý độc lập tại cổng**: Mọi quyết định cho xe vào/ra và chống kẹp đều chạy trực tiếp trên ESP32 $\rightarrow$ **rớt mạng cổng vẫn hoạt động bình thường**, có mạng lại tự đồng bộ lên web.
+* **Luồng Uplink**: Đẩy sự kiện quẹt thẻ, trạng thái barie, cảnh báo và snapshot bãi xe từ ESP32 lên web.
+* **Luồng Downlink**: Gửi lệnh mở/đóng barie, danh sách thẻ và bảng giá mới từ web hoặc Rule 4 xuống ESP32.
+* **Nguyên lý tại cổng**: Theo thiết kế, toàn bộ quyết định vào/ra và chống kẹp chạy ngay trên ESP32 để cổng không phụ thuộc mạng.
 
 > **Lời nói gợi ý:**  
-> Hệ thống chia đúng 4 tầng. Chiều đi lên là dữ liệu từ cổng gửi lên web; chiều đi xuống là lệnh đóng mở barie hay thẻ và bảng giá mới từ web gửi ngược xuống mạch. Tụi em cho ESP32 tự quyết định mọi thứ ở cổng trước, nên lỡ mạng Wi-Fi hay MQTT bị ngắt giữa chừng thì cổng vẫn cho xe quẹt thẻ ra vào bình thường, khi nào nối lại được nó tự đồng bộ lại trên web.
+> Hệ thống chia làm 4 tầng với hai luồng dữ liệu tách biệt. Chiều đi lên đưa thông tin quẹt thẻ và cảnh báo lên web; chiều đi xuống đưa lệnh barie và cấu hình thẻ, giá mới về cổng. Theo thiết kế, phần xử lý tại cổng chạy trực tiếp trên ESP32 nên dù mất mạng tạm thời, cổng vẫn kiểm soát xe bình thường.
 
 > **Chuyển ý:**  
-> Trước khi đi vào chi tiết từng tầng, tụi em mô tả nhanh hai luồng chức năng chính chạy từ đầu tới cuối của hệ thống ạ.
+> Các luồng chức năng chính đi xuyên qua 4 tầng được thể hiện qua sơ đồ tuần tự sau.
 
 ---
 
-## SLIDE 5: LUỒNG CHỨC NĂNG (1/2) — XE VÀO / RA & XỬ LÝ TỪ CHỐI
+## SLIDE 5: LUỒNG CHỨC NĂNG XUYÊN 4 TẦNG
 
 ```mermaid
 sequenceDiagram
-    actor U as Người gửi xe
+    actor U as Người dùng / Quản lý
     participant E as ESP32 (Tầng 1)
     participant M as MQTT (Tầng 2)
     participant N as Node-RED (Tầng 3)
     participant W as Dashboard (Tầng 4)
 
-    U ->> E: Quẹt thẻ RFID tại cổng
-    alt Thẻ hợp lệ & còn chỗ (Xe vào)
-        E ->> E: Gán ô trống (1 hoặc 2), mở barie 90°, hiện LCD
-        E ->> M: Gửi rfid/scan (check_in) + status
-        M ->> N: Đẩy sự kiện vào/trạng thái
-        N ->> N: Ghi log, lưu JSON, bật đếm giờ (Rule 1)
-        N ->> W: Hiện xe vào ô đỗ & nhật ký
-    else Thẻ hợp lệ đang gửi (Xe ra)
-        E ->> E: Tính thời gian & tiền (vé tháng 0đ), mở 90°
-        E ->> M: Gửi rfid/scan (check_out) + status
-        M ->> N: Đẩy lượt ra & cước phí
-        N ->> N: Ghép cặp giao dịch, cộng doanh thu, lưu file
-        N ->> W: Trả ô trống, cập nhật doanh thu & Tab 3
-    else Thẻ lạ / Thẻ khóa / Bãi đầy (2/2)
-        E ->> E: Giữ đóng barie 0°, kêu còi, báo LCD
+    Note over U,W: 1. Luồng xe vào / ra và từ chối tại cổng
+    U ->> E: Quẹt thẻ RFID
+    alt Thẻ hợp lệ (Vào hoặc Ra)
+        E ->> E: Gán ô trống hoặc tính phí, mở barie 90°
+        E ->> M: Gửi rfid/scan + status
+        M ->> N: Cập nhật trạng thái, lưu log & JSON
+        N ->> W: Hiển thị ô đỗ, doanh thu, lịch sử
+    else Thẻ lạ / Thẻ khóa / Bãi đầy
+        E ->> E: Giữ đóng barie 0°, báo còi & LCD
         E ->> M: Gửi alert (INVALID / LOCKED / LOT_FULL)
-        M ->> N: Kiểm tra Rule 2 (đầy) / Rule 3 (dò thẻ >= 3 lần)
-        N ->> W: Bật cảnh báo đỏ & ghi log sự cố
+        M ->> N: Kiểm tra Rule 2 / Rule 3
+        N ->> W: Hiện cảnh báo đỏ trên web
     end
+
+    Note over U,W: 2. Luồng điều khiển barie chống kẹp & cấu hình từ xa
+    U ->> W: Bấm Mở/Đóng barie (hoặc sửa thẻ/giá ở Tab 2)
+    W ->> N: Gửi yêu cầu điều khiển hoặc cấu hình
+    N ->> M: Gửi barie/cmd hoặc config (retained)
+    M ->> E: Đẩy xuống ESP32
+    loop Kiểm tra HC-SR04 mỗi 0,3s khi đóng
+        E ->> E: Khoảng cách < 15 cm -> giữ mở 90°, gửi ANTI_PINCH
+    end
+    E ->> M: Hết vật cản -> hạ 0° & báo barie/status
 ```
 
-* **Luồng xuyên suốt 4 tầng**: Mọi lượt quẹt thẻ đều xử lý ở cổng trước rồi mới đồng bộ lên web và lưu lịch sử.
+* **Điểm thống nhất**: Quyết định thực tế luôn đi qua cổng ESP32; lệnh đóng từ web hay Rule 4 đều phải qua kiểm tra siêu âm `< 15 cm`.
 
 > **Lời nói gợi ý:**  
-> Nhìn theo chiều dọc từ người gửi xe đi hết 4 tầng thì luồng xe vào/ra chạy như thế này ạ: khi người dùng quẹt thẻ, ESP32 tự kiểm tra thẻ hợp lệ trước. Nếu là xe vào thì tự gán ô trống, mở barie 90 độ rồi đẩy tin qua MQTT cho Node-RED ghi log, lưu JSON và hiện lên web. Lúc quẹt ra thì ESP32 tự tính tiền, Node-RED ghép cặp thành một giao dịch hoàn chỉnh rồi cộng doanh thu. Còn nếu gặp thẻ lạ, thẻ khóa hay bãi đầy thì cổng chặn lại tại chỗ luôn, xong mới báo cảnh báo đỏ lên web.
+> Sơ đồ làn bơi này gộp ba luồng chính xuyên suốt 4 tầng. Ở luồng vào ra, ESP32 tự kiểm tra thẻ rồi mở cổng, sau đó đẩy MQTT lên Node-RED để lưu file và cập nhật web; trường hợp thẻ lỗi hoặc bãi đầy thì cổng chặn tại chỗ rồi mới báo cảnh báo. Ở chiều ngược lại, lệnh đóng barie hay cấu hình thẻ, giá mới đi từ web qua MQTT xuống ESP32, và khi đóng đều phải kiểm tra siêu âm dưới 15 cm mới hạ thanh chắn.
 
 > **Chuyển ý:**  
-> Tiếp theo là luồng chức năng đi theo chiều ngược lại từ web xuống cổng và cơ chế bảo vệ chống kẹp xe ạ.
+> Bây giờ nhóm em đi vào chi tiết triển khai từng tầng, bắt đầu từ Tầng 1.
 
 ---
 
-## SLIDE 6: LUỒNG CHỨC NĂNG (2/2) — ĐIỀU KHIỂN CHỐNG KẸP & CẬP NHẬT TỪ XA
-
-```mermaid
-sequenceDiagram
-    actor Q as Người quản lý
-    participant W as Dashboard (Tầng 4)
-    participant N as Node-RED (Tầng 3)
-    participant M as MQTT (Tầng 2)
-    participant E as ESP32 & HC-SR04 (Tầng 1)
-
-    rect rgb(235, 245, 255)
-        Note over Q,E: Luồng 1 — Điều khiển barie & chống kẹp xe (< 15 cm)
-        Q ->> W: Bấm MỞ BARIE / ĐÓNG BARIE (hoặc Rule 4 mở > 10s)
-        W ->> N: Chuyển yêu cầu điều khiển
-        N ->> M: Gửi lệnh barie/cmd (open / close)
-        M ->> E: Đẩy lệnh xuống ESP32
-        loop Kiểm tra siêu âm mỗi 0,3s khi đóng
-            E ->> E: Nếu khoảng cách < 15 cm -> giữ mở 90°
-            E ->> M: Gửi cảnh báo ANTI_PINCH lên web
-        end
-        E ->> M: Hết vật cản -> hạ 0° & báo barie/status (closed)
-    end
-
-    rect rgb(238, 252, 242)
-        Note over Q,E: Luồng 2 — Cập nhật thẻ & bảng giá từ xa
-        Q ->> W: Thêm/khóa thẻ hoặc đổi bảng giá trên Tab 2
-        W ->> N: Gửi cấu hình mới
-        N ->> N: Lưu xuống parking_database.json
-        N ->> M: Phát config (retained) qua MQTT
-        M ->> E: ESP32 áp dụng ngay (vẫn giữ xe đang gửi)
-    end
-```
-
-* **Đồng bộ an toàn**: Dù đóng barie bằng nút bấm trên web hay bằng Rule 4 tự động, ESP32 vẫn kiểm tra siêu âm `< 15 cm` trước khi hạ thanh chắn; sửa thẻ/bảng giá trên web cũng tự cập nhật xuống cổng mà không cần nạp lại code.
-
-> **Lời nói gợi ý:**  
-> Ở slide này là hai luồng chức năng còn lại đi từ trên web xuống cổng. Luồng thứ nhất là điều khiển barie từ xa hoặc do Rule 4 tự kích khi quên đóng quá 10 giây: lệnh đi qua MQTT xuống ESP32, trước khi hạ thanh chắn mạch bắt siêu âm đo liên tục mỗi 0,3 giây, hễ còn vướng dưới 15 cm là giữ mở và báo lên web chứ không đóng bừa. Luồng thứ hai là lúc quản lý thêm thẻ hay đổi giá ở Tab 2: Node-RED lưu vô file JSON trước rồi đẩy tin retained xuống ESP32 cập nhật luôn, vẫn giữ nguyên xe đang gửi bên trong không bị mất dữ liệu.
-
-> **Chuyển ý:**  
-> Sau khi nắm hết các luồng chạy chính, giờ tụi em đi vô phần chi tiết kỹ thuật từng tầng, bắt đầu từ Tầng 1 ạ.
-
----
-
-## SLIDE 7: TẦNG 1 (1/2) — ĐẤU NỐI CHÂN & XỬ LÝ QUẸT THẺ VÀO/RA
-
-![Lưu đồ thuật toán xử lý quẹt thẻ RFID tại cổng ESP32](figures/fig_3_3_flow_rfid.png)
-
-| Linh kiện | Chân ESP32 (GPIO) | Chức năng chính |
-| :--- | :--- | :--- |
-| **RFID-RC522** (`SPI`) | `5`, `18`, `23`, `19`, `4` | Đọc UID thẻ xe 13,56 MHz |
-| **HC-SR04** | `27` (`TRIG`), `32` (`ECHO`) | Đo vật cản dưới barie |
-| **Servo SG90** / **Buzzer** | `13` (Servo) / `14` (Còi) | Đóng mở barie `0°–90°`, tách kênh PWM không xung đột |
-| **LED Đỏ/Xanh** / **LCD I2C** | `25`, `26` / `21`, `22` (`0x27`) | Báo trạng thái và hiện biển số, ô đỗ, tiền phí |
-
-* **Logic tại cổng**: Chống đọc trùng `1,5 giây`; xe vào tự lấy ô trống (`1` hoặc `2`); xe ra tính thời gian gửi & tiền (`0đ` với vé tháng); từ chối tại chỗ nếu gặp **thẻ lạ**, **thẻ bị khóa** hoặc **bãi đầy (`2/2`)**.
-
-> **Lời nói gợi ý:**  
-> Ở Tầng 1, bảng bên dưới là sơ đồ chân tụi em đấu trên ESP32, trong đó còi với servo tách kênh PWM riêng để không bị đụng nhau. Khi có người quẹt thẻ, mạch chạy theo lưu đồ này: chặn đọc lặp trong 1,5 giây để giữ thẻ lâu cũng không bị tính thành 2 lần; kiểm tra thẻ hợp lệ rồi mới chia nhánh cho xe vào lấy ô trống hoặc cho xe ra tính tiền, còn thẻ lạ, thẻ khóa hay bãi đầy thì chặn luôn tại chỗ kèm còi và chữ báo trên LCD.
-
-> **Chuyển ý:**  
-> Phần thứ hai ở Tầng 1 là cơ chế cảm biến chống kẹp xe khi barie hạ xuống ạ.
-
----
-
-## SLIDE 8: TẦNG 1 (2/2) — CHỐNG KẸP XE & MÁY TRẠNG THÁI BARIE
+## SLIDE 6: TẦNG 1 — ĐẤU NỐI, XỬ LÝ THẺ & CHỐNG KẸP XE
 
 ![Lưu đồ chống kẹp xe HC-SR04 và máy trạng thái Barie](figures/fig_3_4_flow_antipinch_fsm.png)
 
-* **Chống kẹp xe (`HC-SR04`)**:
-  * Khi hết `3 giây` giữ mở hoặc có lệnh đóng từ xa, cảm biến đo khoảng cách mỗi `0,3 giây`.
-  * Nếu vật cản dưới `15 cm` $\rightarrow$ **hoãn đóng**, giữ góc `90°`, hiện `TAM HOAN DONG` và gửi cảnh báo lên web; hết vật cản mới hạ `0°`.
-* **3 trạng thái điều khiển barie**: **Đóng** (`0°`), **Mở hẹn giờ** (`3s` khi quẹt thẻ) và **Giữ mở** (khi bấm từ Dashboard cho tới khi có lệnh đóng).
+| Linh kiện | GPIO ESP32 | Chức năng |
+| :--- | :--- | :--- |
+| **RFID-RC522** (`SPI`) | `5`, `18`, `23`, `19`, `4` | Đọc UID thẻ 13,56 MHz |
+| **HC-SR04** | `27` (`TRIG`), `32` (`ECHO`) | Đo vật cản dưới thanh chắn |
+| **Servo** / **Buzzer** / **LED** / **LCD I2C** | `13` / `14` / `25, 26` / `21, 22` | Nâng hạ barie `0°–90°`, báo còi, đèn và hiện thông tin |
+
+* **Xử lý thẻ**: Chống đọc trùng `1,5s`; xe vào lấy ô trống `1–2`; xe ra tính giờ và tiền (`0đ` vé tháng); chặn thẻ lạ, khóa, đầy `2/2`.
+* **Chống kẹp & 3 trạng thái**: Hết `3s` giữ mở hoặc nhận lệnh đóng, HC-SR04 đo mỗi `0,3s`, dưới `15 cm` giữ `90°` (*Đóng*, *Mở hẹn giờ*, *Giữ mở*).
 
 > **Lời nói gợi ý:**  
-> Khi barie chuẩn bị đóng — bất kể là tự đóng sau 3 giây hay do người trực bấm nút đóng trên web — ESP32 đều bắt cảm biến siêu âm đo lại mỗi 0,3 giây. Hễ còn thấy vật cản dưới 15 cm thì barie giữ nguyên góc 90 độ cho an toàn, chừng nào xe đi qua hết mới hạ xuống. Barie được chia đúng 3 trạng thái: Đóng, Mở 3 giây cho xe qua và Giữ mở khi điều khiển từ web.
+> Ở Tầng 1, ESP32 nối 7 linh kiện theo bảng chân như trên, trong đó còi tách kênh PWM riêng để không xung đột servo. Firmware chặn đọc trùng thẻ trong 1,5 giây, tự chia lượt vào ra và tính tiền. Khi chuẩn bị đóng barie, cảm biến siêu âm đo lại mỗi 0,3 giây: còn vật cản dưới 15 cm thì giữ mở 90 độ cho đến khi an toàn mới hạ xuống.
 
 > **Chuyển ý:**  
-> Mọi sự kiện xảy ra ở cổng sẽ được gửi qua Tầng 2 MQTT để lên hệ thống quản lý.
+> Dữ liệu từ cổng được truyền lên hệ thống qua Tầng 2 MQTT.
 
 ---
 
-## SLIDE 9: TẦNG 2 — TRUYỀN THÔNG MQTT HAI CHIỀU, RETAINED & LWT
+## SLIDE 7: TẦNG 2 — TRUYỀN THÔNG MQTT, RETAINED & LAST WILL (LWT)
 
 | Topic (`parking_n4/...`) | Chiều | Cơ chế | Nội dung chính |
 | :--- | :---: | :---: | :--- |
-| `rfid/scan` | Lên | Thường | Lượt xe vào/ra, ô đỗ và cước phí |
-| `barie/status` | Lên | Retained | Trạng thái barie (`open` / `closed`) và góc mở |
-| `alert` | Lên | Thường | Cảnh báo thẻ lạ, thẻ khóa, bãi đầy hoặc có vật cản |
-| `status` | Lên | Retained + LWT | Snapshot 2 ô đỗ; tự báo `{"online":false}` khi mất kết nối |
-| `barie/cmd` | Xuống | Thường | Lệnh đóng/mở/đồng bộ barie từ web hoặc Rule 4 |
-| `config` *(Mở rộng)* | Xuống | Retained | Gửi danh sách tối đa 16 thẻ và bảng giá mới xuống ESP32 |
+| `rfid/scan` / `alert` | Lên | Thường | Lượt xe vào/ra, cước phí và cảnh báo sự cố |
+| `barie/status` / `status` | Lên | Retained (+ LWT ở `status`) | Trạng thái barie, snapshot 2 ô và báo `online=false` khi đứt kết nối |
+| `barie/cmd` / `config` | Xuống | Thường / Retained ở `config` | Lệnh đóng mở barie; đồng bộ tối đa `16` thẻ và bảng giá |
 
-![Kiểm thử mất kết nối đột ngột kích hoạt LWT trên Dashboard](test_ch5_lwt_offline.png)
+![Kiểm thử LWT bằng script giả lập ESP32 kết hợp Node-RED trên Docker](test_ch5_lwt_offline.png)
+*Ghi chú: Ảnh chụp từ kịch bản kiểm thử dùng script giả lập ESP32 kết hợp Node-RED chạy trên Docker (cùng nhật ký `Rule 4 · Barie mở quá lâu` lúc `13:50:50`).*
 
-* **Tự nối lại & báo mất kết nối**: Mất mạng ESP32 tự thử lại mỗi `5 giây`; bản tin `Retained` giúp web và mạch vừa bật lên là có ngay trạng thái mới nhất; ngắt kết nối đột ngột thì **LWT** báo đỏ **`NGOẠI TUYẾN`** ngay trên Dashboard.
+* **Retained & LWT**: `Retained` giữ cấu hình và trạng thái mới nhất trên Broker; khi ngắt kết nối đột ngột, **LWT** báo đỏ **`NGOẠI TUYẾN`**.
+* **Theo thiết kế firmware**: Mất mạng ESP32 tự thử nối lại mỗi `5 giây` *(chưa tách ca test cắt Wi-Fi riêng trên Wokwi)*.
 
 > **Lời nói gợi ý:**  
-> Qua Tầng 2 truyền tin MQTT, nhóm em dùng 6 topic gửi lên và nhận xuống qua HiveMQ Broker. Hai cơ chế chính tụi em tận dụng là Retained và Last Will: Retained giúp lưu lại cấu hình thẻ với trạng thái barie mới nhất để mạch vừa khởi động lại là tự lấy xuống dùng ngay. Còn Last Will như trên ảnh kiểm thử, lúc nhóm thử ngắt kết nối đột ngột thì Broker tự báo tin để Dashboard chuyển sang màu đỏ Ngoại tuyến báo cho người trực biết.
+> Tầng 2 dùng 6 topic MQTT qua HiveMQ Broker. Bản tin Retained giúp giữ lại trạng thái barie và bảng thẻ mới nhất trên Broker để đồng bộ ngay khi kết nối lại. Còn Last Will dùng để phát hiện mất kết nối đột ngột; như ảnh kiểm thử bằng script giả lập ESP32 kết hợp Node-RED trên Docker, khi ngắt kết nối đột ngột thì Dashboard chuyển ngay sang trạng thái Ngoại tuyến màu đỏ. Theo thiết kế firmware, ESP32 cũng tự thử nối lại mỗi 5 giây khi mất mạng.
 
 > **Chuyển ý:**  
-> Dữ liệu từ 6 topic này sẽ đi vào Tầng 3 Node-RED để xử lý tập trung.
+> Các bản tin MQTT sau đó được đưa vào Tầng 3 Node-RED để xử lý tập trung.
 
 ---
 
-## SLIDE 10: TẦNG 3 (1/2) — LUỒNG XỬ LÝ TRUNG GIAN NODE-RED
+## SLIDE 8: TẦNG 3 (1/2) — LUỒNG XỬ LÝ TRÊN NODE-RED
 
-![Giao diện luồng xử lý Node-RED thực tế](nodered_flow.png)
+![Giao diện luồng xử lý Node-RED trên Docker](nodered_flow.png)
 
-* **Cách tổ chức flow theo 5 cụm rõ ràng trên Node-RED**:
-  1. **Nhóm Uplink**: Nhận tin từ 4 topic gửi lên và bộ đếm định kỳ mỗi `1 giây`.
-  2. **Nhóm Middleware & Luật**: Cập nhật toàn bộ dữ liệu vào một biến trạng thái dùng chung và chạy 4 quy tắc tự động.
-  3. **Nhóm Dashboard & Lưu trữ**: Đẩy dữ liệu ra giao diện 3 tab và ghi tệp `parking_log.txt`, `parking_database.json`.
-  4. **Nhóm Downlink**: Nhận thao tác bấm nút/sửa thẻ/giá trên web để đẩy lệnh xuống ESP32.
-  5. **Nhóm Khởi động**: Đọc lại `parking_database.json` mỗi khi bật lại Node-RED.
-
-* **Gợi ý chèn thêm vào PowerPoint (nếu cần)**: `docs/figures/fig_3_5_flow_checkcard_nodered.png`.
+* **Cấu trúc 5 cụm rõ ràng**:
+  1. **Uplink**: Tiếp nhận 4 topic từ ESP32 và xung kiểm tra định kỳ `1 giây`.
+  2. **Middleware & Rules**: Đồng bộ vào một biến trạng thái chung và kiểm tra 4 quy tắc tự động.
+  3. **Dashboard & Lưu trữ**: Cập nhật giao diện web, hiển thị cảnh báo và ghi tệp `parking_log.txt`, `parking_database.json`.
+  4. **Downlink & Khởi động**: Đẩy lệnh/cấu hình xuống ESP32 và nạp lại dữ liệu cũ khi bật Node-RED.
 
 > **Lời nói gợi ý:**  
-> Lên tới Tầng 3 Node-RED, để flow không bị rối và số liệu các bảng không bị đá nhau, nhóm em chia thành 5 cụm khung màu rõ ràng: nhận dữ liệu từ mạch vào, gom hết vào một trạng thái chung ở giữa để xử lý, đẩy ra giao diện web kèm lưu file, gửi lệnh ngược xuống mạch, và một cụm dưới cùng để nạp lại dữ liệu cũ khi khởi động lại Node-RED.
+> Lên tới Tầng 3 Node-RED trên Docker, nhóm em chia flow thành các cụm rõ ràng: nhận dữ liệu từ MQTT, gom hết vào một biến trạng thái dùng chung để các bảng không bị lệch số liệu, rồi đẩy ra giao diện web, lưu tệp và gửi lệnh xuống mạch. Cụm dưới cùng dùng để đọc lại dữ liệu cũ mỗi khi khởi động lại Node-RED.
 
 > **Chuyển ý:**  
-> Trong cụm xử lý giữa này, nhóm em cài sẵn 4 quy tắc tự động như ở slide tiếp theo ạ.
+> Trong cụm xử lý giữa, nhóm em cài đặt 4 quy tắc tự động như ở slide tiếp theo.
 
 ---
 
-## SLIDE 11: TẦNG 3 (2/2) — 4 QUY TẮC TỰ ĐỘNG & KẾT QUẢ CHẠY THẬT
+## SLIDE 9: TẦNG 3 (2/2) — 4 QUY TẮC TỰ ĐỘNG & KẾT QUẢ CHẠY THẬT
 
-| Quy tắc | Điều kiện (Ngưỡng demo) | Hệ thống làm gì |
+| Quy tắc | Điều kiện demo | Hành động hệ thống |
 | :--- | :--- | :--- |
-| **Rule 1 — Xe quá giờ** | Xe gửi vượt `30 giây` *(chỉnh được trên web)* | Gắn nhãn vàng `QUÁ GIỜ` trên ô đỗ, hiện cảnh báo và ghi log |
-| **Rule 2 — Bãi đầy** | Đạt `2/2` xe hoặc nhận tin từ chối đầy bãi | Thẻ Tổng quan đổi sang màu đỏ `Bãi đã đầy` |
-| **Rule 3 — Dò thẻ lạ** | Quẹt thẻ lạ `>= 3` lần trong `60 giây` | Bật cảnh báo đỏ `Nghi vấn dò thẻ` và lưu UID để đăng ký nhanh |
-| **Rule 4 — Barie mở lâu** | Barie giữ mở `> 10 giây` | Node-RED tự gửi lệnh đóng xuống ESP32 (vẫn qua chống kẹp) |
+| **Rule 1 — Xe quá giờ** | Gửi vượt `30 giây` | Gắn nhãn vàng `QUÁ GIỜ` trên ô đỗ, hiện cảnh báo và ghi log |
+| **Rule 2 — Bãi đầy** | Đạt `2/2` xe / nhận `LOT_FULL` | Đổi Tổng quan sang đỏ; **Node-RED chỉ cảnh báo, từ chối xe do ESP32 thực hiện** |
+| **Rule 3 — Dò thẻ lạ** | Thẻ lạ `>= 3` lần / `60 giây` | Bật cảnh báo đỏ `Nghi vấn dò thẻ` và giữ lại UID để đăng ký |
+| **Rule 4 — Barie mở lâu** | Mở giữ `> 10 giây` | Node-RED tự gửi lệnh đóng xuống ESP32 *(vẫn qua chống kẹp)* |
 
-![Kiểm thử kích hoạt đồng thời Rule 1, Rule 2 và Rule 3 trên Dashboard](test_ch5_rules_alerts.png)
-
-* *(Lưu ý: Các mốc `30s`, `10s`, `2` xe là thông số rút gọn để tiện demo; khi dùng thật chỉ cần đổi ngưỡng thành vài giờ hoặc vài chục giây ngay trên web/cấu hình).*
+![Kiểm thử 4 rule bằng script giả lập ESP32 trên Node-RED Docker](test_ch5_rules_alerts.png)
+*Ghi chú: Ảnh chụp kiểm thử bằng script giả lập ESP32 trên Node-RED Docker kích hoạt đồng thời Rule 1, 2, 3; nhật ký `Rule 4 · Barie mở quá lâu` hiển thị trong ảnh ở Slide 7.*
 
 > **Lời nói gợi ý:**  
-> Nhóm em cài đủ 4 quy tắc tự động chạy kiểm tra mỗi giây: báo xe gửi quá giờ, báo đỏ khi bãi đầy 2/2, phát cảnh báo nghi vấn dò thẻ nếu ai quẹt thẻ lạ liên tiếp 3 lần trong 1 phút, và tự động bắn lệnh đóng barie nếu lỡ mở quên quá 10 giây — tất nhiên xuống tới cổng vẫn check siêu âm dưới 15 cm mới đóng. Ảnh bên dưới là lúc tụi em test kích hoạt cùng lúc cả Rule 1, Rule 2 với Rule 3 chạy thật trên Dashboard.
+> Hệ thống chạy 4 quy tắc tự động mỗi giây theo ngưỡng demo rút gọn. Rule 1 nhắc xe quá giờ, Rule 2 báo đỏ khi bãi đầy — còn việc chặn xe thực tế vẫn do ESP32 làm tại cổng — Rule 3 báo động đỏ khi quẹt thẻ lạ 3 lần trong 60 giây, và Rule 4 tự đóng barie nếu mở quên quá 10 giây. Ảnh trên là kết quả chạy kiểm thử bằng script giả lập ESP32 kích hoạt cùng lúc ba cảnh báo đầu trên Dashboard, còn dòng log của Rule 4 đã hiển thị ở ảnh Slide 7.
 
 > **Chuyển ý:**  
-> Giờ em sang Tầng 4 để xem phần giao diện web mà người trực bãi sử dụng hàng ngày.
+> Toàn bộ trạng thái và nút điều khiển nằm ở Tầng 4 Web Dashboard.
 
 ---
 
-## SLIDE 12: TẦNG 4 (1/2) — WEB DASHBOARD GIÁM SÁT CHÍNH (TAB 1)
+## SLIDE 10: TẦNG 4 — WEB DASHBOARD & BẢO MẬT ĐĂNG NHẬP
 
-![Giao diện Web Dashboard Tab 1 giám sát bãi xe và điều khiển barie](dashboard_demo.png)
+![Giao diện Web Dashboard Tab 1 giám sát bãi xe](dashboard_demo.png)
 
-* **Tất cả thông tin cần thiết nằm gọn trong 1 màn hình**:
-  * **4 thẻ Tổng quan**: Số xe đang gửi (`x/2`), trạng thái barie, tình trạng online ESP32, tổng doanh thu.
-  * **Sơ đồ 2 ô đỗ**: Hiện biển số, chủ xe, giờ vào, bộ đếm giây và nhãn `QUÁ GIỜ` / `VÉ THÁNG`.
-  * **Điều khiển barie & Cảnh báo**: Mô phỏng góc mở barie, banner cảnh báo và 2 nút `MỞ BARIE` / `ĐÓNG BARIE`.
-  * **Nhật ký & Biểu đồ**: Danh sách 12 sự kiện mới nhất cùng biểu đồ doanh thu và số xe theo thời gian.
+![Hộp thoại đăng nhập xác thực quản trị Node-RED](nodered_admin_login.png)
+
+* **Tab 1 — Giám sát chính (1 màn hình)**: Gồm 4 thẻ tổng quan, sơ đồ Ô 1 & Ô 2, nút `MỞ` / `ĐÓNG BARIE`, 12 sự kiện và 2 biểu đồ.
+* **Khóa truy cập 2 lớp**: Dashboard (`/ui`) dùng **HTTP Basic Auth**, Flow Editor (`/`) dùng màn hình đăng nhập; mật khẩu lưu dạng băm `bcrypt`.
+* **Kiểm thử xác thực**: Gửi request thiếu hoặc sai mật khẩu trả mã `401`, đúng tài khoản trả `200`.
 
 > **Lời nói gợi ý:**  
-> Đây là giao diện chính ở Tab 1. Nhóm em bố trí hết trên một màn hình máy tính để người trực nhìn vô là nắm được ngay bãi đang có mấy xe, ô nào còn trống, barie đang đóng hay mở, bên dưới có bảng nhật ký 12 sự kiện mới nhất với hai biểu đồ cập nhật trực tiếp mà không cần cuộn trang lên xuống.
+> Ở Tầng 4, Tab 1 xếp gọn trong một màn hình để người trực theo dõi số xe, trạng thái hai ô, bấm mở hoặc đóng barie và xem nhật ký cùng biểu đồ. Về bảo mật, cả trang Dashboard và trang chỉnh flow đều khóa đăng nhập bằng mật khẩu băm bcrypt, thử gửi truy cập sai mật khẩu đều trả mã 401. Tuy nhiên Basic Auth chạy trên HTTP cục bộ chưa mã hóa đường truyền, điểm này nhóm em đã ghi ở phần hạn chế để cải thiện nếu đưa lên mạng ngoài.
 
 > **Chuyển ý:**  
-> Để người lạ không tự ý vào trang này bấm mở barie được thì nhóm em làm thêm phần đăng nhập ở slide sau ạ.
+> Tiếp theo là các phần mở rộng quản trị và cơ chế lưu trữ bền vững trong Docker.
 
 ---
 
-## SLIDE 13: TẦNG 4 (2/2) — BẢO MẬT ĐĂNG NHẬP HAI LỚP
+## SLIDE 11: MỞ RỘNG & LƯU TRỮ — 16 THẺ, GIÁ ĐỘNG, CSV & KHÔI PHỤC
 
-![Giao diện đăng nhập xác thực quản trị Node-RED](nodered_admin_login.png)
+![Tab 2 Quản lý thẻ RFID và bảng giá động](dashboard_cards_pricing.png)
 
-* **Khóa cả 2 đường vào hệ thống**:
-  * **Web Dashboard (`/ui`)**: Bắt buộc xác thực **HTTP Basic Auth** trước khi xem dữ liệu hoặc bấm nút barie.
-  * **Trang chỉnh flow Node-RED (`/`)**: Có màn hình đăng nhập quản trị riêng như hình trên.
-* **Không lưu mật khẩu thô**: Mật khẩu đều được băm bằng `bcrypt`; kiểm thử gửi request không đăng nhập hoặc sai mật khẩu đều bị chặn trả về mã `401 Unauthorized`, đúng tài khoản mới cho vào (`200 OK`).
+![Tab 3 Tra cứu lịch sử giao dịch và xuất CSV](dashboard_history.png)
+
+![Dashboard sau khi docker restart khôi phục doanh thu và giao dịch](test_ch5_restart_recovery.png)
+
+* **Tab 2 & Tab 3 (Mở rộng)**: Quản lý tối đa `16` thẻ (`Lấy UID này`, vé tháng `0đ`, khóa/xóa thẻ), chỉnh bảng giá đồng bộ `retained` xuống cổng; đối soát vào–ra và xuất CSV cho Excel.
+* **Lưu trữ bền vững (`data/`)**: Ghi `parking_log.txt` và `parking_database.json` gọn nhẹ trong Docker, không cần dựng máy chủ SQL rời.
+* **Kiểm chứng `docker restart iot_parking_middleware`**: Khôi phục nguyên **`5.000đ` doanh thu**, **`2` giao dịch** (`GIAO DỊCH ĐÃ LƯU: 2`) và `12` sự kiện như ảnh thật.
 
 > **Lời nói gợi ý:**  
-> Về phần bảo mật truy cập, tụi em khóa cả hai cửa: người trực vô Dashboard phải nhập tài khoản HTTP Basic Auth, còn người sửa flow Node-RED ở cổng 1880 phải đăng nhập qua màn hình quản trị như trên ảnh. Mật khẩu trong file cấu hình đều được băm bằng bcrypt chứ không để chữ thường; khi test bằng lệnh curl lúc chưa đăng nhập hoặc gõ sai mật khẩu hệ thống đều trả lỗi 401 chặn lại ngay.
+> Phần mở rộng gồm Tab 2 để thêm, khóa thẻ, chọn vé tháng và chỉnh bảng giá đẩy thẳng xuống ESP32 mà không cần nạp lại code; Tab 3 dùng để tra cứu và xuất file CSV mở trên Excel. Toàn bộ dữ liệu được lưu ra file log và file JSON trong Docker. Khi nhóm em thử chạy lệnh restart container Docker, web mở lại vẫn nạp nguyên 5.000 đồng doanh thu, 2 giao dịch đã lưu và bảng nhật ký 12 sự kiện như trên ảnh.
 
 > **Chuyển ý:**  
-> Ngoài các yêu cầu bắt buộc, nhóm em làm thêm hai tab quản trị mở rộng trên Dashboard.
+> Sau đây nhóm em đối chiếu kết quả kiểm thử với các mốc yêu cầu của môn học.
 
 ---
 
-## SLIDE 14: TÍNH NĂNG MỞ RỘNG — QUẢN LÝ 16 THẺ, GIÁ ĐỘNG & XUẤT CSV
+## SLIDE 12: KIỂM THỬ & ĐỐI CHIẾU YÊU CẦU MÔN HỌC (M1–M4)
 
-![Giao diện mở rộng Tab 2 quản lý thẻ RFID và bảng giá động](dashboard_cards_pricing.png)
-
-![Giao diện mở rộng Tab 3 tra cứu lịch sử giao dịch và xuất CSV](dashboard_history.png)
-
-* **Tab 2 — Quản lý thẻ & Bảng giá động**:
-  * Thêm, sửa, khóa/mở khóa và xóa tối đa `16` thẻ; khi vừa quẹt thẻ lạ có nút **`Lấy UID này`** điền nhanh; phân biệt **Vé lượt** và **Vé tháng (`0đ`)**; tự khóa nút xóa nếu xe đang gửi trong bãi.
-  * Đổi chế độ miễn phí, sửa 3 mức giá và ngưỡng quá giờ Rule 1 rồi đẩy `retained` xuống ESP32 không cần nạp lại code.
-* **Tab 3 — Đối soát lịch sử & Xuất CSV**:
-  * Ghép cặp giờ vào–ra thành từng dòng giao dịch, lọc/tìm theo biển số hoặc chủ xe, xuất file `.csv` mở chuẩn tiếng Việt trên Excel.
-
-> **Lời nói gợi ý:**  
-> Hai tab mở rộng này giúp hệ thống thực tế hơn khi quản trị. Ở Tab 2, người quản lý tự thêm hoặc khóa thẻ, chọn vé tháng miễn phí, hay bấm nút Lấy UID này ngay khi có thẻ lạ mới quẹt ở cổng; sửa bảng giá xong bấm lưu là nó đẩy thẳng xuống ESP32 luôn khỏi phải sửa code nạp lại. Còn Tab 3 tự ghép giờ vào với giờ ra của từng xe thành từng giao dịch hoàn chỉnh để tìm kiếm và xuất ra file CSV xem trên Excel.
-
-> **Chuyển ý:**  
-> Toàn bộ dữ liệu thẻ, giá và lịch sử đó được lưu xuống ổ cứng như thế nào ạ?
-
----
-
-## SLIDE 15: LƯU TRỮ DỮ LIỆU & ĐÓNG GÓI DOCKER COMPOSE
-
-![Dashboard sau khi khởi động lại container Docker khôi phục doanh thu và giao dịch](test_ch5_restart_recovery.png)
-
-* **Lưu trữ bền vững trong thư mục `data/`**:
-  * `parking_log.txt`: Ghi nối tiếp từng sự kiện theo giờ để mở lên đọc hoặc truy vết nhanh.
-  * `parking_database.json`: Lưu danh sách thẻ, bảng giá, doanh thu, xe đang gửi và tối đa `100` giao dịch gần nhất.
-  * *Lý do chọn JSON*: Gọn nhẹ ngay trong container Node-RED, không cần cài thêm máy chủ SQL rời mà vẫn đủ chức năng thêm/sửa/xóa và khôi phục số liệu.
-* **Đóng gói Docker Compose & Kiểm chứng restart**:
-  * Dùng `docker-compose.yml` để khởi chạy trọn bộ Node-RED kèm cấu hình bảo mật và thư mục `data/`.
-  * Test chạy lệnh `docker restart` khi đang có doanh thu `5.000đ` và `2` giao dịch: bật lại xong toàn bộ tiền thu, giao dịch và bảng nhật ký được nạp lại nguyên vẹn như hình trên.
-
-> **Lời nói gợi ý:**  
-> Để tắt mở lại không bị mất sạch dữ liệu, nhóm em lưu lịch sử dạng chữ vô file parking_log.txt và lưu cấu hình thẻ, giá, doanh thu vô file JSON. Cách này gọn vì chạy chung trong một container Node-RED không cần dựng thêm database rời. Như ảnh chụp sau khi nhóm thử chạy lệnh restart container Docker, mở web lại vẫn giữ nguyên 5.000 đồng doanh thu với toàn bộ giao dịch trước đó.
-
-> **Chuyển ý:**  
-> Em xin tóm tắt lại quá trình kiểm thử và kịch bản chạy thử 9 bước của hệ thống ạ.
-
----
-
-## SLIDE 16: KẾT QUẢ KIỂM THỬ & KỊCH BẢN DEMO 9 BƯỚC
-
-| Phân hệ kiểm thử | Cách nhóm đã chạy kiểm tra | Kết quả |
+| Mốc / Yêu cầu | Minh chứng kiểm thử thực tế | Trạng thái |
 | :--- | :--- | :---: |
-| **Tầng 1 (Cổng Wokwi)** | Chạy trực tiếp trên Wokwi: xe vào/ra, tính tiền, bãi đầy `2/2`, thẻ lạ, chống lặp `1,5s`, chống kẹp `< 15 cm` | Đạt |
-| **Tầng 2 & 3 (MQTT + Docker)** | Script MQTT gửi tới Node-RED thật: đồng bộ `config` retained, LWT báo ngoại tuyến, chạy đủ 4 rule, khôi phục sau `docker restart` | Đạt |
-| **Tầng 4 (Bảo mật HTTP)** | Test trực tiếp cổng `/ui`: thiếu/sai mật khẩu trả `401`, đúng mật khẩu trả `200` | Đạt |
-| **Chạy liên hoàn 9 bước E2E** | Logic 9 bước đã test qua script MQTT + Node-RED; **đang quay nốt video chạy liền trên Wokwi thật** | Đang quay video |
+| **M1 — Thiết bị tại cổng (Wokwi thật)** | Quẹt thẻ vào/ra, tính cước, bãi đầy `2/2`, thẻ lạ, chống trùng `1,5s`, chống kẹp `< 15 cm` | Đạt (Wokwi) |
+| **M2 — Kết nối MQTT (Script + Docker)** | Uplink sự kiện, Downlink lệnh barie, `config` retained và LWT báo ngoại tuyến *(tự nối lại `5s` theo thiết kế)* | Đạt (Script + Docker) |
+| **M3 — Web Dashboard & Xác thực** | Giao diện 3 tab điều khiển từ xa; kiểm thử HTTP trả `401` khi thiếu/sai mật khẩu và `200` khi đúng | Đạt |
+| **Automation & Lưu trữ (Docker)** | Kích hoạt đủ 4 rule tự động, ghi `parking_log.txt` và khôi phục `5.000đ`, `2` giao dịch sau `docker restart` | Đạt (Docker) |
+| **M4 — Liên hoàn toàn hệ thống** | Đã kiểm chứng logic 9 bước bằng script MQTT + Node-RED; **nhóm em demo trực tiếp ngay hôm nay** *(video liên hoàn đang bổ sung)* | Demo trực tiếp |
 
-* **Trình tự 9 bước demo**: `(1)` Đăng nhập & mở Wokwi $\rightarrow$ `(2)` Xe 1 vào $\rightarrow$ `(3)` Kéo vật cản `< 15 cm` rồi thả $\rightarrow$ `(4)` Chờ quá giờ Rule 1 $\rightarrow$ `(5)` Xe 2 vào đầy bãi & chặn xe 3 (Rule 2) $\rightarrow$ `(6)` Quẹt thẻ lạ 3 lần (Rule 3) $\rightarrow$ `(7)` Tab 2 thêm thẻ/đổi giá xuống ESP32 $\rightarrow$ `(8)` Mở barie `> 10s` kích hoạt Rule 4 $\rightarrow$ `(9)` Cho xe ra & xuất CSV ở Tab 3.
+* **Điều kiện Pass**: Đáp ứng đủ mô phỏng 4 tầng IoT, Uplink/Downlink, tối thiểu 2 rule và tình huống bất thường.
 
 > **Lời nói gợi ý:**  
-> Về kiểm thử thì phần nào chạy trên Wokwi thật tụi em ghi riêng, phần nào chạy kiểm tra bằng script MQTT với Docker Node-RED thật tụi em cũng tách riêng cho rõ ràng: các thao tác quẹt thẻ, chống kẹp dưới 15 cm, LWT mất kết nối, đủ 4 rule, khóa đăng nhập 401/200 với restart Docker không mất dữ liệu đều đã chạy qua hết. Hiện nhóm còn khâu quay liền mạch đủ 9 bước demo trên Wokwi thật kẹp vô video nộp bài là xong hoàn chỉnh.
+> Đối chiếu theo từng mốc môn học: phần xử lý tại cổng và chống kẹp M1 nhóm em đã chạy trực tiếp trên Wokwi; các phần MQTT, LWT ở M2, Dashboard kèm đăng nhập 401/200 ở M3 cùng 4 quy tắc tự động và khôi phục sau docker restart đều đã kiểm chứng thực tế trên Docker Node-RED. Với mốc liên hoàn M4, nhóm đã test logic qua script, video liên hoàn đang bổ sung và ngay sau đây nhóm em sẽ chạy demo trực tiếp cả mạch Wokwi lẫn Dashboard cho thầy kiểm tra.
 
 > **Chuyển ý:**  
-> Cuối cùng là phần tổng kết ngắn gọn những gì đã làm được và hướng khắc phục các hạn chế ạ.
+> Trước khi vào phần demo trực tiếp, nhóm em xin tổng kết ngắn gọn những gì đã làm được và hạn chế còn lại.
 
 ---
 
-## SLIDE 17: TỔNG KẾT — LÀM ĐƯỢC GÌ, HẠN CHẾ & HƯỚNG PHÁT TRIỂN
+## SLIDE 13: TỔNG KẾT, HẠN CHẾ & HƯỚNG PHÁT TRIỂN
 
-* **Những gì hệ thống đã làm được**:
-  * Chạy hoàn chỉnh mô hình **IoT 4 tầng** cho bãi giữ xe RFID với luồng dữ liệu hai chiều Uplink / Downlink.
-  * Cổng tự xử lý vào/ra độc lập kể cả khi rớt mạng và có **chống kẹp `< 15 cm`**.
-  * Node-RED chạy đủ **4 quy tắc tự động**, báo mất kết nối **LWT**, khóa **đăng nhập 2 lớp**, lưu file khôi phục được qua restart và đóng gói bằng **Docker Compose**.
-  * Bổ sung hoàn chỉnh phần mở rộng: quản lý tối đa `16` thẻ (vé tháng, lấy UID nhanh), bảng giá động và đối soát xuất CSV.
+* **Đã làm được**:
+  * Hoàn thiện các phân hệ **4 tầng IoT** và kiểm chứng bằng Wokwi, script MQTT và Node-RED trên Docker.
+  * Xử lý vào/ra, chống đọc trùng `1,5s`, chống kẹp `< 15 cm`, chạy `4` rule, LWT, khóa đăng nhập 2 lớp, lưu JSON/log và phần mở rộng (16 thẻ, giá động, CSV).
 * **Hạn chế hiện tại**:
-  * Bài mới chạy trong môi trường mô phỏng Wokwi (`2` ô đỗ, các ngưỡng thời gian demo ngắn), chưa lắp mạch thật nên chưa kiểm chứng độ ổn định cơ khí hay nhiễu môi trường ngoài thực tế.
-  * Giao tiếp hiện dùng public broker (`broker.hivemq.com`) và HTTP nội bộ, chưa bật mã hóa TLS/HTTPS.
+  * Chạy mô phỏng trên Wokwi (`2` ô đỗ, ngưỡng thời gian demo ngắn), chưa lắp mạch thật để kiểm chứng độ ổn định cơ khí ngoài thực tế.
+  * Dùng public broker và Basic Auth trên HTTP cục bộ chưa bật mã hóa TLS/HTTPS; phần kiểm thử liên hoàn đang bổ sung video và hôm nay nhóm chạy demo trực tiếp.
 * **Hướng phát triển sát thực tế**:
-  * Thi công thử nghiệm trên mạch thật với nguồn riêng ổn định cho servo và đầu đọc thẻ.
-  * Dùng MQTT broker riêng có tài khoản + mã hóa TLS/HTTPS nếu đưa lên mạng ngoài, và lắp thêm cảm biến tại từng ô đỗ nếu mở rộng số lượng chỗ gửi xe.
+  * Ráp mạch ESP32 thật với nguồn riêng cho servo, dùng MQTT broker riêng có tài khoản + TLS/HTTPS và gắn cảm biến cho từng ô đỗ.
 
 > **Lời nói gợi ý:**  
-> Tóm lại tới giờ, nhóm em đã dựng và chạy được trọn vẹn mô hình bãi giữ xe RFID 4 tầng: dưới cổng xử lý được vào ra kể cả lúc mất mạng và có siêu âm chống kẹp, trên Node-RED chạy đủ 4 luật cảnh báo, web có khóa đăng nhập, dữ liệu tắt mở lại vẫn giữ nguyên, kèm thêm quản lý 16 thẻ, đổi bảng giá từ xa và xuất Excel CSV. Nhóm cũng thấy rõ hạn chế là đồ án đang dừng ở mô phỏng 2 ô và xài broker công cộng chưa mã hóa TLS. Nếu nâng cấp thêm cho đúng thực tế thì việc đầu tiên tụi em làm là ráp mạch thật có nguồn riêng cho servo, chuyển sang broker riêng có HTTPS/TLS và gắn thêm cảm biến từng ô đỗ. Phần trình bày của Nhóm 4 tới đây là hết, em cảm ơn thầy Hải và các bạn đã lắng nghe ạ.
+> Tóm lại, nhóm em đã hoàn thiện các phân hệ của mô hình bãi giữ xe RFID 4 tầng và kiểm chứng qua Wokwi, script MQTT và Node-RED trên Docker, gồm xử lý vào ra, chống kẹp dưới 15 cm, 4 rule tự động, đăng nhập bảo mật và các tính năng mở rộng quản lý thẻ, bảng giá, xuất CSV. Hạn chế hiện tại là mô phỏng 2 ô dùng public broker và HTTP cục bộ chưa bật mã hóa TLS/HTTPS, đồng thời video liên hoàn đang được bổ sung. Hướng tiếp theo nhóm muốn làm là ráp mạch thật có nguồn riêng, chuyển sang broker có TLS và thêm cảm biến từng ô. Em cảm ơn thầy Hải và các bạn đã lắng nghe, sau đây nhóm em xin bắt đầu phần demo trực tiếp ạ.
