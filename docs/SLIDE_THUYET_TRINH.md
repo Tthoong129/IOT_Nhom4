@@ -73,12 +73,46 @@
 
 ## SLIDE 5: LUỒNG CHỨC NĂNG XUYÊN 4 TẦNG
 
-![Sơ đồ luồng chức năng xuyên 4 tầng](figures/fig_slide_sequence.png)
+```mermaid
+sequenceDiagram
+    actor U as Người dùng / Quản lý
+    participant E as ESP32 (Tầng 1)
+    participant M as MQTT (Tầng 2)
+    participant N as Node-RED (Tầng 3)
+    participant W as Dashboard (Tầng 4)
+
+    Note over U,W: 1. Luồng xe vào / ra và từ chối tại cổng
+    U ->> E: Quẹt thẻ RFID
+    alt Thẻ hợp lệ (Vào hoặc Ra)
+        E ->> E: Gán ô trống hoặc tính phí, mở barie 90°
+        E ->> M: Gửi rfid/scan + status
+        M ->> N: Cập nhật trạng thái, lưu log & JSON
+        N ->> W: Hiển thị ô đỗ, doanh thu, lịch sử
+    else Thẻ lạ / Thẻ khóa / Bãi đầy
+        E ->> E: Giữ đóng barie 0°, báo còi & LCD
+        E ->> M: Gửi alert (INVALID / LOCKED / LOT_FULL)
+        M ->> N: Kiểm tra Rule 2 / Rule 3
+        N ->> W: Hiện cảnh báo đỏ trên web
+    end
+
+    Note over U,W: 2. Luồng điều khiển barie chống kẹp & cấu hình từ xa
+    U ->> W: Bấm Mở/Đóng barie (hoặc sửa thẻ/giá ở Tab 2)
+    W ->> N: Gửi yêu cầu điều khiển hoặc cấu hình
+    N ->> M: Gửi barie/cmd hoặc config (retained)
+    M ->> E: Đẩy xuống ESP32
+    loop Kiểm tra HC-SR04 mỗi 0,3s khi đóng
+        E ->> E: Khoảng cách < 15 cm -> giữ mở 90°, gửi ANTI_PINCH
+    end
+    E ->> M: Hết vật cản -> hạ 0° & báo barie/status (closed)
+    M ->> N: Cập nhật trạng thái đóng cổng & lưu log
+```
+
+![Sơ đồ tuần tự chuẩn UML xuyên 4 tầng](figures/fig_slide_sequence.png)
 
 * **Điểm thống nhất**: Quyết định thực tế luôn đi qua cổng ESP32; lệnh đóng từ web hay Rule 4 đều phải qua kiểm tra siêu âm `< 15 cm`.
 
 > **Lời nói gợi ý:**  
-> Sơ đồ làn bơi này gộp ba luồng chính xuyên suốt 4 tầng. Ở luồng vào ra, ESP32 tự kiểm tra thẻ rồi mở cổng, sau đó đẩy MQTT lên Node-RED để lưu file và cập nhật web; trường hợp thẻ lỗi hoặc bãi đầy thì cổng chặn tại chỗ rồi mới báo cảnh báo. Ở chiều ngược lại, lệnh đóng barie hay cấu hình thẻ, giá mới đi từ web qua MQTT xuống ESP32, và khi đóng đều phải kiểm tra siêu âm dưới 15 cm mới hạ thanh chắn.
+> Sơ đồ tuần tự chuẩn UML này gộp hai luồng chính xuyên suốt 4 tầng. Ở luồng vào ra, ESP32 tự kiểm tra thẻ rồi mở cổng, sau đó đẩy MQTT lên Node-RED để lưu file và cập nhật web; trường hợp thẻ lỗi hoặc bãi đầy thì cổng chặn tại chỗ rồi mới báo cảnh báo. Ở chiều ngược lại, lệnh đóng barie hay cấu hình thẻ, giá mới đi từ web qua MQTT xuống ESP32, và khi đóng đều phải kiểm tra siêu âm dưới 15 cm mới hạ thanh chắn.
 
 > **Chuyển ý:**  
 > Bây giờ nhóm em đi vào chi tiết triển khai từng tầng, bắt đầu từ Tầng 1.

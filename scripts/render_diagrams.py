@@ -368,63 +368,138 @@ def render_fig_3_3():
 
 
 # ==============================================================================
-# 4. SƠ ĐỒ TUẦN TỰ CHO SLIDE THUYẾT TRÌNH (fig_slide_sequence.png)
+# 4. SƠ ĐỒ TUẦN TỰ CHUẨN UML CHO BÁO CÁO & SLIDE (fig_slide_sequence.png)
 # ==============================================================================
 def render_slide_sequence():
-    print("-> Rendering Sơ đồ Tuần tự cho Slide...")
-    fig, ax = plt.subplots(figsize=(15, 8.5), dpi=300)
-    ax.set_xlim(0, 15)
-    ax.set_ylim(0, 8.5)
+    print("-> Rendering Sơ đồ Tuần tự chuẩn UML Sequence Diagram...")
+    fig, ax = plt.subplots(figsize=(16, 17), dpi=300)
+    ax.set_xlim(0, 16)
+    ax.set_ylim(0, 18)
     ax.axis('off')
-    fig.patch.set_facecolor(C_BG_PAGE)
+    fig.patch.set_facecolor(C_WHITE)
 
-    # Tiêu đề
-    ax.text(7.5, 8.1, "SƠ ĐỒ TUẦN TỰ LUỒNG NGHIỆP VỤ VÀ ĐIỀU KHIỂN TỪ XA",
+    # 1. TIÊU ĐỀ BIỂU ĐỒ
+    ax.text(8, 17.5, "SƠ ĐỒ TUẦN TỰ HỆ THỐNG BÃI GIỮ XE IoT 4 TẦNG (UML SEQUENCE DIAGRAM)",
             ha='center', va='center', fontsize=15, fontweight='bold', color=C_TEXT_MAIN)
+    ax.text(8, 17.15, "Chuẩn UML: Phân chia 5 trục thực thể (Lifelines), khối rẽ nhánh (alt / else) và khối lặp (loop)",
+            ha='center', va='center', fontsize=10.5, color=C_TEXT_MUTED)
 
-    # 4 Trục thực thể (Lifelines)
+    # 2. TOẠ ĐỘ 5 TRỤC LIFELINES
     lifelines = [
-        ("Người gửi / Bảo vệ", 1.8),
-        ("ESP32 & Cảm biến (Tầng 1)", 5.6),
-        ("MQTT Broker (Tầng 2)", 9.4),
-        ("Node-RED & Web (Tầng 3-4)", 13.2)
+        ("Người dùng / Quản lý", 1.8, True),
+        ("ESP32 (Tầng 1)", 5.2, False),
+        ("MQTT (Tầng 2)", 8.6, False),
+        ("Node-RED (Tầng 3)", 12.0, False),
+        ("Dashboard (Tầng 4)", 14.8, False)
     ]
-    for name, x in lifelines:
-        draw_card(ax, x - 1.5, 7.1, 3.0, 0.7, name, bg=C_WHITE, border="#475569", title_fontsize=10)
-        ax.plot([x, x], [0.8, 7.1], color="#94A3B8", linestyle="--", linewidth=1.5, zorder=2)
 
-    # Khung Luồng 1: Xe Vào/Ra tại chỗ
-    draw_card(ax, 0.5, 4.4, 14.0, 2.5, "", bg="#F0FDF4", border="#16A34A", radius=0.1, lw=1.5)
-    ax.text(0.8, 6.6, "LUỒNG 1: QUẸT THẺ TẠI CỔNG & TỰ ĐỘNG BẢO VỆ CHỐNG KẸP (EDGE COMPUTING)",
-            fontsize=10.5, fontweight='bold', color="#166534")
+    y_top = 16.5
+    y_bottom = 0.5
 
-    draw_arrow(ax, 1.8, 6.1, 5.6, 6.1, color="#0369A1", lw=2, label="1. Quẹt thẻ RFID", label_color="#0369A1")
-    draw_card(ax, 4.3, 5.2, 2.6, 0.6, "ESP32 tự cấp ô/tính phí", "Mở barie 90° tức thì", bg=C_SUCCESS_BG, border=C_SUCCESS_BORDER, title_fontsize=9, sub_fontsize=7.5)
-    draw_arrow(ax, 5.6, 4.8, 9.4, 4.8, color="#16A34A", lw=2, label="2. Uplink rfid/scan & status", label_color="#166534")
-    draw_arrow(ax, 9.4, 4.8, 13.2, 4.8, color="#16A34A", lw=2)
+    # Vẽ hộp thực thể trên cùng và đường dóng đứt nét
+    for name, x, is_actor in lifelines:
+        ax.plot([x, x], [y_bottom, y_top - 0.4], color="#94A3B8", linestyle="--", linewidth=1.5, zorder=1)
 
-    # Khung Luồng 2: Điều khiển barie & Chống kẹp
-    draw_card(ax, 0.5, 2.2, 14.0, 2.0, "", bg="#FFFBEB", border="#F59E0B", radius=0.1, lw=1.5)
-    ax.text(0.8, 3.9, "LUỒNG 2: ĐIỀU KHIỂN TỪ XA & CẢM BIẾN SIÊU ÂM HC-SR04 CHỐNG KẸP",
-            fontsize=10.5, fontweight='bold', color="#92400E")
+        if is_actor:
+            circle = plt.Circle((x, y_top + 0.15), 0.15, color="#6366F1", fill=False, linewidth=2, zorder=5)
+            ax.add_patch(circle)
+            ax.plot([x, x], [y_top, y_top - 0.22], color="#6366F1", linewidth=2, zorder=5)
+            ax.plot([x - 0.22, x + 0.22], [y_top - 0.08, y_top - 0.08], color="#6366F1", linewidth=2, zorder=5)
+            ax.plot([x, x - 0.18], [y_top - 0.22, y_top - 0.4], color="#6366F1", linewidth=2, zorder=5)
+            ax.plot([x, x + 0.18], [y_top - 0.22, y_top - 0.4], color="#6366F1", linewidth=2, zorder=5)
+            ax.text(x, y_top - 0.58, name, ha='center', va='center', fontsize=10, fontweight='bold', color=C_TEXT_MAIN, zorder=5)
+        else:
+            box = patches.FancyBboxPatch((x - 1.25, y_top - 0.45), 2.5, 0.7,
+                                         boxstyle="round,pad=0,rounding_size=0.1",
+                                         facecolor="#F1F5F9", edgecolor="#64748B", linewidth=1.5, zorder=4)
+            ax.add_patch(box)
+            ax.text(x, y_top - 0.1, name, ha='center', va='center', fontsize=10, fontweight='bold', color=C_TEXT_MAIN, zorder=5)
 
-    draw_arrow(ax, 13.2, 3.3, 9.4, 3.3, color="#D97706", lw=2, label="Bấm 'Đóng Barie' / Rule 4", label_color="#92400E")
-    draw_arrow(ax, 9.4, 3.3, 5.6, 3.3, color="#D97706", lw=2, label="Lệnh barie/cmd (close)", label_color="#92400E")
-    draw_card(ax, 4.0, 2.4, 3.2, 0.7, "HC-SR04 đo d < 15cm", "Tạm hoãn đóng · Giữ mở 90°", bg=C_WARN_BG, border=C_WARN_BORDER, title_fontsize=9, sub_fontsize=7.5)
+    def draw_msg(x1, x2, y, label, is_response=False, color="#1E293B", text_color=C_TEXT_MAIN, label_y_offset=0.22):
+        style = "--" if is_response else "-"
+        arr_style = "-|>,head_length=5,head_width=3" if not is_response else "->,head_length=5,head_width=3"
+        arrow = patches.FancyArrowPatch((x1, y), (x2, y),
+                                        arrowstyle=arr_style,
+                                        linestyle=style,
+                                        color=color, linewidth=1.5, zorder=6)
+        ax.add_patch(arrow)
+        x_mid = (x1 + x2) / 2.0
+        ax.text(x_mid, y + label_y_offset, label, ha='center', va='bottom', fontsize=9.5, fontweight='bold', color=text_color, zorder=7)
 
-    # Khung Luồng 3: Cấu hình retained
-    draw_card(ax, 0.5, 0.6, 14.0, 1.4, "", bg="#EEF2FF", border="#6366F1", radius=0.1, lw=1.5)
-    ax.text(0.8, 1.7, "LUỒNG 3: CẬP NHẬT 16 THẺ & BẢNG GIÁ ĐỘNG (DOWNLINK RETAINED)",
-            fontsize=10.5, fontweight='bold', color="#3730A3")
+    def draw_self_call(x, y, h, label, color="#1E293B", text_color=C_TEXT_MAIN):
+        x_right = x + 0.55
+        ax.plot([x, x_right, x_right, x], [y, y, y - h, y - h], color=color, linewidth=1.5, zorder=6)
+        arr = patches.FancyArrowPatch((x_right, y - h), (x, y - h),
+                                      arrowstyle="-|>,head_length=5,head_width=3",
+                                      color=color, linewidth=1.5, zorder=6)
+        ax.add_patch(arr)
+        ax.text(x_right + 0.1, y - h / 2.0, label, ha='left', va='center', fontsize=9.2, fontweight='bold', color=text_color, zorder=7)
 
-    draw_arrow(ax, 13.2, 1.0, 9.4, 1.0, color="#6366F1", lw=2, label="Cấu hình mới từ Tab 2", label_color="#3730A3")
-    draw_arrow(ax, 9.4, 1.0, 5.6, 1.0, color="#6366F1", lw=2, label="config retained -> ESP32 nạp ngay", label_color="#3730A3")
+    # 1. Luồng xe vào / ra và từ chối tại cổng
+    banner1 = patches.FancyBboxPatch((0.8, 15.1), 14.4, 0.55, boxstyle="square,pad=0",
+                                    facecolor="#FEF9C3", edgecolor="#FACC15", linewidth=1.2, zorder=2)
+    ax.add_patch(banner1)
+    ax.text(8.0, 15.37, "1. Luồng xe vào / ra và từ chối tại cổng", ha='center', va='center',
+            fontsize=11, fontweight='bold', color="#854D0E", zorder=3)
+
+    draw_msg(1.8, 5.2, 14.5, "Quẹt thẻ RFID", color="#0284C7", text_color="#0369A1")
+
+    alt_box = patches.Rectangle((1.0, 7.8), 14.2, 6.4, fill=True, facecolor="#F8FAFC",
+                                edgecolor="#818CF8", linestyle="--", linewidth=1.5, zorder=2, alpha=0.9)
+    ax.add_patch(alt_box)
+
+    alt_tag = patches.FancyBboxPatch((1.0, 13.7), 0.9, 0.5, boxstyle="round,pad=0,rounding_size=0.05",
+                                    facecolor="#EEF2FF", edgecolor="#818CF8", linewidth=1.5, zorder=4)
+    ax.add_patch(alt_tag)
+    ax.text(1.45, 13.95, "alt", ha='center', va='center', fontsize=9.5, fontweight='bold', color="#4338CA", zorder=5)
+    ax.text(2.1, 13.95, "[Thẻ hợp lệ (Vào hoặc Ra)]", ha='left', va='center', fontsize=9.5, fontweight='bold', color="#166534", zorder=5)
+
+    draw_self_call(5.2, 13.5, 0.45, "Gán ô trống hoặc tính phí, mở barie 90°", color="#166534", text_color="#166534")
+    draw_msg(5.2, 8.6, 12.6, "Gửi rfid/scan + status", color="#166534", text_color="#166534")
+    draw_msg(8.6, 12.0, 12.0, "Cập nhật trạng thái, lưu log & JSON", color="#166534", text_color="#166534")
+    draw_msg(12.0, 14.8, 11.4, "Hiển thị ô đỗ, doanh thu, lịch sử", color="#166534", text_color="#166534")
+
+    ax.plot([1.0, 15.2], [10.8, 10.8], color="#818CF8", linestyle=":", linewidth=1.5, zorder=3)
+    ax.text(2.1, 10.5, "[Thẻ lạ / Thẻ khóa / Bãi đầy]", ha='left', va='center', fontsize=9.5, fontweight='bold', color="#B91C1C", zorder=5)
+
+    draw_self_call(5.2, 10.1, 0.45, "Giữ đóng barie 0°, báo còi & LCD", color="#B91C1C", text_color="#B91C1C")
+    draw_msg(5.2, 8.6, 9.2, "Gửi alert (INVALID / LOCKED / LOT_FULL)", color="#B91C1C", text_color="#B91C1C")
+    draw_msg(8.6, 12.0, 8.6, "Kiểm tra Rule 2 / Rule 3", color="#B91C1C", text_color="#B91C1C")
+    draw_msg(12.0, 14.8, 8.0, "Hiện cảnh báo đỏ trên web", color="#B91C1C", text_color="#B91C1C")
+
+    # 2. Luồng điều khiển barie chống kẹp & cấu hình từ xa
+    banner2 = patches.FancyBboxPatch((0.8, 6.9), 14.4, 0.55, boxstyle="square,pad=0",
+                                    facecolor="#FEF9C3", edgecolor="#FACC15", linewidth=1.2, zorder=2)
+    ax.add_patch(banner2)
+    ax.text(8.0, 7.17, "2. Luồng điều khiển barie chống kẹp & cấu hình từ xa", ha='center', va='center',
+            fontsize=11, fontweight='bold', color="#854D0E", zorder=3)
+
+    draw_msg(1.8, 14.8, 6.3, "Bấm Mở/Đóng barie (hoặc sửa thẻ/giá ở Tab 2)", color="#0369A1", text_color="#0369A1")
+    draw_msg(14.8, 12.0, 5.7, "Gửi yêu cầu điều khiển hoặc cấu hình", color="#0369A1", text_color="#0369A1")
+    draw_msg(12.0, 8.6, 5.1, "Gửi barie/cmd hoặc config (retained)", color="#0369A1", text_color="#0369A1")
+    draw_msg(8.6, 5.2, 4.5, "Đẩy lệnh xuống ESP32", color="#0369A1", text_color="#0369A1")
+
+    loop_box = patches.Rectangle((4.5, 2.0), 10.7, 2.0, fill=True, facecolor="#FFFBEB",
+                                 edgecolor="#F59E0B", linestyle="--", linewidth=1.5, zorder=2, alpha=0.9)
+    ax.add_patch(loop_box)
+
+    loop_tag = patches.FancyBboxPatch((4.5, 3.6), 1.0, 0.4, boxstyle="round,pad=0,rounding_size=0.05",
+                                     facecolor="#FEF3C7", edgecolor="#F59E0B", linewidth=1.5, zorder=4)
+    ax.add_patch(loop_tag)
+    ax.text(5.0, 3.8, "loop", ha='center', va='center', fontsize=9.5, fontweight='bold', color="#92400E", zorder=5)
+    ax.text(5.7, 3.8, "[Kiểm tra HC-SR04 mỗi 0,3s khi đóng]", ha='left', va='center', fontsize=9.5, fontweight='bold', color="#92400E", zorder=5)
+
+    draw_self_call(5.2, 3.3, 0.45, "Khoảng cách < 15 cm -> giữ mở 90°", color="#D97706", text_color="#D97706")
+    draw_msg(5.2, 8.6, 2.4, "Gửi cảnh báo ANTI_PINCH lên web", color="#D97706", text_color="#D97706")
+
+    draw_msg(5.2, 8.6, 1.4, "Hết vật cản -> hạ 0° & báo barie/status (closed)", color="#166534", text_color="#166534")
+    draw_msg(8.6, 12.0, 0.9, "Cập nhật trạng thái đóng cổng & lưu log", color="#166534", text_color="#166534")
 
     out_path = os.path.join(OUTPUT_DIR, "fig_slide_sequence.png")
     plt.tight_layout()
     plt.savefig(out_path, dpi=300, bbox_inches='tight')
     plt.close()
-    print(f"-> Saved: {out_path}")
+    print("-> Đã vẽ lại thành công Sơ đồ tuần tự chuẩn UML Sequence Diagram tại:", out_path)
 
 
 if __name__ == "__main__":

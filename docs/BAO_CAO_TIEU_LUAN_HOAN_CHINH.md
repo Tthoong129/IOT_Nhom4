@@ -369,10 +369,44 @@ Hệ thống có hai luồng dữ liệu chính:
 * **Luồng dữ liệu đi lên:** ESP32 gửi sự kiện quẹt thẻ, trạng thái barie, thông tin bãi xe và cảnh báo lên MQTT Broker. Node-RED tiếp nhận các bản tin, xử lý dữ liệu và cập nhật Dashboard.
 * **Luồng dữ liệu đi xuống:** Người vận hành hoặc các luật tự động trên Node-RED gửi lệnh điều khiển barie và cấu hình thẻ, biểu phí xuống ESP32 thông qua MQTT.
 
-Cách tổ chức này giúp tách biệt việc điều khiển thiết bị tại cổng với chức năng giám sát và quản lý.
+Cách tổ chức này giúp tách biệt việc điều khiển thiết bị tại cổng với chức năng giám sát và quản lý. Trình tự tương tác giữa các thành phần được mô hình hóa bằng sơ đồ tuần tự chuẩn UML (Hình 3.3):
+
+```mermaid
+sequenceDiagram
+    actor U as Người dùng / Quản lý
+    participant E as ESP32 (Tầng 1)
+    participant M as MQTT (Tầng 2)
+    participant N as Node-RED (Tầng 3)
+    participant W as Dashboard (Tầng 4)
+
+    Note over U,W: 1. Luồng xe vào / ra và từ chối tại cổng
+    U ->> E: Quẹt thẻ RFID
+    alt Thẻ hợp lệ (Vào hoặc Ra)
+        E ->> E: Gán ô trống hoặc tính phí, mở barie 90°
+        E ->> M: Gửi rfid/scan + status
+        M ->> N: Cập nhật trạng thái, lưu log & JSON
+        N ->> W: Hiển thị ô đỗ, doanh thu, lịch sử
+    else Thẻ lạ / Thẻ khóa / Bãi đầy
+        E ->> E: Giữ đóng barie 0°, báo còi & LCD
+        E ->> M: Gửi alert (INVALID / LOCKED / LOT_FULL)
+        M ->> N: Kiểm tra Rule 2 / Rule 3
+        N ->> W: Hiện cảnh báo đỏ trên web
+    end
+
+    Note over U,W: 2. Luồng điều khiển barie chống kẹp & cấu hình từ xa
+    U ->> W: Bấm Mở/Đóng barie (hoặc sửa thẻ/giá ở Tab 2)
+    W ->> N: Gửi yêu cầu điều khiển hoặc cấu hình
+    N ->> M: Gửi barie/cmd hoặc config (retained)
+    M ->> E: Đẩy xuống ESP32
+    loop Kiểm tra HC-SR04 mỗi 0,3s khi đóng
+        E ->> E: Khoảng cách < 15 cm -> giữ mở 90°, gửi ANTI_PINCH
+    end
+    E ->> M: Hết vật cản -> hạ 0° & báo barie/status (closed)
+    M ->> N: Cập nhật trạng thái đóng cổng & lưu log
+```
 
 ![Hình 3.3: Sơ đồ luồng dữ liệu hai chiều và tuần tự giữa ESP32, MQTT Broker và Node-RED](figures/fig_slide_sequence.png)
-*Hình 3.3: Sơ đồ luồng dữ liệu hai chiều và tuần tự giữa ESP32, MQTT Broker và Node-RED.*
+*Hình 3.3: Sơ đồ tuần tự chuẩn UML biểu diễn luồng dữ liệu hai chiều giữa các tầng.*
 
 ---
 
