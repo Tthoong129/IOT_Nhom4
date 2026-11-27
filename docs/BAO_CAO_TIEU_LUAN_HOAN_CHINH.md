@@ -255,20 +255,29 @@ Hệ thống gồm ba nhóm tác nhân tương tác chính (Hình 3.1):
 
 ```mermaid
 flowchart LR
-    U1(["Người gửi xe"])
-    U2(["Người quản lý"])
-    U3(["Tác nhân tự động (Tại cổng & Trung gian)"])
+    U1(["👤 Người gửi xe"])
+    U2(["👮 Người quản lý"])
+    U3(["🤖 Tác nhân tự động<br/>(ESP32 & Node-RED)"])
 
-    subgraph SYS["HỆ THỐNG BÃI GIỮ XE MÁY TỰ QUẢN RFID"]
+    subgraph SYS["HỆ THỐNG QUẢN LÝ BÃI GIỮ XE MÁY RFID"]
         direction TB
-        UC1(["Quẹt thẻ RFID gửi / lấy xe"])
-        UC2(["Xem LCD & LED tại cổng"])
-        UC3(["Giám sát 2 ô đỗ & nhật ký"])
-        UC4(["Mở / Đóng barie từ xa"])
-        UC7(["Quản lý thẻ & Giá (Mở rộng)"])
-        UC8(["Giao dịch & Xuất CSV (Mở rộng)"])
-        UC5(["Chống kẹp xe khi đóng barie (< 15 cm)"])
-        UC6(["Chạy 4 rule cảnh báo & ghi log/JSON"])
+        
+        subgraph G1["Nghiệp vụ trực tiếp tại cổng"]
+            UC1(["Quẹt thẻ RFID gửi / lấy xe"])
+            UC2(["Quan sát LCD & Đèn LED chỉ dẫn"])
+            UC5(["Chống kẹp xe tự động (< 15 cm)"])
+        end
+
+        subgraph G2["Giám sát & Điều hành Web"]
+            UC3(["Giám sát 2 ô đỗ & Nhật ký trực tiếp"])
+            UC4(["Mở / Đóng barie thủ công từ xa"])
+            UC6(["Chạy 4 rule cảnh báo & Ghi log/JSON"])
+        end
+
+        subgraph G3["Chức năng quản trị mở rộng"]
+            UC7(["Quản lý 16 thẻ RFID & Bảng giá động"])
+            UC8(["Đối soát giao dịch & Xuất file CSV"])
+        end
     end
 
     U1 --- UC1
@@ -280,8 +289,15 @@ flowchart LR
     UC5 --- U3
     UC6 --- U3
 
-    classDef ext stroke-dasharray: 5 5
-    class UC7,UC8 ext
+    classDef actorStyle fill:#f1f5f9,stroke:#475569,stroke-width:2px,color:#0f172a;
+    classDef gateStyle fill:#e0f2fe,stroke:#0284c7,stroke-width:1.5px,color:#0369a1;
+    classDef webStyle fill:#dcfce7,stroke:#16a34a,stroke-width:1.5px,color:#14532d;
+    classDef extStyle fill:#fef3c7,stroke:#d97706,stroke-width:1.5px,stroke-dasharray: 4 4,color:#78350f;
+
+    class U1,U2,U3 actorStyle;
+    class UC1,UC2,UC5 gateStyle;
+    class UC3,UC4,UC6 webStyle;
+    class UC7,UC8 extStyle;
 ```
 
 *Hình 3.1: Sơ đồ Use Case tổng quát của hệ thống bãi giữ xe RFID.*
@@ -312,39 +328,55 @@ Hệ thống được thiết kế theo kiến trúc IoT gồm bốn tầng liê
 Dữ liệu luân chuyển theo hai hướng tách biệt: **luồng Uplink** đưa sự kiện quẹt thẻ, trạng thái barie, cảnh báo và snapshot bãi xe từ cổng lên Dashboard; **luồng Downlink** đưa lệnh mở/đóng barie và cấu hình thẻ/bảng giá từ Dashboard hoặc luật tự động xuống cổng. Trong kiến trúc này, ESP32 đóng vai trò nguồn dữ liệu gốc (source of truth) về hiện trạng hai ô đỗ và thanh chắn tại cổng; mỗi khi kết nối lại, thiết bị gửi bản tin snapshot giúp giao diện web tự đồng bộ khớp với thực tế tại cổng.
 
 ```mermaid
-flowchart TD
-    subgraph L4["TẦNG 4: ỨNG DỤNG (Web Dashboard 3 Tab & Xác thực)"]
-        T1["Tab 1: Giám sát bãi xe (Tổng quan, 2 ô đỗ, Điều khiển barie, Nhật ký)"]
-        T2["Tab 2: Quản lý Thẻ & Bảng giá (Mở rộng: CRUD 16 thẻ, Vé tháng, Giá động)"]
-        T3["Tab 3: Lịch sử Giao dịch (Mở rộng: Tìm kiếm, Lọc, Xuất CSV)"]
+flowchart TB
+    subgraph L4["TẦNG 4: ỨNG DỤNG (Web Dashboard 3 Tab & Xác thực Bảo mật)"]
+        direction LR
+        T1["Tab 1: Giám sát Trực tiếp<br/>(2 ô đỗ · Điều khiển barie · KPI)"]
+        T2["Tab 2: Quản lý Thẻ & Giá<br/>(CRUD 16 thẻ · Vé tháng · Giá động)"]
+        T3["Tab 3: Lịch sử Giao dịch<br/>(Tìm kiếm · Lọc · Xuất CSV UTF-8)"]
     end
 
-    subgraph L3["TẦNG 3: XỬ LÝ TRUNG GIAN & TỰ ĐỘNG HÓA (Node-RED)"]
-        SYNC["Đồng bộ trạng thái tập trung & Khôi phục dữ liệu sau khởi động lại"]
-        RULES["4 Quy tắc tự động (Quá giờ · Bãi đầy · Dò thẻ lạ · Barie mở lâu)"]
-        STORE["Lưu trữ bền vững (Nhật ký văn bản & CSDL JSON)"]
+    subgraph L3["TẦNG 3: XỬ LÝ TRUNG GIAN & TỰ ĐỘNG HÓA (Node-RED Docker)"]
+        direction LR
+        M1["Bộ điều phối trạng thái tập trung<br/>flow.get('park')"]
+        M2["Bộ 4 quy tắc tự động hóa<br/>(Quá giờ · Bãi đầy · Dò thẻ · Kẹt barie)"]
+        M3["Lưu trữ tệp bền vững<br/>(parking_log.txt & database.json)"]
     end
 
-    subgraph L2["TẦNG 2: MẠNG & TRUYỀN THÔNG (Wi-Fi + MQTT)"]
-        BROKER["MQTT Broker (Trung chuyển tin nhắn, Retained & Last Will)"]
-        NET["Kết nối thiết bị (Tự nối lại 5s · Uplink 4 topic · Downlink 2 topic)"]
+    subgraph L2["TẦNG 2: MẠNG & TRUYỀN THÔNG (HiveMQ MQTT Broker :1883)"]
+        direction LR
+        UP["Luồng Uplink (4 topic)<br/>rfid/scan · barie/status · alert · status (LWT)"]
+        DN["Luồng Downlink (2 topic)<br/>barie/cmd · config (retained)"]
     end
 
-    subgraph L1["TẦNG 1: CẢM BIẾN & CHẤP HÀNH (ESP32 tại cổng)"]
-        SENS["Khối Cảm biến (Đầu đọc RFID 13,56 MHz & Siêu âm chống kẹp < 15 cm)"]
-        EDGE["Xử lý nghiệp vụ tại chỗ (Vào/ra, 2 ô, cước phí · Độc lập khi mất mạng)"]
-        ACT["Khối Chấp hành (Servo 0-90° · LED Đỏ/Xanh · LCD 1602 · Còi báo)"]
+    subgraph L1["TẦNG 1: CẢM BIẾN & CHẤP HÀNH TẠI CỔNG (ESP32 Edge Computing)"]
+        direction LR
+        E1["Khối Cảm biến<br/>(RFID-RC522 · Siêu âm HC-SR04)"]
+        E2["Xử lý biên độc lập<br/>(Cấp ô · Tính cước · Chống lặp 1.5s)"]
+        E3["Khối Chấp hành<br/>(Servo SG90 · LCD 1602 · LED · Còi)"]
     end
 
-    SENS --> EDGE --> ACT
-    ACT -->|"Uplink: sự kiện thẻ, barie, cảnh báo, snapshot"| NET
-    NET -->|"Phát bản tin"| BROKER
-    BROKER -->|"Đẩy sự kiện vào"| SYNC & RULES
-    SYNC & RULES --> STORE
-    SYNC & RULES --> T1 & T2 & T3
-    T1 & RULES -->|"Downlink: lệnh điều khiển barie"| BROKER
-    T2 -->|"Downlink: cấu hình thẻ & bảng giá"| BROKER
-    BROKER -->|"Nhận lệnh & cấu hình"| NET
+    %% Luồng liên kết hai chiều mạch lạc
+    E1 --> E2 --> E3
+    E3 ==>|"Uplink: sự kiện thẻ, barie, cảnh báo, snapshot"| UP
+    UP ==>|"Đẩy dữ liệu vào"| M1
+    M1 <--> M2
+    M1 --> M3
+    M1 <==>|"Websocket / HTTP Auth"| L4
+    T1 -.->|"Downlink: lệnh điều khiển barie"| DN
+    T2 -.->|"Downlink: cấu hình thẻ & giá"| DN
+    M2 -.->|"Downlink: lệnh đóng barie khi mở lâu"| DN
+    DN ==>|"Đẩy lệnh & cấu hình xuống cổng"| E2
+
+    classDef l4Style fill:#f0fdf4,stroke:#16a34a,stroke-width:1.5px,color:#14532d;
+    classDef l3Style fill:#eff6ff,stroke:#2563eb,stroke-width:1.5px,color:#1e40af;
+    classDef l2Style fill:#fefce8,stroke:#ca8a04,stroke-width:1.5px,color:#713f12;
+    classDef l1Style fill:#fdf2f8,stroke:#db2777,stroke-width:1.5px,color:#831843;
+
+    class L4,T1,T2,T3 l4Style;
+    class L3,M1,M2,M3 l3Style;
+    class L2,UP,DN l2Style;
+    class L1,E1,E2,E3 l1Style;
 ```
 
 *Hình 3.2: Sơ đồ kiến trúc 4 tầng IoT và luồng dữ liệu hai chiều.*
@@ -373,19 +405,58 @@ Luồng xử lý nghiệp vụ tại cổng hoạt động theo các bước đ�
 3. **Thang phí mô phỏng:** Vé tháng tính phí `0 đồng`; vé lượt áp dụng 3 mức cước mô phỏng `3.000`, `5.000` hoặc `9.000 đồng` tương ứng với thời lượng dưới `10 giây`, từ `10` đến `30 giây`, và trên `30 giây` (là thang thời gian rút gọn phục vụ trình diễn, có thể thay đổi từ bảng giá quản trị).
 
 ```mermaid
-flowchart TD
-    S0(["Đọc được UID từ đầu đọc RFID"]) --> D1{"Barie đang đóng & qua thời gian chống lặp 1,5s?"}
-    D1 -->|"Không"| B1(["Bỏ qua lần quẹt"])
-    D1 -->|"Có"| D2{"UID có trong danh sách đã đăng ký?"}
-    D2 -->|"Không"| B2["Từ chối, còi 3 tiếng, LCD hiện UID, gửi cảnh báo thẻ lạ"]
-    D2 -->|"Có"| D3{"Xe đang gửi trong bãi?"}
-    D3 -->|"Có (Lượt ra)"| A_OUT["Tính thời gian gửi & cước phí, trả ô đỗ, mở barie 90°, hiện LCD"]
-    D3 -->|"Chưa (Lượt vào)"| D4{"Thẻ đang hoạt động & bãi còn chỗ trống?"}
-    D4 -->|"Không"| B3["Cổng giữ đóng, LCD thông báo & gửi cảnh báo bãi đầy hoặc thẻ khóa"]
-    D4 -->|"Có"| A_IN["Gán ô trống (1 hoặc 2), ghi mốc vào, mở barie 90°, bật LED Xanh"]
-    A_OUT --> PUB["Cập nhật sự kiện & snapshot lên MQTT; đếm giữ mở barie 3 giây"]
-    A_IN --> PUB
-    PUB --> W1(["Tiếp tục chu kỳ giám sát"])
+flowchart LR
+    %% Khối 1: Tiếp nhận và xác thực
+    subgraph S1["1. TIẾP NHẬN & XÁC THỰC THẺ"]
+        direction TB
+        A["Quẹt thẻ RFID"] --> B["Đọc & Chuẩn hóa UID"]
+        B --> C{"Chống đọc lặp<br/>(> 1,5s & Barie đóng)?"}
+        C -- "Không" --> C1["Bỏ qua lần quẹt lặp"]
+        C -- "Hợp lệ" --> D{"Thẻ đã đăng ký?"}
+        D -- "Chưa" --> D1["Từ chối, còi 3 tiếng<br/>LCD: THE CHUA DKY"]
+        D -- "Đã có" --> E{"Thẻ có bị khóa?"}
+        E -- "Bị khóa" --> E1["Từ chối, còi 3 tiếng<br/>LCD: THE BI KHOA"]
+    end
+
+    %% Khối 2: Phân luồng Vào / Ra
+    subgraph S2["2. PHÂN LUỒNG NGHIỆP VỤ TẠI CỔNG"]
+        direction TB
+        E -- "Bình thường" --> F{"Xe đang ở trong bãi?"}
+        
+        %% Nhánh Vào
+        F -- "Chưa (Lượt vào)" --> G{"Còn ô trống<br/>(Slot 1 hoặc 2)?"}
+        G -- "Bãi đầy (2/2)" --> G1["Từ chối, giữ đóng barie<br/>LCD: BAI DA DAY"]
+        G -- "Còn chỗ" --> H["Gán ô trống đầu tiên<br/>Lưu mốc giờ vào xe"]
+        
+        %% Nhánh Ra
+        F -- "Đang đỗ (Lượt ra)" --> I["Tính thời gian gửi & cước phí<br/>(Vé tháng 0đ · Vé lượt block)"]
+        I --> J["Giải phóng ô đỗ<br/>LCD: Hiển thị cước phí"]
+    end
+
+    %% Khối 3: Chấp hành & Chống kẹp
+    subgraph S3["3. MỞ BARIE & CHỐNG KẸP XE (HC-SR04)"]
+        direction TB
+        K["Mở barie 90° & Bật LED Xanh<br/>Còi báo · Phát MQTT Uplink"]
+        K --> L["Đếm thời gian giữ mở 3 giây"]
+        L --> M{"Cảm biến siêu âm<br/>Khoảng cách d < 15 cm?"}
+        M -- "Có vật cản" --> N["TẠM HOÃN ĐÓNG, GIỮ 90°<br/>LCD cảnh báo · Đo lại sau 0,3s"]
+        N --> M
+        M -- "Thông thoáng" --> P["Hạ barie về 0° & Bật LED Đỏ<br/>Cập nhật barie/status (closed)"]
+    end
+
+    H ==> K
+    J ==> K
+
+    %% Phối màu trực quan
+    classDef reject fill:#fee2e2,stroke:#ef4444,stroke-width:1.5px,color:#991b1b;
+    classDef success fill:#dcfce7,stroke:#22c55e,stroke-width:1.5px,color:#166534;
+    classDef process fill:#e0f2fe,stroke:#0284c7,stroke-width:1.5px,color:#0369a1;
+    classDef warning fill:#fef3c7,stroke:#f59e0b,stroke-width:1.5px,color:#92400e;
+
+    class C1,D1,E1,G1 reject;
+    class H,J,K,P success;
+    class A,B,I process;
+    class N warning;
 ```
 
 *Hình 3.3: Lưu đồ thuật toán xử lý quẹt thẻ RFID tại cổng ESP32.*
@@ -395,31 +466,37 @@ Cơ chế an toàn dưới thanh chắn kết hợp hai thành phần (Hình 3.4
 * **Giám sát vật cản khi đóng:** Bất kỳ yêu cầu đóng barie nào (hết 3 giây tự động đóng, lệnh đóng thủ công từ Dashboard hay lệnh đóng tự động từ Tầng 3) đều chuyển sang trạng thái chờ đóng và đo khoảng cách siêu âm mỗi `0,3 giây`. Nếu khoảng cách đo được nhỏ hơn `15 cm`, thanh chắn giữ nguyên vị trí mở `90°` và phát cảnh báo vật cản đến khi khu vực thông thoáng mới hạ xuống `0°`.
 * **Máy trạng thái barie 3 trạng thái:** Thanh chắn luân chuyển giữa ba trạng thái *Đóng* ($0^\circ$, LED Đỏ), *Mở có thời hạn* ($90^\circ$, tự đóng sau 3 giây khi quẹt thẻ) và *Mở giữ* (duy trì $90^\circ$ khi mở thủ công từ xa đến khi có lệnh đóng).
 
-**(a) Lưu đồ chống kẹp xe (HC-SR04):**
-
 ```mermaid
-flowchart TD
-    P1["Phát sinh yêu cầu đóng barie"] --> P2["Đo khoảng cách d (cm) bằng cảm biến siêu âm"]
-    P2 --> P3{"d < 15 cm?"}
-    P3 -->|"Không"| P4["Hạ thanh chắn 0°, bật LED Đỏ, cập nhật trạng thái đóng"]
-    P3 -->|"Có"| P5["Hoãn đóng, giữ mở 90°, phát cảnh báo vật cản, đợi 0,3s đo lại"]
-    P5 --> P2
-```
+flowchart LR
+    subgraph SAFE["(a) LƯU ĐỒ CHỐNG KẸP XE BẰNG SIÊU ÂM (HC-SR04)"]
+        direction TB
+        P1["Phát sinh yêu cầu đóng barie<br/>(Hết 3s / Lệnh web / Rule 4)"] --> P2["Kích hoạt cảm biến siêu âm<br/>Đo khoảng cách d (cm) mỗi 0,3s"]
+        P2 --> P3{"d < 15 cm<br/>(Có xe hoặc người)?"}
+        P3 -- "Có vật cản" --> P4["TẠM HOÃN ĐÓNG, GIỮ 90°<br/>Phát cảnh báo vật cản<br/>Chờ 0,3s rồi đo lại"]
+        P4 --> P2
+        P3 -- "Khu vực an toàn" --> P5["HẠ CẦN VỀ 0° & BẬT LED ĐỎ<br/>Cập nhật trạng thái cổng đã đóng"]
+    end
 
-**(b) Máy trạng thái điều khiển Barie:**
+    subgraph FSM["(b) MÁY TRẠNG THÁI ĐIỀU KHIỂN BARIE"]
+        direction TB
+        CLOSED["Trạng thái 1: ĐÓNG<br/>(Servo 0° · LED Đỏ)"]
+        OPEN_TIMED["Trạng thái 2: MỞ CÓ THỜI HẠN<br/>(Servo 90° · Tự đóng sau 3s)"]
+        OPEN_HOLD["Trạng thái 3: GIỮ MỞ THỦ CÔNG<br/>(Servo 90° · Chờ lệnh đóng từ Web)"]
 
-```mermaid
-stateDiagram-v2
-    CLOSED: Đóng (Servo 0° · LED Đỏ)
-    OPEN_TIMED: Mở có thời hạn (90° · Đợi 3 giây)
-    OPEN_HOLD: Giữ mở (90° · Chờ lệnh đóng)
+        CLOSED -->|"Quẹt thẻ hợp lệ tại cổng"| OPEN_TIMED
+        OPEN_TIMED -->|"Hết 3s & Không có vật cản"| CLOSED
+        CLOSED -->|"Bấm 'Mở Barie' trên Dashboard"| OPEN_HOLD
+        OPEN_TIMED -->|"Bấm 'Mở Barie' trên Dashboard"| OPEN_HOLD
+        OPEN_HOLD -->|"Lệnh đóng web / Rule 4 (an toàn)"| CLOSED
+    end
 
-    [*] --> CLOSED
-    CLOSED --> OPEN_TIMED : Quẹt thẻ hợp lệ
-    OPEN_TIMED --> CLOSED : Hết 3s / Lệnh đóng (d >= 15 cm)
-    CLOSED --> OPEN_HOLD : Lệnh mở từ Dashboard
-    OPEN_TIMED --> OPEN_HOLD : Lệnh mở từ Dashboard
-    OPEN_HOLD --> CLOSED : Lệnh đóng / Rule 4 (d >= 15 cm)
+    classDef warnStyle fill:#fef3c7,stroke:#f59e0b,stroke-width:1.5px,color:#92400e;
+    classDef safeStyle fill:#dcfce7,stroke:#22c55e,stroke-width:1.5px,color:#166534;
+    classDef procStyle fill:#e0f2fe,stroke:#0284c7,stroke-width:1.5px,color:#0369a1;
+
+    class P4 warnStyle;
+    class P5,OPEN_TIMED,OPEN_HOLD safeStyle;
+    class P1,P2,CLOSED procStyle;
 ```
 
 *Hình 3.4: Lưu đồ chống kẹp xe (HC-SR04) và máy trạng thái điều khiển Barie.*
@@ -447,26 +524,47 @@ Hệ thống sử dụng **HiveMQ Public Broker** tại địa chỉ `broker.hiv
 
 ```mermaid
 flowchart LR
-    I1["Nhận Snapshot & LWT (status)"] --> H1["Đồng bộ hiện trạng 2 ô & kết nối"]
-    I2["Nhận sự kiện thẻ (rfid/scan)"] --> H2["Cập nhật vào/ra, cước phí & Rule 2"]
-    I3["Nhận trạng thái cổng (barie/status)"] --> H3["Cập nhật góc mở & mốc thời gian barie"]
-    I4["Nhận cảnh báo cổng (alert)"] --> H4["Phân loại thẻ khóa, chống kẹp & Rule 3"]
-    I5["Bộ đếm định kỳ mỗi 1 giây"] --> H5["Kiểm tra Rule 1 (Quá giờ) & Rule 4 (Mở lâu)"]
-    I6["Thao tác từ Web Dashboard"] --> H6["Kiểm tra hợp lệ lệnh & cấu hình quản trị"]
+    subgraph IN["CÁC LUỒNG ĐẦU VÀO (INPUT)"]
+        direction TB
+        I1["📡 Snapshot & LWT<br/>(parking_n4/status)"]
+        I2["💳 Sự kiện quẹt thẻ<br/>(parking_n4/rfid/scan)"]
+        I3["🚧 Trạng thái barie<br/>(parking_n4/barie/status)"]
+        I4["⚠️ Cảnh báo tại cổng<br/>(parking_n4/alert)"]
+        I5["⏱️ Bộ đếm nhịp 1s<br/>(Kiểm tra Rule định kỳ)"]
+        I6["🖱️ Thao tác quản trị<br/>(Từ Web Dashboard)"]
+    end
 
-    H1 --> D["Bộ điều phối trung tâm (Cập nhật trạng thái dùng chung)"]
-    H2 --> D
-    H3 --> D
-    H4 --> D
-    H5 --> D
-    H6 --> D
+    subgraph CORE["BỘ NÃO ĐIỀU PHỐI TRUNG TÂM (NODE-RED)"]
+        direction TB
+        D1["ĐỒNG BỘ TRẠNG THÁI TẬP TRUNG<br/>flow.get('park') duy nhất"]
+        D2["THỰC THI 4 QUY TẮC TỰ ĐỘNG HÓA:<br/>• Rule 1: Xe quá giờ (> 30s demo / 4-12h thật)<br/>• Rule 2: Cảnh báo bãi đầy (2/2 xe)<br/>• Rule 3: Dò thẻ lạ liên tục (>= 3 lần/60s)<br/>• Rule 4: Kẹt barie mở lâu (> 10s)"]
+        D1 <--> D2
+    end
 
-    D --> O1["Cập nhật 3 tab giao diện Dashboard"]
-    D --> O2["Hiển thị thông báo nổi (Toast)"]
-    D --> O3["Lưu nhật ký văn bản & tệp JSON"]
-    D --> O4["Phát lệnh & cấu hình xuống MQTT"]
-    H5 --> O4
-    H6 --> O4
+    subgraph OUT["CÁC ĐẦU RA (OUTPUT)"]
+        direction TB
+        O1["🖥️ Giao diện 3 Tab Dashboard & Toast nổi"]
+        O2["💾 Lưu trữ tệp bền vững (log.txt & JSON)"]
+        O3["📤 Phát lệnh đóng barie (barie/cmd Downlink)"]
+        O4["⚙️ Đồng bộ thẻ & giá (config Downlink retained)"]
+    end
+
+    I1 & I2 & I3 & I4 ==> D1
+    I5 ==> D2
+    I6 ==> D1 & D2
+
+    D1 ==> O1
+    D1 ==> O2
+    D2 -.->|"Rule 4 kích hoạt"| O3
+    D1 -.->|"Quản trị đổi thẻ/giá"| O4
+
+    classDef inStyle fill:#eff6ff,stroke:#3b82f6,stroke-width:1.5px,color:#1e40af;
+    classDef coreStyle fill:#fdf4ff,stroke:#a855f7,stroke-width:2px,color:#6b21a8;
+    classDef outStyle fill:#f0fdf4,stroke:#22c55e,stroke-width:1.5px,color:#14532d;
+
+    class IN,I1,I2,I3,I4,I5,I6 inStyle;
+    class CORE,D1,D2 coreStyle;
+    class OUT,O1,O2,O3,O4 outStyle;
 ```
 
 *Hình 3.5: Lưu đồ xử lý sự kiện, đồng bộ và 4 quy tắc tự động trên Node-RED.*

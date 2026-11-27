@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bộ 5 Sơ đồ Thiết kế Chương 3 - Hệ thống Giữ xe RFID</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --border: #334155;
+      --accent: #22c55e;
+    }
+    body.light-theme {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --primary: #0284c7;
+      --border: #e2e8f0;
+      --accent: #16a34a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 24px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .header {
+      max-width: 1200px;
+      margin: 0 auto 32px auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 20px;
+    }
+    .header h1 {
+      font-size: 24px;
+      color: var(--primary);
+      margin-bottom: 6px;
+    }
+    .header p {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .btn {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn:hover {
+      background: var(--primary);
+      color: #0f172a;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 36px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 14px;
+    }
+    .card-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .card-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--primary);
+      margin-left: 8px;
+    }
+    .diagram-box {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 20px;
+      overflow-x: auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 280px;
+    }
+    body.light-theme .diagram-box {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+    }
+    .tip-box {
+      margin-top: 14px;
+      font-size: 13px;
+      color: var(--text-muted);
+      background: rgba(34, 197, 94, 0.1);
+      border-left: 3px solid var(--accent);
+      padding: 8px 12px;
+      border-radius: 0 6px 6px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>Bộ 5 Sơ đồ Thiết kế Hệ thống Giữ xe RFID (Chương 3)</h1>
+      <p>Thiết kế dạng khối ngang (Landscape 16:9), chữ to rõ, chuẩn hóa cho Báo cáo tiểu luận & Slide bảo vệ</p>
+    </div>
+    <div>
+      <button class="btn" onclick="toggleTheme()">🌓 Đổi Giao diện Sáng/Tối</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Hình 3.1 -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Hình 3.1: Sơ đồ Use Case tổng quát <span class="badge">Use Case Diagram</span></div>
+          <div class="card-desc">Phân định 3 nhóm tác nhân (Người gửi xe, Người quản lý, Tác nhân tự động) và 8 trường hợp sử dụng</div>
+        </div>
+      </div>
+      <div class="diagram-box">
+        <div class="mermaid">
+flowchart LR
+    U1(["👤 Người gửi xe"])
+    U2(["👮 Người quản lý"])
+    U3(["🤖 Tác nhân tự động<br/>(ESP32 & Node-RED)"])
+
+    subgraph SYS["HỆ THỐNG QUẢN LÝ BÃI GIỮ XE MÁY RFID"]
+        direction TB
+        
+        subgraph G1["Nghiệp vụ trực tiếp tại cổng"]
+            UC1(["Quẹt thẻ RFID gửi / lấy xe"])
+            UC2(["Quan sát LCD & Đèn LED chỉ dẫn"])
+            UC5(["Chống kẹp xe tự động (< 15 cm)"])
+        end
+
+        subgraph G2["Giám sát & Điều hành Web"]
+            UC3(["Giám sát 2 ô đỗ & Nhật ký trực tiếp"])
+            UC4(["Mở / Đóng barie thủ công từ xa"])
+            UC6(["Chạy 4 rule cảnh báo & Ghi log/JSON"])
+        end
+
+        subgraph G3["Chức năng quản trị mở rộng"]
+            UC7(["Quản lý 16 thẻ RFID & Bảng giá động"])
+            UC8(["Đối soát giao dịch & Xuất file CSV"])
+        end
+    end
+
+    U1 --- UC1
+    U1 --- UC2
+    UC3 --- U2
+    UC4 --- U2
+    UC7 --- U2
+    UC8 --- U2
+    UC5 --- U3
+    UC6 --- U3
+
+    classDef actorStyle fill:#f1f5f9,stroke:#475569,stroke-width:2px,color:#0f172a;
+    classDef gateStyle fill:#e0f2fe,stroke:#0284c7,stroke-width:1.5px,color:#0369a1;
+    classDef webStyle fill:#dcfce7,stroke:#16a34a,stroke-width:1.5px,color:#14532d;
+    classDef extStyle fill:#fef3c7,stroke:#d97706,stroke-width:1.5px,stroke-dasharray: 4 4,color:#78350f;
+
+    class U1,U2,U3 actorStyle;
+    class UC1,UC2,UC5 gateStyle;
+    class UC3,UC4,UC6 webStyle;
+    class UC7,UC8 extStyle;
+        </div>
+      </div>
+      <div class="tip-box">
+        💡 <strong>Điểm nhấn:</strong> Phân chia 3 phân hệ trực quan bằng màu sắc riêng biệt giúp thầy cô nhìn là hiểu ngay phạm vi đồ án.
+      </div>
+    </div>
+
+    <!-- Hình 3.2 -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Hình 3.2: Kiến trúc IoT 4 tầng & Luồng dữ liệu hai chiều <span class="badge">Architecture</span></div>
+          <div class="card-desc">Cấu trúc 4 tầng hoàn chỉnh với luồng Uplink (báo cáo) và Downlink (lệnh/cấu hình)</div>
+        </div>
+      </div>
+      <div class="diagram-box">
+        <div class="mermaid">
+flowchart TB
+    subgraph L4["TẦNG 4: ỨNG DỤNG (Web Dashboard 3 Tab & Xác thực Bảo mật)"]
+        direction LR
+        T1["Tab 1: Giám sát Trực tiếp<br/>(2 ô đỗ · Điều khiển barie · KPI)"]
+        T2["Tab 2: Quản lý Thẻ & Giá<br/>(CRUD 16 thẻ · Vé tháng · Giá động)"]
+        T3["Tab 3: Lịch sử Giao dịch<br/>(Tìm kiếm · Lọc · Xuất CSV UTF-8)"]
+    end
+
+    subgraph L3["TẦNG 3: XỬ LÝ TRUNG GIAN & TỰ ĐỘNG HÓA (Node-RED Docker)"]
+        direction LR
+        M1["Bộ điều phối trạng thái tập trung<br/>flow.get('park')"]
+        M2["Bộ 4 quy tắc tự động hóa<br/>(Quá giờ · Bãi đầy · Dò thẻ · Kẹt barie)"]
+        M3["Lưu trữ tệp bền vững<br/>(parking_log.txt & database.json)"]
+    end
+
+    subgraph L2["TẦNG 2: MẠNG & TRUYỀN THÔNG (HiveMQ MQTT Broker :1883)"]
+        direction LR
+        UP["Luồng Uplink (4 topic)<br/>rfid/scan · barie/status · alert · status (LWT)"]
+        DN["Luồng Downlink (2 topic)<br/>barie/cmd · config (retained)"]
+    end
+
+    subgraph L1["TẦNG 1: CẢM BIẾN & CHẤP HÀNH TẠI CỔNG (ESP32 Edge Computing)"]
+        direction LR
+        E1["Khối Cảm biến<br/>(RFID-RC522 · Siêu âm HC-SR04)"]
+        E2["Xử lý biên độc lập<br/>(Cấp ô · Tính cước · Chống lặp 1.5s)"]
+        E3["Khối Chấp hành<br/>(Servo SG90 · LCD 1602 · LED · Còi)"]
+    end
+
+    E1 --> E2 --> E3
+    E3 ==>|"Uplink: sự kiện thẻ, barie, cảnh báo, snapshot"| UP
+    UP ==>|"Đẩy dữ liệu vào"| M1
+    M1 <--> M2
+    M1 --> M3
+    M1 <==>|"Websocket / HTTP Auth"| L4
+    T1 -.->|"Downlink: lệnh điều khiển barie"| DN
+    T2 -.->|"Downlink: cấu hình thẻ & giá"| DN
+    M2 -.->|"Downlink: lệnh đóng barie khi mở lâu"| DN
+    DN ==>|"Đẩy lệnh & cấu hình xuống cổng"| E2
+
+    classDef l4Style fill:#f0fdf4,stroke:#16a34a,stroke-width:1.5px,color:#14532d;
+    classDef l3Style fill:#eff6ff,stroke:#2563eb,stroke-width:1.5px,color:#1e40af;
+    classDef l2Style fill:#fefce8,stroke:#ca8a04,stroke-width:1.5px,color:#713f12;
+    classDef l1Style fill:#fdf2f8,stroke:#db2777,stroke-width:1.5px,color:#831843;
+
+    class L4,T1,T2,T3 l4Style;
+    class L3,M1,M2,M3 l3Style;
+    class L2,UP,DN l2Style;
+    class L1,E1,E2,E3 l1Style;
+        </div>
+      </div>
+      <div class="tip-box">
+        💡 <strong>Điểm nhấn:</strong> Các thành phần trong cùng 1 tầng được dàn ngang (direction LR), thể hiện rõ tính độc lập của Edge Computing tại Tầng 1.
+      </div>
+    </div>
+
+    <!-- Hình 3.3 (TRỌNG TÂM: THAY THẾ CHO HÌNH CŨ BỊ DÀI DỌC) -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Hình 3.3: Lưu đồ thuật toán xử lý quẹt thẻ RFID tại cổng ESP32 <span class="badge" style="background: rgba(34, 197, 94, 0.2); color: var(--accent);">Đã tối ưu ngang 16:9</span></div>
+          <div class="card-desc">Bố cục 3 khối ngang: Tiếp nhận & Xác thực ➔ Phân luồng Vào/Ra ➔ Mở barie & Chống kẹp an toàn (không bị dài ngoằng)</div>
+        </div>
+      </div>
+      <div class="diagram-box">
+        <div class="mermaid">
+flowchart LR
+    %% Khối 1: Tiếp nhận và xác thực
+    subgraph S1["1. TIẾP NHẬN & XÁC THỰC THẺ"]
+        direction TB
+        A["Quẹt thẻ RFID"] --> B["Đọc & Chuẩn hóa UID"]
+        B --> C{"Chống đọc lặp<br/>(> 1,5s & Barie đóng)?"}
+        C -- "Không" --> C1["Bỏ qua lần quẹt lặp"]
+        C -- "Hợp lệ" --> D{"Thẻ đã đăng ký?"}
+        D -- "Chưa" --> D1["Từ chối, còi 3 tiếng<br/>LCD: THE CHUA DKY"]
+        D -- "Đã có" --> E{"Thẻ có bị khóa?"}
+        E -- "Bị khóa" --> E1["Từ chối, còi 3 tiếng<br/>LCD: THE BI KHOA"]
+    end
+
+    %% Khối 2: Phân luồng Vào / Ra
+    subgraph S2["2. PHÂN LUỒNG NGHIỆP VỤ TẠI CỔNG"]
+        direction TB
+        E -- "Bình thường" --> F{"Xe đang ở trong bãi?"}
+        
+        %% Nhánh Vào
+        F -- "Chưa (Lượt vào)" --> G{"Còn ô trống<br/>(Slot 1 hoặc 2)?"}
+        G -- "Bãi đầy (2/2)" --> G1["Từ chối, giữ đóng barie<br/>LCD: BAI DA DAY"]
+        G -- "Còn chỗ" --> H["Gán ô trống đầu tiên<br/>Lưu mốc giờ vào xe"]
+        
+        %% Nhánh Ra
+        F -- "Đang đỗ (Lượt ra)" --> I["Tính thời gian gửi & cước phí<br/>(Vé tháng 0đ · Vé lượt block)"]
+        I --> J["Giải phóng ô đỗ<br/>LCD: Hiển thị cước phí"]
+    end
+
+    %% Khối 3: Chấp hành & Chống kẹp
+    subgraph S3["3. MỞ BARIE & CHỐNG KẸP XE (HC-SR04)"]
+        direction TB
+        K["Mở barie 90° & Bật LED Xanh<br/>Còi báo · Phát MQTT Uplink"]
+        K --> L["Đếm thời gian giữ mở 3 giây"]
+        L --> M{"Cảm biến siêu âm<br/>Khoảng cách d < 15 cm?"}
+        M -- "Có vật cản" --> N["TẠM HOÃN ĐÓNG, GIỮ 90°<br/>LCD cảnh báo · Đo lại sau 0,3s"]
+        N --> M
+        M -- "Thông thoáng" --> P["Hạ barie về 0° & Bật LED Đỏ<br/>Cập nhật barie/status (closed)"]
+    end
+
+    H ==> K
+    J ==> K
+
+    %% Phối màu trực quan
+    classDef reject fill:#fee2e2,stroke:#ef4444,stroke-width:1.5px,color:#991b1b;
+    classDef success fill:#dcfce7,stroke:#22c55e,stroke-width:1.5px,color:#166534;
+    classDef process fill:#e0f2fe,stroke:#0284c7,stroke-width:1.5px,color:#0369a1;
+    classDef warning fill:#fef3c7,stroke:#f59e0b,stroke-width:1.5px,color:#92400e;
+
+    class C1,D1,E1,G1 reject;
+    class H,J,K,P success;
+    class A,B,I process;
+    class N warning;
+        </div>
+      </div>
+      <div class="tip-box">
+        🌟 <strong>Giải pháp triệt tiêu lỗi "dài ngoằng":</strong> Gom 10 bước dọc thành 3 pha song song. Màu đỏ thể hiện các điểm chặn (Từ chối, Đầy bãi), màu xanh thể hiện luồng thành công. Chèn vào Word hoặc Slide cực kỳ đẹp!
+      </div>
+    </div>
+
+    <!-- Hình 3.4 -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Hình 3.4: Cơ chế chống kẹp xe & Máy trạng thái Barie <span class="badge">FSM & Anti-pinch</span></div>
+          <div class="card-desc">Bố cục song song: (a) Lưu đồ đo cảm biến khoảng cách & (b) Máy 3 trạng thái điều khiển thanh chắn</div>
+        </div>
+      </div>
+      <div class="diagram-box">
+        <div class="mermaid">
+flowchart LR
+    subgraph SAFE["(a) LƯU ĐỒ CHỐNG KẸP XE BẰNG SIÊU ÂM (HC-SR04)"]
+        direction TB
+        P1["Phát sinh yêu cầu đóng barie<br/>(Hết 3s / Lệnh web / Rule 4)"] --> P2["Kích hoạt cảm biến siêu âm<br/>Đo khoảng cách d (cm) mỗi 0,3s"]
+        P2 --> P3{"d < 15 cm<br/>(Có xe hoặc người)?"}
+        P3 -- "Có vật cản" --> P4["TẠM HOÃN ĐÓNG, GIỮ 90°<br/>Phát cảnh báo vật cản<br/>Chờ 0,3s rồi đo lại"]
+        P4 --> P2
+        P3 -- "Khu vực an toàn" --> P5["HẠ CẦN VỀ 0° & BẬT LED ĐỎ<br/>Cập nhật trạng thái cổng đã đóng"]
+    end
+
+    subgraph FSM["(b) MÁY TRẠNG THÁI ĐIỀU KHIỂN BARIE"]
+        direction TB
+        CLOSED["Trạng thái 1: ĐÓNG<br/>(Servo 0° · LED Đỏ)"]
+        OPEN_TIMED["Trạng thái 2: MỞ CÓ THỜI HẠN<br/>(Servo 90° · Tự đóng sau 3s)"]
+        OPEN_HOLD["Trạng thái 3: GIỮ MỞ THỦ CÔNG<br/>(Servo 90° · Chờ lệnh đóng từ Web)"]
+
+        CLOSED -->|"Quẹt thẻ hợp lệ tại cổng"| OPEN_TIMED
+        OPEN_TIMED -->|"Hết 3s & Không có vật cản"| CLOSED
+        CLOSED -->|"Bấm 'Mở Barie' trên Dashboard"| OPEN_HOLD
+        OPEN_TIMED -->|"Bấm 'Mở Barie' trên Dashboard"| OPEN_HOLD
+        OPEN_HOLD -->|"Lệnh đóng web / Rule 4 (an toàn)"| CLOSED
+    end
+
+    classDef warnStyle fill:#fef3c7,stroke:#f59e0b,stroke-width:1.5px,color:#92400e;
+    classDef safeStyle fill:#dcfce7,stroke:#22c55e,stroke-width:1.5px,color:#166534;
+    classDef procStyle fill:#e0f2fe,stroke:#0284c7,stroke-width:1.5px,color:#0369a1;
+
+    class P4 warnStyle;
+    class P5,OPEN_TIMED,OPEN_HOLD safeStyle;
+    class P1,P2,CLOSED procStyle;
+        </div>
+      </div>
+      <div class="tip-box">
+        💡 <strong>Điểm nhấn:</strong> Minh họa rõ ràng việc Servo không bao giờ đóng nếu cảm biến siêu âm HC-SR04 còn đo thấy vật cản dưới 15 cm.
+      </div>
+    </div>
+
+    <!-- Hình 3.5 -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Hình 3.5: Lưu đồ xử lý trung gian & 4 quy tắc tự động trên Node-RED <span class="badge">Middleware & Automation</span></div>
+          <div class="card-desc">Mô hình hội tụ 6 input vào biến dùng chung flow.get('park') và phân phối ra 4 ngõ output</div>
+        </div>
+      </div>
+      <div class="diagram-box">
+        <div class="mermaid">
+flowchart LR
+    subgraph IN["CÁC LUỒNG ĐẦU VÀO (INPUT)"]
+        direction TB
+        I1["📡 Snapshot & LWT<br/>(parking_n4/status)"]
+        I2["💳 Sự kiện quẹt thẻ<br/>(parking_n4/rfid/scan)"]
+        I3["🚧 Trạng thái barie<br/>(parking_n4/barie/status)"]
+        I4["⚠️ Cảnh báo tại cổng<br/>(parking_n4/alert)"]
+        I5["⏱️ Bộ đếm nhịp 1s<br/>(Kiểm tra Rule định kỳ)"]
+        I6["🖱️ Thao tác quản trị<br/>(Từ Web Dashboard)"]
+    end
+
+    subgraph CORE["BỘ NÃO ĐIỀU PHỐI TRUNG TÂM (NODE-RED)"]
+        direction TB
+        D1["ĐỒNG BỘ TRẠNG THÁI TẬP TRUNG<br/>flow.get('park') duy nhất"]
+        D2["THỰC THI 4 QUY TẮC TỰ ĐỘNG HÓA:<br/>• Rule 1: Xe quá giờ (> 30s demo / 4-12h thật)<br/>• Rule 2: Cảnh báo bãi đầy (2/2 xe)<br/>• Rule 3: Dò thẻ lạ liên tục (>= 3 lần/60s)<br/>• Rule 4: Kẹt barie mở lâu (> 10s)"]
+        D1 <--> D2
+    end
+
+    subgraph OUT["CÁC ĐẦU RA (OUTPUT)"]
+        direction TB
+        O1["🖥️ Giao diện 3 Tab Dashboard & Toast nổi"]
+        O2["💾 Lưu trữ tệp bền vững (log.txt & JSON)"]
+        O3["📤 Phát lệnh đóng barie (barie/cmd Downlink)"]
+        O4["⚙️ Đồng bộ thẻ & giá (config Downlink retained)"]
+    end
+
+    I1 & I2 & I3 & I4 ==> D1
+    I5 ==> D2
+    I6 ==> D1 & D2
+
+    D1 ==> O1
+    D1 ==> O2
+    D2 -.->|"Rule 4 kích hoạt"| O3
+    D1 -.->|"Quản trị đổi thẻ/giá"| O4
+
+    classDef inStyle fill:#eff6ff,stroke:#3b82f6,stroke-width:1.5px,color:#1e40af;
+    classDef coreStyle fill:#fdf4ff,stroke:#a855f7,stroke-width:2px,color:#6b21a8;
+    classDef outStyle fill:#f0fdf4,stroke:#22c55e,stroke-width:1.5px,color:#14532d;
+
+    class IN,I1,I2,I3,I4,I5,I6 inStyle;
+    class CORE,D1,D2 coreStyle;
+    class OUT,O1,O2,O3,O4 outStyle;
+        </div>
+      </div>
+      <div class="tip-box">
+        💡 <strong>Điểm nhấn:</strong> Thể hiện rõ triết lý kiến trúc: Node-RED nhận sự kiện, chạy luật tự động nhưng không can thiệp việc đóng/mở tự động bình thường tại cổng của ESP32.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    function toggleTheme() {
+      document.body.classList.toggle('light-theme');
+    }
+  </script>
+</body>
+</html>
