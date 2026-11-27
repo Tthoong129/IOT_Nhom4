@@ -47,8 +47,9 @@
 * **Hình 3.4:** Sơ đồ kết nối các linh kiện phần cứng với ESP32 trên Wokwi (`minh_chung_anti_pinch_wokwi.png`)
 * **Hình 3.5:** Lưu đồ xử lý thẻ RFID và kiểm tra chống kẹp tại cổng (`fig_3_2_flow_rfid.png`)
 * **Hình 3.6:** Sơ đồ trạng thái hoạt động của barie (`fig_3_4_flow_antipinch_fsm.png`)
-* **Hình 3.7:** Sơ đồ xử lý dữ liệu và điều phối chức năng trong Node-RED (`fig_3_3_flow_nodered.png`)
-* **Hình 3.8:** Giao diện Web Dashboard Tab 1 giám sát bãi xe và điều khiển barie (`dashboard_demo.png`)
+* **Hình 3.7:** Sơ đồ mô hình trao đổi dữ liệu MQTT giữa ESP32, HiveMQ và Node-RED (`fig_3_6_mqtt_exchange.png`)
+* **Hình 3.8:** Sơ đồ xử lý dữ liệu và điều phối chức năng trong Node-RED (`fig_3_3_flow_nodered.png`)
+* **Hình 3.9:** Giao diện Web Dashboard Tab 1 giám sát bãi xe và điều khiển barie (`dashboard_demo.png`)
 * **Hình 4.1:** Mạch mô phỏng Wokwi khi xe ra bãi và chức năng chống kẹp được kích hoạt (`minh_chung_anti_pinch_wokwi.png`)
 * **Hình 4.2:** Luồng xử lý Node-RED được tổ chức theo các nhóm chức năng (`nodered_flow.png`)
 * **Hình 4.3:** Giao diện Web Dashboard Tab 1 giám sát bãi xe và điều khiển barie (`dashboard_demo.png`)
@@ -552,7 +553,57 @@ Các topic được tổ chức dưới tiền tố `parking_n4/` nhằm phân b
 
 Các bản tin được truyền dưới dạng JSON để thuận tiện cho việc xử lý và trao đổi dữ liệu.
 
-Các topic trạng thái và cấu hình sử dụng cơ chế retained để lưu lại bản tin mới nhất. Các topic giao dịch, cảnh báo và lệnh điều khiển không sử dụng retained nhằm tránh phát lại các hành động cũ khi thiết bị kết nối lại.
+Các topic trạng thái và cấu hình sử dụng cơ chế retained để lưu lại bản tin mới nhất. Các topic giao dịch, cảnh báo và lệnh điều khiển không sử dụng retained nhằm tránh phát lại các hành động cũ khi thiết bị kết nối lại. Mô hình luồng dữ liệu trao đổi qua 6 topic MQTT giữa Tầng 1 (ESP32), Tầng 2 (HiveMQ Broker) và Tầng 3-4 (Node-RED & Dashboard) được thể hiện tại Hình 3.7:
+
+```mermaid
+graph LR
+    subgraph ESP32["ESP32 DevKit V1 (Tầng 1)"]
+        direction TB
+        E_PUB["Publisher (Uplink)<br/>• Quẹt thẻ RFID<br/>• Góc quay Servo<br/>• Cảnh báo & Vật cản<br/>• Snapshot 2 ô đỗ"]
+        E_SUB["Subscriber (Downlink)<br/>• Lệnh Barie (Mở/Đóng)<br/>• Cấu hình 16 thẻ xe<br/>• Biểu phí 3 bậc"]
+    end
+
+    subgraph BROKER["MQTT Broker HiveMQ :1883 (Tầng 2)<br/>Tiền tố: parking_n4/"]
+        direction TB
+        subgraph UP_TOPICS["4 Topic Uplink (ESP32 → Node-RED)"]
+            T1["parking_n4/rfid/scan<br/><i>(QoS 0, Không Retained)</i>"]
+            T2["parking_n4/barie/status<br/><i>(QoS 0, Retained)</i>"]
+            T3["parking_n4/alert<br/><i>(QoS 0, Không Retained)</i>"]
+            T4["parking_n4/status<br/><i>(QoS 0, Retained + LWT)</i>"]
+        end
+        subgraph DOWN_TOPICS["2 Topic Downlink (Node-RED → ESP32)"]
+            T5["parking_n4/barie/cmd<br/><i>(QoS 1, Không Retained)</i>"]
+            T6["parking_n4/config<br/><i>(QoS 1, Retained)</i>"]
+        end
+    end
+
+    subgraph NODERED["Node-RED & Dashboard (Tầng 3 & 4)"]
+        direction TB
+        N_SUB["Subscriber (Uplink)<br/>• Đồng bộ flow.park<br/>• Thực thi 4 Rule cảnh báo<br/>• Ghi log & JSON<br/>• Cập nhật Web UI Tab 1"]
+        N_PUB["Publisher (Downlink)<br/>• Lệnh Barie từ UI / Rule 4<br/>• Lưu & đẩy cấu hình Tab 2<br/>• Đẩy biểu phí retained"]
+    end
+
+    %% Uplink connections
+    E_PUB -->|Publish| T1
+    E_PUB -->|Publish| T2
+    E_PUB -->|Publish| T3
+    E_PUB -->|Publish| T4
+
+    T1 -->|Subscribe| N_SUB
+    T2 -->|Subscribe| N_SUB
+    T3 -->|Subscribe| N_SUB
+    T4 -->|Subscribe| N_SUB
+
+    %% Downlink connections
+    N_PUB -->|Publish| T5
+    N_PUB -->|Publish| T6
+
+    T5 -->|Subscribe| E_SUB
+    T6 -->|Subscribe| E_SUB
+```
+
+![Hình 3.7: Sơ đồ mô hình trao đổi dữ liệu MQTT giữa ESP32, Broker và Node-RED](figures/fig_3_6_mqtt_exchange.png)
+*Hình 3.7: Sơ đồ mô hình trao đổi dữ liệu MQTT giữa ESP32, HiveMQ Broker và Node-RED.*
 
 #### 3.5.3. Đồng bộ trạng thái khi kết nối lại
 ESP32 đăng ký nhận lệnh điều khiển và cấu hình từ Node-RED. Khi kết nối MQTT được thiết lập, thiết bị gửi trạng thái hiện tại để hệ thống quản lý cập nhật.
@@ -579,8 +630,8 @@ Các luồng xử lý được tổ chức theo nhóm chức năng:
 4. Tiếp nhận lệnh từ Dashboard và gửi xuống ESP32.
 5. Lưu trữ dữ liệu và khôi phục trạng thái ứng dụng.
 
-![Hình 3.7: Sơ đồ xử lý dữ liệu và điều phối chức năng trong Node-RED](figures/fig_3_3_flow_nodered.png)
-*Hình 3.7: Sơ đồ xử lý dữ liệu và điều phối chức năng trong Node-RED.*
+![Hình 3.8: Sơ đồ xử lý dữ liệu và điều phối chức năng trong Node-RED](figures/fig_3_3_flow_nodered.png)
+*Hình 3.8: Sơ đồ xử lý dữ liệu và điều phối chức năng trong Node-RED.*
 
 #### 3.6.2. Mô hình dữ liệu trạng thái
 Node-RED duy trì một mô hình trạng thái chung của bãi xe để các thành phần trên Dashboard sử dụng thống nhất (Bảng 3.7).
@@ -625,8 +676,8 @@ Giao diện được chia thành ba tab chính:
 * **Tab 2 – Quản lý thẻ và biểu phí:** Cho phép thêm, sửa, khóa hoặc mở khóa thẻ; cập nhật biển số, chủ xe và loại vé. Người vận hành có thể điều chỉnh các mức phí, lựa chọn chế độ miễn phí và cập nhật cấu hình xuống ESP32.
 * **Tab 3 – Lịch sử giao dịch:** Hiển thị thông tin giao dịch vào/ra, thời gian gửi, phí và trạng thái hoàn tất. Người vận hành có thể tìm kiếm theo biển số hoặc UID, lọc giao dịch và xuất dữ liệu ra tệp CSV để phục vụ đối soát.
 
-![Hình 3.8: Giao diện Web Dashboard Tab 1 giám sát bãi xe và điều khiển barie](dashboard_demo.png)
-*Hình 3.8: Giao diện Web Dashboard Tab 1 giám sát bãi xe và điều khiển barie.*
+![Hình 3.9: Giao diện Web Dashboard Tab 1 giám sát bãi xe và điều khiển barie](dashboard_demo.png)
+*Hình 3.9: Giao diện Web Dashboard Tab 1 giám sát bãi xe và điều khiển barie.*
 
 #### 3.7.2. Nguyên lý cập nhật dữ liệu
 Dashboard nhận dữ liệu từ mô hình trạng thái chung trong Node-RED. Khi có giao dịch mới, thay đổi cấu hình hoặc cảnh báo, các thành phần giao diện được cập nhật theo dữ liệu tương ứng.

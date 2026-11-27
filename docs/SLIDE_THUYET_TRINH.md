@@ -148,6 +148,9 @@ sequenceDiagram
 | `barie/status` / `status` | Lên | Retained (+ LWT ở `status`) | Trạng thái barie, snapshot 2 ô và báo `online=false` khi đứt kết nối |
 | `barie/cmd` / `config` | Xuống | Thường / Retained ở `config` | Lệnh đóng mở barie; đồng bộ tối đa `16` thẻ và bảng giá |
 
+![Mô hình trao đổi dữ liệu MQTT qua HiveMQ Broker](figures/fig_3_6_mqtt_exchange.png)
+*Hình: Mô hình trao đổi dữ liệu hai chiều qua 6 topic MQTT giữa ESP32, Broker và Node-RED.*
+
 ![Kiểm thử LWT bằng script giả lập ESP32 kết hợp Node-RED trên Docker](test_ch5_lwt_offline.png)
 *Ghi chú: Ảnh chụp từ kịch bản kiểm thử dùng script giả lập ESP32 kết hợp Node-RED chạy trên Docker (cùng nhật ký `Rule 4 · Barie mở quá lâu` lúc `13:50:50`).*
 

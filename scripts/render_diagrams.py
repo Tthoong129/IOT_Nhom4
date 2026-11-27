@@ -502,10 +502,137 @@ def render_slide_sequence():
     print("-> Đã vẽ lại thành công Sơ đồ tuần tự chuẩn UML Sequence Diagram tại:", out_path)
 
 
+# ==============================================================================
+# 5. HÌNH 3.7: MÔ HÌNH TRAO ĐỔI DỮ LIỆU MQTT GIỮA ESP32 VÀ NODE-RED
+# ==============================================================================
+def render_mqtt_diagram():
+    print("-> Rendering Hình 3.7: Mô hình trao đổi dữ liệu MQTT...")
+    fig, ax = plt.subplots(figsize=(16, 11), dpi=300)
+    ax.set_xlim(0, 16)
+    ax.set_ylim(0, 11)
+    ax.axis('off')
+    fig.patch.set_facecolor(C_BG_PAGE)
+
+    # Tiêu đề biểu đồ
+    ax.text(8, 10.5, "MÔ HÌNH TRAO ĐỔI DỮ LIỆU MQTT GIỮA ESP32 VÀ NODE-RED",
+            ha='center', va='center', fontsize=16, fontweight='bold', color=C_TEXT_MAIN)
+    ax.text(8, 10.15, "Mô hình Publish / Subscribe hai chiều qua HiveMQ Public Broker (:1883) với tiền tố topic 'parking_n4/'",
+            ha='center', va='center', fontsize=11, color=C_TEXT_MUTED)
+
+    # CỘT 1: ESP32 (TẦNG 1) - X: 0.6 - 4.4
+    draw_card(ax, 0.6, 0.6, 3.8, 9.1, "", bg=C_L1_BG, border=C_L1_BORDER, radius=0.12, lw=2)
+    ax.text(2.5, 9.35, "ESP32 DEV-KIT V1 (TẦNG 1)", ha='center', fontsize=12, fontweight='bold', color=C_L1_TITLE)
+    ax.text(2.5, 9.05, "Client ID: esp32_parking_... (eFuse)", ha='center', fontsize=8.5, color=C_TEXT_MUTED)
+
+    draw_card(ax, 0.9, 5.0, 3.2, 3.7, "PUBLISHER (UPLINK)", "Định kỳ hoặc theo sự kiện",
+              bg=C_WHITE, border=C_L1_BORDER, title_color=C_L1_TITLE, title_fontsize=10.5, sub_fontsize=8.5)
+    up_items = [
+        "1. Quẹt thẻ hợp lệ (Vào/Ra)",
+        "2. Cập nhật góc quay Barie",
+        "3. Cảnh báo lỗi & Vật cản",
+        "4. Snapshot bãi xe & LWT"
+    ]
+    for i, itm in enumerate(up_items):
+        ax.text(1.1, 7.6 - i * 0.65, f"• {itm}", fontsize=9, color=C_TEXT_MAIN, zorder=5)
+
+    draw_card(ax, 0.9, 1.0, 3.2, 3.5, "SUBSCRIBER (DOWNLINK)", "Lắng nghe lệnh & cấu hình",
+              bg=C_WHITE, border=C_L1_BORDER, title_color=C_L1_TITLE, title_fontsize=10.5, sub_fontsize=8.5)
+    down_items = [
+        "• Nhận lệnh mở/đóng Barie",
+        "• Nhận lệnh giữ mở khẩn cấp",
+        "• Nhận cấu hình danh mục 16 thẻ",
+        "• Nhận biểu phí 3 bậc cập nhật"
+    ]
+    for i, itm in enumerate(down_items):
+        ax.text(1.1, 3.5 - i * 0.65, itm, fontsize=9, color=C_TEXT_MAIN, zorder=5)
+
+    # CỘT 2: MQTT BROKER (TẦNG 2) - X: 5.2 - 10.8
+    draw_card(ax, 5.2, 0.6, 5.6, 9.1, "", bg=C_L2_BG, border=C_L2_BORDER, radius=0.12, lw=2)
+    ax.text(8.0, 9.35, "MQTT BROKER (TẦNG 2)", ha='center', fontsize=12, fontweight='bold', color=C_L2_TITLE)
+    ax.text(8.0, 9.05, "broker.hivemq.com:1883 (Tiền tố: parking_n4/)", ha='center', fontsize=9, color=C_L2_TITLE)
+
+    # 4 Topic Uplink
+    topics_up = [
+        ("parking_n4/rfid/scan", "Sự kiện xe vào/ra, UID, biển số, cước phí", "QoS 0 · Không Retained", 7.8),
+        ("parking_n4/barie/status", "Trạng thái đóng/mở & góc Servo (0°-90°)", "QoS 0 · Retained", 6.4),
+        ("parking_n4/alert", "Cảnh báo thẻ lạ, thẻ khóa, bãi đầy, chống kẹp", "QoS 0 · Không Retained", 5.0),
+        ("parking_n4/status", "Snapshot toàn bãi (2 ô) & Di chúc LWT", "QoS 0 · Retained + LWT", 3.6),
+    ]
+
+    for top, desc, badge, y in topics_up:
+        draw_card(ax, 5.5, y, 5.0, 1.15, top, desc, bg=C_WHITE, border="#22C55E", title_color="#15803D", title_fontsize=9.5, sub_fontsize=8)
+        ax.text(10.3, y + 0.95, badge, ha='right', va='center', fontsize=7.5, fontweight='bold', color="#166534",
+                bbox=dict(boxstyle="round,pad=0.15", facecolor="#DCFCE7", edgecolor="#22C55E", lw=0.8), zorder=5)
+
+    # 2 Topic Downlink
+    topics_down = [
+        ("parking_n4/barie/cmd", "Lệnh mở, đóng, giữ mở hoặc đồng bộ barie", "QoS 1 · Không Retained", 2.2),
+        ("parking_n4/config", "Cấu hình 16 thẻ xe & biểu phí 3 bậc mới nhất", "QoS 1 · Retained", 0.9)
+    ]
+    for top, desc, badge, y in topics_down:
+        draw_card(ax, 5.5, y, 5.0, 1.15, top, desc, bg=C_WHITE, border="#F59E0B", title_color="#B45309", title_fontsize=9.5, sub_fontsize=8)
+        ax.text(10.3, y + 0.95, badge, ha='right', va='center', fontsize=7.5, fontweight='bold', color="#92400E",
+                bbox=dict(boxstyle="round,pad=0.15", facecolor="#FEF3C7", edgecolor="#F59E0B", lw=0.8), zorder=5)
+
+    # CỘT 3: NODE-RED & DASHBOARD (TẦNG 3 & 4) - X: 11.6 - 15.4
+    draw_card(ax, 11.6, 0.6, 3.8, 9.1, "", bg=C_L3_BG, border=C_L3_BORDER, radius=0.12, lw=2)
+    ax.text(13.5, 9.35, "NODE-RED & DASHBOARD", ha='center', fontsize=12, fontweight='bold', color=C_L3_TITLE)
+    ax.text(13.5, 9.05, "Middleware Docker & Web UI 3 Tab", ha='center', fontsize=8.5, color=C_TEXT_MUTED)
+
+    draw_card(ax, 11.9, 5.0, 3.2, 3.7, "SUBSCRIBER (UPLINK)", "Tiếp nhận dữ liệu hiện trường",
+              bg=C_WHITE, border=C_L3_BORDER, title_color=C_L3_TITLE, title_fontsize=10.5, sub_fontsize=8.5)
+    node_sub_items = [
+        "• Đồng bộ trạng thái toàn bãi",
+        "• Ghi nhật ký vào/ra vào file",
+        "• Kiểm tra 4 Rule tự động",
+        "• Cập nhật giao diện Web Tab 1"
+    ]
+    for i, itm in enumerate(node_sub_items):
+        ax.text(12.1, 7.6 - i * 0.65, itm, fontsize=9, color=C_TEXT_MAIN, zorder=5)
+
+    draw_card(ax, 11.9, 1.0, 3.2, 3.5, "PUBLISHER (DOWNLINK)", "Phát lệnh điều khiển & cấu hình",
+              bg=C_WHITE, border=C_L3_BORDER, title_color=C_L3_TITLE, title_fontsize=10.5, sub_fontsize=8.5)
+    node_pub_items = [
+        "• Nút MỞ / ĐÓNG barie từ xa",
+        "• Lệnh tự đóng từ Rule 4",
+        "• Lưu & đẩy cấu hình thẻ (Tab 2)",
+        "• Cập nhật bảng giá retained"
+    ]
+    for i, itm in enumerate(node_pub_items):
+        ax.text(12.1, 3.5 - i * 0.65, itm, fontsize=9, color=C_TEXT_MAIN, zorder=5)
+
+    # Mũi tên kết nối
+    c_up = "#16A34A"
+    c_down = "#D97706"
+
+    draw_arrow(ax, 4.1, 7.5, 5.5, 8.4, color=c_up, lw=2)
+    draw_arrow(ax, 4.1, 7.0, 5.5, 7.0, color=c_up, lw=2)
+    draw_arrow(ax, 4.1, 6.5, 5.5, 5.6, color=c_up, lw=2)
+    draw_arrow(ax, 4.1, 6.0, 5.5, 4.2, color=c_up, lw=2)
+
+    draw_arrow(ax, 10.5, 8.4, 11.9, 7.5, color=c_up, lw=2)
+    draw_arrow(ax, 10.5, 7.0, 11.9, 7.0, color=c_up, lw=2)
+    draw_arrow(ax, 10.5, 5.6, 11.9, 6.5, color=c_up, lw=2)
+    draw_arrow(ax, 10.5, 4.2, 11.9, 6.0, color=c_up, lw=2)
+
+    draw_arrow(ax, 11.9, 3.0, 10.5, 2.8, color=c_down, lw=2)
+    draw_arrow(ax, 11.9, 2.0, 10.5, 1.5, color=c_down, lw=2)
+
+    draw_arrow(ax, 5.5, 2.8, 4.1, 3.0, color=c_down, lw=2)
+    draw_arrow(ax, 5.5, 1.5, 4.1, 2.0, color=c_down, lw=2)
+
+    out_path = os.path.join(OUTPUT_DIR, "fig_3_6_mqtt_exchange.png")
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    print("-> Đã vẽ thành công Sơ đồ Mô hình Trao đổi Dữ liệu MQTT tại:", out_path)
+
+
 if __name__ == "__main__":
     print("=== BẮT ĐẦU TẠO BỘ ẢNH ĐỒ HỌA SƠ ĐỒ CHUYÊN NGHIỆP ===")
     render_fig_3_1()
     render_fig_3_2()
     render_fig_3_3()
     render_slide_sequence()
-    print("=== HOÀN TẤT 4 SƠ ĐỒ SẮC NÉT TẠI docs/figures/ ===")
+    render_mqtt_diagram()
+    print("=== HOÀN TẤT TẤT CẢ SƠ ĐỒ SẮC NÉT TẠI docs/figures/ ===")
