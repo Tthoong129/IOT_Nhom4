@@ -49,12 +49,12 @@
 * **Hình 3.6:** Sơ đồ trạng thái hoạt động của barie (`fig_3_4_flow_antipinch_fsm.png`)
 * **Hình 3.7:** Sơ đồ xử lý dữ liệu và điều phối chức năng trong Node-RED (`fig_3_3_flow_nodered.png`)
 * **Hình 3.8:** Giao diện Web Dashboard Tab 1 giám sát bãi xe và điều khiển barie (`dashboard_demo.png`)
-* **Hình 4.1:** Mạch mô phỏng Wokwi khi xe ra tính phí và kích hoạt chống kẹp xe (`minh_chung_anti_pinch_wokwi.png`)
-* **Hình 4.2:** Giao diện luồng xử lý Node-RED thực tế chia theo 4 cụm và cụm khởi động (`nodered_flow.png`)
+* **Hình 4.1:** Mạch mô phỏng Wokwi khi xe ra bãi và chức năng chống kẹp được kích hoạt (`minh_chung_anti_pinch_wokwi.png`)
+* **Hình 4.2:** Luồng xử lý Node-RED được tổ chức theo các nhóm chức năng (`nodered_flow.png`)
 * **Hình 4.3:** Giao diện Web Dashboard Tab 1 giám sát bãi xe và điều khiển barie (`dashboard_demo.png`)
-* **Hình 4.4:** Giao diện đăng nhập xác thực quản trị Node-RED và cơ chế `httpNodeAuth` (`nodered_admin_login.png`)
-* **Hình 4.5:** Giao diện mở rộng Tab 2 quản lý thẻ RFID và bảng giá động (`dashboard_cards_pricing.png`)
-* **Hình 4.6:** Giao diện mở rộng Tab 3 tra cứu lịch sử giao dịch và xuất CSV (`dashboard_history.png`)
+* **Hình 4.4:** Giao diện đăng nhập Node-RED Editor (`nodered_admin_login.png`)
+* **Hình 4.5:** Giao diện quản lý thẻ RFID và bảng giá (`dashboard_cards_pricing.png`)
+* **Hình 4.6:** Giao diện tra cứu lịch sử giao dịch và xuất CSV (`dashboard_history.png`)
 * **Hình 5.1:** Kết quả kiểm thử mất kết nối đột ngột kích hoạt LWT trên Dashboard (`test_ch5_lwt_offline.png`)
 * **Hình 5.2:** Kết quả kiểm thử kích hoạt đồng thời Rule 1, Rule 2 và Rule 3 trên Dashboard (`test_ch5_rules_alerts.png`)
 * **Hình 5.3:** Dashboard sau khi khởi động lại container Docker khôi phục doanh thu và giao dịch (`test_ch5_restart_recovery.png`)
@@ -74,7 +74,7 @@
 * **Bảng 3.6:** Danh mục 6 topic MQTT trao đổi giữa ESP32 và Node-RED
 * **Bảng 3.7:** Đặc tả các trường dữ liệu trong mô hình trạng thái bãi xe
 * **Bảng 3.8:** Bảng định nghĩa 4 quy tắc tự động hóa trên Node-RED
-* **Bảng 4.1:** Môi trường công cụ và phiên bản sử dụng khi triển khai
+* **Bảng 4.1:** Môi trường và công cụ triển khai hệ thống
 * **Bảng 5.1:** Bộ dữ liệu 4 thẻ RFID mẫu sử dụng trong kiểm thử
 * **Bảng 5.2:** Kết quả kiểm thử Tầng 1 (Firmware và mạch mô phỏng Wokwi)
 * **Bảng 5.3:** Kết quả kiểm thử Tầng 2 (Truyền thông MQTT hai chiều, LWT và xác thực)
@@ -627,122 +627,124 @@ Cơ chế này hỗ trợ khôi phục dữ liệu quản lý và trạng thái 
 ## CHƯƠNG 4. TRIỂN KHAI
 
 ### 4.1. Môi trường triển khai
-Hệ thống được phát triển, biên dịch và kiểm thử trên hệ điều hành Windows; Node-RED Runtime có thể chạy trực tiếp bằng Node.js hoặc đóng gói một lệnh qua Docker Compose. Bảng 4.1 tổng hợp các công cụ và phiên bản thực tế trích từ nhật ký biên dịch và hạ tầng kiểm thử.
+Hệ thống được phát triển, biên dịch và kiểm thử trên Windows. Firmware ESP32 được xây dựng bằng PlatformIO, phần cứng được mô phỏng trên Wokwi, còn Node-RED được triển khai bằng Docker. Các thành phần giao tiếp thông qua MQTT Broker HiveMQ Public.
 
-| Thành phần | Công cụ / Thư viện | Phiên bản thực tế | Vai trò |
-| :--- | :--- | :--- | :--- |
-| Biên dịch nhúng | PlatformIO Core / Platform | Core `6.2.0` (`pio --version`) / `espressif32 (7.1.3)` | Biên dịch firmware cho board `esp32dev` |
-| Framework & Toolchain | Arduino-ESP32 / GCC / esptool | `framework-arduinoespressif32 @ 4.20017.260907+sha.dcc1105b` (nhánh 2.0.17), `toolchain-xtensa-esp32 @ 8.4.0+2021r2-patch5`, `esptool.py v4.11.0` | Lõi Arduino-ESP32, trình biên dịch và đóng gói `.bin` |
-| Thư viện ESP32 | `MFRC522`, `ESP32Servo`, `LiquidCrystal_I2C`, `PubSubClient`, `ArduinoJson` | `1.4.12`, `3.2.1`, `1.1.4`, `2.8.0`, `7.4.3` | Giao tiếp ngoại vi, JSON và MQTT |
-| Mô phỏng phần cứng | Wokwi Simulator (VS Code ext.) | `wokwi-vscode 4.1.0` (nạp `firmware.bin`) | Mô phỏng mạch ESP32 và cảm biến |
-| Middleware & UI (Docker) | Node-RED / Node.js / Dashboard | `Node-RED v5.0.10` / `Node.js v24.22.3` / `node-red-dashboard 3.6.6` (`docker logs`) | Xử lý luồng, 4 rule, xác thực và giao diện web |
-| Hạ tầng container & Host | Docker Engine / Node.js Host | `Docker 29.5.3` (`docker --version`) / `Node.js v24.22.0` (`node -v`) | Đóng gói `nodered/node-red:latest`, `eclipse-mosquitto:2.0` và chạy script kiểm thử |
-| MQTT Broker | HiveMQ Public Broker | `broker.hivemq.com:1883` | Trung chuyển gói tin giữa Wokwi và Node-RED |
+| Thành phần | Công cụ / Phiên bản | Vai trò |
+|---|---|---|
+| **Biên dịch firmware** | PlatformIO Core 6.2.0; platform espressif32 7.1.3 | Biên dịch chương trình cho ESP32 |
+| **Framework và toolchain** | Arduino-ESP32 2.0.17; GCC Xtensa 8.4.0; esptool.py 4.11.0 | Biên dịch và tạo firmware nhị phân |
+| **Thư viện ESP32** | MFRC522 1.4.12; ESP32Servo 3.2.1; LiquidCrystal_I2C 1.1.4; PubSubClient 2.8.0; ArduinoJson 7.4.3 | Điều khiển ngoại vi, xử lý JSON và truyền thông MQTT |
+| **Mô phỏng phần cứng** | Wokwi VS Code Extension 4.1.0 | Mô phỏng mạch ESP32 và các linh kiện ngoại vi |
+| **Middleware và giao diện** | Node-RED 5.0.10; Node.js 24.22.3; node-red-dashboard 3.6.6 | Xử lý luồng, tự động hóa và hiển thị giao diện |
+| **Đóng gói và chạy dịch vụ** | Docker 29.5.3; Docker Compose | Triển khai Node-RED và các dịch vụ liên quan |
+| **MQTT Broker** | HiveMQ Public Broker, `broker.hivemq.com:1883` | Trung chuyển dữ liệu giữa ESP32 và Node-RED |
 
-*Bảng 4.1: Môi trường công cụ và phiên bản sử dụng khi triển khai.*
+*Bảng 4.1: Môi trường và công cụ triển khai hệ thống.*
 
-**Quy trình khởi chạy lại hệ thống:** (1) Chạy `docker compose up -d --build` (hoặc nhấp đúp `start_docker.bat`) để khởi động Node-RED tại cổng `1880` (tệp `docker-compose.yml` cũng khai báo sẵn dịch vụ `eclipse-mosquitto:2.0` dự phòng, còn luồng hiện tại trỏ thẳng tới `broker.hivemq.com:1883`); (2) Chạy `pio run` để biên dịch `.pio/build/esp32dev/firmware.bin`; (3) Mở `diagram.json` trên VS Code Wokwi và bấm **Play**; (4) Truy cập `http://localhost:1880/ui` và đăng nhập theo cấu hình `settings.js`.
+Quy trình khởi chạy gồm: khởi động dịch vụ bằng `docker compose up -d --build`, biên dịch firmware bằng `pio run`, chạy mô phỏng Wokwi và truy cập giao diện tại `http://localhost:1880/ui`. Node-RED Editor được truy cập tại cổng 1880 và yêu cầu đăng nhập theo cấu hình hệ thống.
 
 ### 4.2. Triển khai Tầng 1 – Thiết bị
 
-#### 4.2.1. Đấu nối mô phỏng trên Wokwi và xử lý xung đột phần cứng
-Mạch mô phỏng Tầng 1 khai báo trong `diagram.json` với vi điều khiển `board-esp32-devkit-c-v4` và 7 linh kiện đấu nối theo đúng Bảng 3.3, sử dụng màn hình LCD I2C tại địa chỉ `0x27`. Để còi báo không xung đột bộ định thời PWM với động cơ Servo SG90 trên ESP32, firmware cấp riêng cho còi **kênh LEDC 15** và điều khiển âm thanh hoàn toàn không chặn vòng quét chính.
+#### 4.2.1. Mô phỏng phần cứng
+Mạch được khai báo trong tệp `diagram.json` và mô phỏng bằng Wokwi với board ESP32 DevKitC. Các linh kiện được đấu nối theo thiết kế tại Chương 3, trong đó màn hình LCD I2C sử dụng địa chỉ `0x27`.
 
-Ảnh chụp thực tế ở Hình 4.1 ghi nhận tình huống xe `29A-123.45` quẹt thẻ ra bãi (LCD hiển thị `RA: 29A-123.45` / `T:35s 9000d`), đồng thời cảm biến siêu âm HC-SR04 ở cự ly `10,0 cm` nên hệ thống tạm hoãn hạ barie và in log `[GATE] Anti-pinch triggered (dist=10.0cm). Holding barrier open.` trên cửa sổ Terminal.
+Firmware điều khiển còi bằng kênh LEDC riêng nhằm hạn chế xung đột bộ định thời PWM với động cơ Servo SG90. Âm thanh được phát theo cơ chế không chặn vòng lặp chính, giúp ESP32 tiếp tục xử lý thẻ RFID và cảm biến.
 
-![Hình 4.1: Mạch mô phỏng Wokwi khi xe ra tính phí và kích hoạt chống kẹp xe](minh_chung_anti_pinch_wokwi.png)
-*Hình 4.1: Mạch mô phỏng Wokwi khi xe ra tính phí và kích hoạt chống kẹp xe.*
+Trong tình huống xe ra bãi, hệ thống đọc thẻ, tính thời gian gửi và phí, sau đó hiển thị kết quả trên LCD. Nếu cảm biến siêu âm phát hiện vật cản trong phạm vi chống kẹp, barie được giữ mở và hệ thống ghi nhận cảnh báo.
 
-#### 4.2.2. Tổ chức 4 mô-đun mã nguồn và trích đoạn chống kẹp xe
-Mã nguồn firmware phân chia thành 4 mô-đun theo trách nhiệm trong `include/` và `src/`:
-* **`Config.h`:** Khai báo chân GPIO, hằng số thời gian (`GATE_HOLD_MS = 3000`, `CARD_DEBOUNCE_MS = 1500`, `ANTI_PINCH_DIST_CM = 15.0`, `ANTI_PINCH_RECHECK = 300`), biểu phí mặc định và 6 topic MQTT.
-* **`ParkingSystem`:** Quản lý mảng `_cards` (tối đa 16 thẻ), chuẩn hóa UID dạng thập lục phân viết hoa, cấp phát ô `1..2`, tính cước phí và cập nhật bảng giá/thẻ động thông qua hàm `applyConfig()` (bảo toàn thông tin `slot` và `entryTime` của xe đang gửi trong bãi kể cả khi cấu hình từ web chỉnh sửa hoặc xóa thẻ).
-* **`GateController`:** Triển khai máy trạng thái barie (`GATE_CLOSED`, `GATE_OPEN_TIMED`, `GATE_OPEN_HOLD`) và điều khiển Servo SG90 cùng đèn LED Đỏ/Xanh.
-* **`MqttService` & `main.cpp`:** Quản lý kết nối Wi-Fi/MQTT và vòng lặp không chặn `loop()` (kèm các lệnh kiểm thử qua Serial như `1`–`4`, `scan`, `open`, `close`, `sonar`, `cards`, `price`, `status`).
+![Hình 4.1: Mạch mô phỏng Wokwi khi xe ra bãi và chức năng chống kẹp được kích hoạt](minh_chung_anti_pinch_wokwi.png)
+*Hình 4.1: Mạch mô phỏng Wokwi khi xe ra bãi và chức năng chống kẹp được kích hoạt.*
 
-Khi barie chuẩn bị đóng, cờ `_closePending = true` kích hoạt chu kỳ đo siêu âm mỗi `300 ms` trong `GateController::update()` (`src/GateController.cpp`, chi tiết đầy đủ tại Phụ lục A):
+#### 4.2.2. Tổ chức firmware
+Firmware được chia thành các mô-đun theo chức năng:
+* **`Config.h`:** Khai báo chân GPIO, thời gian điều khiển, ngưỡng chống kẹp, biểu phí mặc định và các topic MQTT.
+* **`ParkingSystem`:** Quản lý danh sách tối đa 16 thẻ, chuẩn hóa UID, phân bổ hai ô đỗ, tính phí và cập nhật cấu hình.
+* **`GateController`:** Quản lý trạng thái barie, điều khiển Servo SG90 và đèn LED.
+* **`MqttService` và `main.cpp`:** Quản lý kết nối Wi-Fi/MQTT, tiếp nhận lệnh và vận hành vòng lặp chính.
 
-```cpp
-if (!_closePending) return EVT_NONE;
-if (_lastCheck != 0 && now - _lastCheck < ANTI_PINCH_RECHECK) return EVT_NONE;
-_lastCheck = now;
-if (readDistanceCm() < ANTI_PINCH_DIST_CM) {
-    if (!_blocked) { _blocked = true; return EVT_OBSTACLE; }
-    return EVT_NONE;
-}
-doClose();
-return EVT_CLOSED;
-```
+Khi barie chuẩn bị đóng, `GateController` kiểm tra khoảng cách bằng cảm biến siêu âm theo chu kỳ 300 ms. Nếu khoảng cách nhỏ hơn ngưỡng 15 cm, hệ thống tạm dừng thao tác đóng barie; chỉ tiếp tục khi điều kiện chống kẹp được bảo đảm.
 
 ### 4.3. Triển khai Tầng 2 – Truyền thông MQTT
 
-#### 4.3.1. Cấu hình kết nối, bộ đệm và LWT
-Lớp `MqttService` (`src/MqttService.cpp`) tạo Client ID duy nhất từ mã eFuse của ESP32, thiết lập Wi-Fi `WIFI_STA` với `setAutoReconnect(true)` (chỉ chờ tối đa 10 giây lúc khởi động để không chặn cổng nếu chưa có Wi-Fi). Thư viện `PubSubClient` cấu hình bộ đệm `2560 bytes` (đủ truyền tải trọn gói cấu hình JSON chứa tối đa 16 thẻ), `keepAlive = 15s` và `socketTimeout = 4s`. Khi kết nối tới `broker.hivemq.com:1883`, ESP32 khai báo sẵn gói LWT `{"online":false}` trên topic `parking_n4/status` với `willQos = 1`, `willRetain = true`. Ở phía phát bản tin, ESP32 dùng `QoS 0` cho 4 topic Uplink, còn các node `mqtt out` trên Node-RED phát lệnh và cấu hình Downlink ở `QoS 1`.
+#### 4.3.1. Cấu hình kết nối
+Mô-đun `MqttService` tạo Client ID từ mã eFuse của ESP32 và quản lý kết nối Wi-Fi ở chế độ station. Firmware sử dụng thư viện PubSubClient với bộ đệm 2560 byte, thời gian keep-alive 15 giây và socket timeout 4 giây.
 
-#### 4.3.2. Tự kết nối lại và đồng bộ cấu hình
-Khi mất mạng, hàm `mqtt.update()` không chặn vòng lặp xử lý tại cổng và gọi `connectMqtt()` thử lại mỗi `5 giây` (`MQTT_RETRY_MS = 5000`). Ngay sau khi phục hồi kết nối, thiết bị đăng ký 2 topic Downlink (`parking_n4/barie/cmd` nhận `open`, `open_hold`, `close`, `sync` và `parking_n4/config` nhận payload cấu hình `{"v":2,"p":{...},"c":[...]}`), đồng thời gọi `onMqttConnected()` phát lại trạng thái barie và bản tin snapshot gồm sức chứa, xe đang gửi trong 2 ô, `uptime` và `RSSI`.
+Thiết bị kết nối đến `broker.hivemq.com:1883` và khai báo bản tin Last Will and Testament (LWT) trên topic `parking_n4/status`. Khi thiết bị mất kết nối bất thường, broker có thể phát trạng thái ngoại tuyến để Node-RED cập nhật tình trạng hệ thống.
+
+ESP32 sử dụng QoS 0 cho các bản tin gửi lên. Các lệnh điều khiển và cấu hình từ Node-RED xuống thiết bị sử dụng QoS 1.
+
+#### 4.3.2. Kết nối lại và đồng bộ trạng thái
+Khi mất mạng, firmware tiếp tục xử lý các chức năng tại thiết bị và thử kết nối MQTT lại theo chu kỳ 5 giây. Sau khi kết nối thành công, ESP32 đăng ký các topic nhận lệnh và cấu hình, sau đó gửi lại trạng thái barie cùng dữ liệu tổng quan như sức chứa, xe đang gửi, thời gian hoạt động và cường độ tín hiệu Wi-Fi.
+
+Cơ chế này giúp Node-RED cập nhật trạng thái hiện tại sau khi kết nối được khôi phục. Các sự kiện xảy ra trong thời gian mất mạng không được xem là đã tự động phát lại nếu chưa có cơ chế lưu và gửi bù riêng.
 
 ### 4.4. Triển khai Tầng 3 – Xử lý và tự động hóa
 
-#### 4.4.1. Tổ chức luồng Node-RED và trạng thái tập trung
-Node-RED thực thi tệp `nodered_flow.json` gồm **69 phần tử JSON** (`50` node xử lý và hiển thị UI, `13` node cấu hình dùng chung gồm `broker_hivemq`, `cfg_ui_base`, 3 tab và 8 group UI, kèm `1` tab flow và `5` khung nhóm trực quan trên Editor). Luồng xử lý bố trí từ trái sang phải theo 4 cụm Uplink, Middleware, Application, Downlink và cụm Khởi động ở phía dưới (Hình 4.2).
+#### 4.4.1. Tổ chức luồng Node-RED
+Luồng Node-RED được lưu trong tệp `nodered_flow.json`, gồm các node xử lý, cấu hình và giao diện. Các node được bố trí theo nhóm chức năng: Uplink, Middleware, Application, Downlink và Khởi động.
 
-![Hình 4.2: Giao diện luồng xử lý Node-RED thực tế chia theo 4 cụm và cụm khởi động](nodered_flow.png)
-*Hình 4.2: Giao diện luồng xử lý Node-RED thực tế chia theo 4 cụm và cụm khởi động.*
+Dữ liệu từ ESP32 được tiếp nhận, chuẩn hóa và cập nhật vào đối tượng trạng thái trung tâm. Node-RED lưu các nhật ký gần nhất và chuyển dữ liệu cần thiết đến giao diện giám sát.
 
-#### 4.4.2. Bộ điều phối trung tâm và mã xử lý 4 quy tắc
-Mọi nhánh đầu vào hội tụ về nút `DISPATCH` để cập nhật đối tượng ngữ cảnh `flow.get('park')`, lưu tối đa 12 nhật ký gần nhất, ghi đồng bộ ra tệp và chuyển qua nút `RENDER` (chỉ phát bản tin cho từng widget UI khi chuỗi JSON đầu ra thay đổi).
+![Hình 4.2: Luồng xử lý Node-RED được tổ chức theo các nhóm chức năng](nodered_flow.png)
+*Hình 4.2: Luồng xử lý Node-RED được tổ chức theo các nhóm chức năng.*
 
-Trên xung quét `1 giây`: `RULE1` đối chiếu thời gian lưu bãi của từng ô với ngưỡng `overstaySec` động; `RULE2` theo dõi đủ `2/2` xe và cờ từ chối `LOT_FULL`; `RULE3` đếm `INVALID_CARD` trong cửa sổ 60 giây và nâng mức cảnh báo từ lần thứ 3; `RULE4` kiểm tra barie mở giữ quá 10 giây theo trích đoạn JavaScript cốt lõi dưới đây trước khi phát lệnh đóng tự động xuống ESP32 (mã đầy đủ của luồng đặt tại Phụ lục B):
+#### 4.4.2. Bộ điều phối và các quy tắc tự động
+Các nhánh dữ liệu được đưa về node điều phối `DISPATCH`. Node này cập nhật trạng thái bãi xe, lưu tối đa 12 sự kiện gần nhất và chuyển dữ liệu sang node `RENDER` để cập nhật giao diện khi nội dung hiển thị thay đổi.
 
-```javascript
-if (g.state === 'open' && now - g.since > 10000 && park.online) {
-    if (!park.rule4.sentAt || now - park.rule4.sentAt > 10000) {
-        park.rule4.sentAt = now;
-        cmd = { payload: { cmd: 'close', src: 'rule4' } };
-        flow.set('park', park);
-    }
-}
-```
+Hệ thống triển khai bốn quy tắc tự động:
+1. **Quá thời gian gửi:** Kiểm tra thời gian gửi xe tại từng ô và cảnh báo khi vượt ngưỡng cấu hình (mặc định 30 giây trong mô hình).
+2. **Bãi đầy:** Theo dõi tình trạng hai ô đỗ và cảnh báo khi không còn chỗ trống (2/2 xe).
+3. **Thẻ không hợp lệ:** Đếm số lần quẹt thẻ không hợp lệ trong cửa sổ 60 giây và nâng mức cảnh báo từ lần thứ ba.
+4. **Barie mở quá lâu:** Nếu barie mở quá 10 giây và ESP32 đang trực tuyến, Node-RED gửi lệnh đóng barie tự động.
+
+Các quy tắc được xử lý định kỳ, đồng thời cập nhật trạng thái và cảnh báo trên giao diện giám sát.
 
 ### 4.5. Triển khai Tầng 4 – Web Dashboard và xác thực
 
-#### 4.5.1. Giao diện giám sát chính Tab 1
-Tab 1 (`Giám sát bãi xe`, Hình 4.3) sắp xếp thành hai cột cân đối ở độ phân giải `1440x1080` để người trực theo dõi trọn vẹn trên một màn hình mà không phải cuộn trang: cột trái gồm 4 thẻ KPI tổng quan (`overview`) và bảng 12 nhật ký sự kiện (`park.events`); cột phải gồm sơ đồ 2 ô đỗ (`slots`), khu vực điều khiển barie (`control`) kèm 2 nút `MỞ BARIE` / `ĐÓNG BARIE` (có cảnh báo nếu gửi lệnh lúc ESP32 đang ngoại tuyến), phía dưới là 4 chỉ số vận hành và 2 biểu đồ step thời gian thực (`stats`, `rev`, `occ`).
+#### 4.5.1. Giao diện giám sát
+Dashboard được xây dựng bằng Node-RED Dashboard và chia thành ba tab. Tab 1 là giao diện giám sát chính, gồm các thẻ thông tin tổng quan, nhật ký sự kiện, sơ đồ hai ô đỗ, khu vực điều khiển barie và các biểu đồ theo dõi hoạt động.
+
+Giao diện hỗ trợ người vận hành quan sát tình trạng bãi xe và gửi lệnh mở hoặc đóng barie. Khi ESP32 ngoại tuyến, hệ thống hiển thị cảnh báo để người dùng biết lệnh điều khiển có thể không được thực thi.
 
 ![Hình 4.3: Giao diện Web Dashboard Tab 1 giám sát bãi xe và điều khiển barie](dashboard_demo.png)
 *Hình 4.3: Giao diện Web Dashboard Tab 1 giám sát bãi xe và điều khiển barie.*
 
-#### 4.5.2. Cấu hình xác thực truy cập (`httpNodeAuth` và `adminAuth`)
-Tệp `docker/nodered/settings.js` bật đồng thời `httpNodeAuth` (HTTP Basic Auth cho `/ui`, trả mã `401 Unauthorized` kèm header `WWW-Authenticate` khi thiếu hoặc sai mật khẩu) và `adminAuth` (hộp thoại đăng nhập cho Node-RED Editor `/`, Hình 4.4). Mật khẩu được lưu hoàn toàn dưới dạng chuỗi băm `bcrypt` (`$2b$08$...`) hoặc nạp qua hai biến môi trường `NODERED_UI_PASS_HASH` và `NODERED_ADMIN_PASS_HASH`, không chứa mật khẩu dạng văn bản thuần trong mã nguồn.
+#### 4.5.2. Xác thực truy cập
+Tệp `settings.js` cấu hình xác thực cho Node-RED Editor và Dashboard. `adminAuth` bảo vệ trang quản trị, trong khi `httpNodeAuth` yêu cầu xác thực khi truy cập giao diện `/ui`.
 
-![Hình 4.4: Giao diện hộp thoại đăng nhập xác thực quản trị Node-RED (`adminAuth`)](nodered_admin_login.png)
-*Hình 4.4: Giao diện hộp thoại đăng nhập xác thực quản trị Node-RED (`adminAuth`), đồng thời `/ui` áp dụng `httpNodeAuth` kiểm tra mã `401`/`200`.*
+Thông tin mật khẩu được lưu dưới dạng chuỗi băm bcrypt hoặc nạp thông qua biến môi trường, không lưu trực tiếp mật khẩu dạng văn bản thuần trong mã nguồn.
 
-### 4.6. Tính năng mở rộng và đóng gói lưu trữ *(Mở rộng)*
-Ngoài 4 tầng IoT và 4 quy tắc tự động cốt lõi của học phần, hệ thống triển khai thêm các phần mở rộng quản trị, đối soát và đóng gói hạ tầng sau:
+![Hình 4.4: Giao diện đăng nhập Node-RED Editor](nodered_admin_login.png)
+*Hình 4.4: Giao diện đăng nhập Node-RED Editor.*
 
-#### 4.6.1. Quản lý danh sách thẻ động (16 thẻ) và bảng giá động *(Mở rộng)*
-Tab 2 (Hình 4.5) cho phép thêm thẻ mới, chỉnh sửa biển số/chủ xe, chuyển `Vé lượt` / `Vé tháng` (`0đ`), `Khóa/Mở khóa` thẻ (`LOCKED_CARD`) và xóa thẻ (tự vô hiệu nút xóa nếu xe của thẻ đó đang gửi trong bãi). Khi vừa quẹt một thẻ lạ trên Wokwi, biểu mẫu tự hiện nút `Lấy UID này` để điền nhanh UID mới; các thay đổi chế độ thu phí, 3 khung giá và ngưỡng Rule 1 được lưu xuống `parking_database.json` và đẩy `retained` qua `parking_n4/config` để `applyConfig()` trên ESP32 cập nhật ngay không cần nạp lại firmware.
+### 4.6. Các chức năng mở rộng
 
-![Hình 4.5: Giao diện mở rộng Tab 2 quản lý thẻ RFID và bảng giá động](dashboard_cards_pricing.png)
-*Hình 4.5: Giao diện mở rộng Tab 2 quản lý thẻ RFID và bảng giá động.*
+#### 4.6.1. Quản lý thẻ RFID và bảng giá
+Tab 2 cho phép thêm, sửa, khóa, mở khóa và xóa thẻ RFID. Người quản trị có thể cập nhật thông tin chủ xe, biển số, loại vé và bảng giá. Chức năng xóa thẻ bị vô hiệu khi xe tương ứng vẫn đang ở trong bãi.
 
-#### 4.6.2. Đối soát lịch sử giao dịch và xuất tệp CSV *(Mở rộng)*
-Tab 3 (Hình 4.6) ghép cặp từng lượt `check_in` và `check_out` thành dòng giao dịch hoàn chỉnh (`Mã GD`, `Biển số`, `Chủ xe`, `UID`, `Loại vé`, `Ô`, `Giờ vào`, `Giờ ra`, `Thời lượng`, `Cước phí`, `Trạng thái`), hỗ trợ tìm kiếm, lọc trạng thái và nút `Xuất CSV (Excel)` xuất tệp `lich_su_bai_xe.csv` kèm chữ ký UTF-8 BOM giúp Excel hiển thị đúng tiếng Việt.
+Khi phát hiện thẻ lạ, giao diện hỗ trợ lấy UID vừa quét để thêm vào danh sách. Các thay đổi về thẻ và cấu hình tính phí được lưu vào cơ sở dữ liệu JSON và gửi xuống ESP32 để áp dụng mà không cần biên dịch lại firmware.
 
-![Hình 4.6: Giao diện mở rộng Tab 3 tra cứu lịch sử giao dịch và xuất CSV](dashboard_history.png)
-*Hình 4.6: Giao diện mở rộng Tab 3 tra cứu lịch sử giao dịch và xuất CSV.*
+![Hình 4.5: Giao diện quản lý thẻ RFID và bảng giá](dashboard_cards_pricing.png)
+*Hình 4.5: Giao diện quản lý thẻ RFID và bảng giá.*
 
-#### 4.6.3. Lưu trữ bền vững và đóng gói triển khai Docker Compose *(Mở rộng)*
-Dữ liệu vận hành được Node-RED ghi đồng thời vào hai tệp trong thư mục `data/` (gắn qua biến `PARKING_DATA_DIR` vào `/data/storage` trong container Docker):
-1. **`data/parking_log.txt`:** Ghi nối tiếp mỗi sự kiện một dòng theo định dạng `Ngày Giờ | Loại sự kiện | Biển số/UID | Chi tiết`, ví dụ:
-   ```text
-   23/11/2026 18:11:41 | Xe vào | 29A-123.45 | Ô 1 · Nguyễn Văn A
-   ```
-2. **`data/parking_database.json`:** Ghi đè cấu trúc gồm `updated_at`, `capacity`, `pricing`, `cards`, `vehicles_inside`, `stats`, `events` (12 sự kiện gần nhất) và `transactions` (tối đa 100 giao dịch) để nạp lại nguyên vẹn khi dịch vụ khởi động lại.
+#### 4.6.2. Tra cứu giao dịch và xuất CSV
+Tab 3 hỗ trợ tra cứu lịch sử gửi xe, tìm kiếm và lọc theo trạng thái. Các sự kiện xe vào và xe ra được ghép thành giao dịch, gồm thông tin xe, thời điểm vào/ra, thời lượng gửi, ô đỗ và phí.
 
-Cấu hình `docker-compose.yml`, `docker/nodered/Dockerfile` và script `start_docker.bat` tự động cài sẵn `node-red-dashboard@^3.6.6`, nạp `settings.js`, gắn volume dữ liệu và cho phép dựng lại toàn bộ hệ thống trên máy khác chỉ bằng một lệnh `docker compose up -d --build`.
+Người dùng có thể xuất lịch sử thành tệp CSV. Tệp được bổ sung UTF-8 BOM để hỗ trợ hiển thị tiếng Việt khi mở bằng Excel.
+
+![Hình 4.6: Giao diện tra cứu lịch sử giao dịch và xuất CSV](dashboard_history.png)
+*Hình 4.6: Giao diện tra cứu lịch sử giao dịch và xuất CSV.*
+
+#### 4.6.3. Lưu trữ và đóng gói triển khai
+Dữ liệu vận hành được lưu trong thư mục `data/`, gồm:
+* `parking_log.txt`: Ghi nối tiếp các sự kiện theo thời gian.
+* `parking_database.json`: Lưu cấu hình, danh sách thẻ, xe đang gửi, thống kê, nhật ký gần nhất và các giao dịch.
+
+Docker Compose được sử dụng để đóng gói Node-RED và các dịch vụ liên quan. Thư mục dữ liệu được gắn vào container thông qua volume, giúp dữ liệu được duy trì khi dịch vụ khởi động lại. Tệp cấu hình và script khởi chạy hỗ trợ dựng lại hệ thống trên máy khác.
+
+### 4.7. Kết luận chương
+Chương này đã trình bày quá trình triển khai hệ thống bãi giữ xe máy tự quản sử dụng RFID trên môi trường mô phỏng. Firmware ESP32 đảm nhiệm việc đọc thẻ, điều khiển barie và xử lý chống kẹp; MQTT truyền dữ liệu giữa thiết bị và Node-RED; Node-RED thực hiện xử lý, tự động hóa và cập nhật Dashboard. Các chức năng mở rộng hỗ trợ quản lý thẻ, cấu hình bảng giá, tra cứu giao dịch và lưu trữ dữ liệu. Hệ thống được đóng gói bằng Docker Compose nhằm thuận tiện cho việc khởi chạy và triển khai lại.
+
 
 ---
 
