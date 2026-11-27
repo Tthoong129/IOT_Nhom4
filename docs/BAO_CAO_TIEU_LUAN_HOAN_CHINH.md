@@ -281,57 +281,7 @@ Hệ thống được chia thành bốn tầng liên kết hai chiều từ thi�
 
 Trong kiến trúc này, việc điều khiển thời gian thực tại cổng được tách bạch hoàn toàn khỏi phần giám sát và quản lý: ESP32 tự quyết định cho phép hoặc từ chối xe ngay tại chỗ mà không cần phụ thuộc vào máy chủ, còn Node-RED làm nhiệm vụ thu thập sự kiện, cảnh báo và cung cấp công cụ quản trị từ xa.
 
-```mermaid
-flowchart TB
-    subgraph L4["TẦNG 4: ỨNG DỤNG (Web Dashboard 3 Tab & Xác thực Mật khẩu)"]
-        direction LR
-        T1["Tab 1: Giám sát Trực tiếp<br/>(2 ô đỗ · Điều khiển barie · KPI)"]
-        T2["Tab 2: Quản lý Thẻ & Giá<br/>(CRUD 16 thẻ · Vé tháng · Giá động)"]
-        T3["Tab 3: Lịch sử Giao dịch<br/>(Tìm kiếm · Lọc · Xuất CSV UTF-8)"]
-    end
-
-    subgraph L3["TẦNG 3: XỬ LÝ TRUNG GIAN & TỰ ĐỘNG HÓA (Node-RED Docker)"]
-        direction LR
-        M1["Bộ điều phối trạng thái tập trung<br/>flow.get('park')"]
-        M2["Bộ 4 quy tắc tự động hóa<br/>(Quá giờ · Bãi đầy · Dò thẻ · Kẹt barie)"]
-        M3["Lưu trữ tệp bền vững<br/>(parking_log.txt & database.json)"]
-    end
-
-    subgraph L2["TẦNG 2: MẠNG & TRUYỀN THÔNG (HiveMQ MQTT Broker :1883)"]
-        direction LR
-        UP["Luồng Uplink (4 topic)<br/>rfid/scan · barie/status · alert · status (LWT)"]
-        DN["Luồng Downlink (2 topic)<br/>barie/cmd · config (retained)"]
-    end
-
-    subgraph L1["TẦNG 1: CẢM BIẾN & CHẤP HÀNH TẠI CỔNG (ESP32)"]
-        direction LR
-        E1["Khối Cảm biến<br/>(RFID-RC522 · Siêu âm HC-SR04)"]
-        E2["Xử lý độc lập tại cổng<br/>(Cấp ô · Tính cước · Chống lặp 1.5s)"]
-        E3["Khối Chấp hành<br/>(Servo SG90 · LCD 1602 · LED · Còi)"]
-    end
-
-    E1 --> E2 --> E3
-    E3 ==>|"Uplink: sự kiện thẻ, barie, cảnh báo, snapshot"| UP
-    UP ==>|"Đẩy dữ liệu vào"| M1
-    M1 <--> M2
-    M1 --> M3
-    M1 <==>|"Websocket / HTTP Auth"| L4
-    T1 -.->|"Downlink: lệnh điều khiển barie"| DN
-    T2 -.->|"Downlink: cấu hình thẻ & giá"| DN
-    M2 -.->|"Downlink: lệnh đóng barie khi mở lâu"| DN
-    DN ==>|"Đẩy lệnh & cấu hình xuống cổng"| E2
-
-    classDef l4Style fill:#f0fdf4,stroke:#16a34a,stroke-width:1.5px,color:#14532d;
-    classDef l3Style fill:#eff6ff,stroke:#2563eb,stroke-width:1.5px,color:#1e40af;
-    classDef l2Style fill:#fefce8,stroke:#ca8a04,stroke-width:1.5px,color:#713f12;
-    classDef l1Style fill:#fdf2f8,stroke:#db2777,stroke-width:1.5px,color:#831843;
-
-    class L4,T1,T2,T3 l4Style;
-    class L3,M1,M2,M3 l3Style;
-    class L2,UP,DN l2Style;
-    class L1,E1,E2,E3 l1Style;
-```
-
+![Hình 3.1: Sơ đồ kiến trúc tổng thể 4 tầng và luồng dữ liệu hai chiều](figures/fig_3_1_arch_4layer.png)
 *Hình 3.1: Sơ đồ kiến trúc tổng thể 4 tầng và luồng dữ liệu hai chiều.*
 
 Luồng dữ liệu trao đổi giữa hai chiều:
@@ -372,57 +322,7 @@ Firmware trên ESP32 được tổ chức thành các mô-đun riêng biệt the
 * **`MqttService`:** Phụ trách kết nối Wi-Fi, MQTT, đăng ký các topic nhận lệnh/cấu hình, phân tích chuỗi JSON và tự động thử kết nối lại theo chu kỳ 5 giây khi rớt mạng.
 * **`main.cpp`:** Trong hàm `loop()`, hệ thống lần lượt cập nhật MQTT, LCD, còi báo, thanh chắn barie, đầu đọc RFID và cổng Serial mà không dùng lệnh `delay()` chặn vòng quét chính. Nhờ đó, nghiệp vụ tại cổng vẫn diễn ra thông suốt kể cả khi mạng bị gián đoạn.
 
-```mermaid
-flowchart LR
-    subgraph S1["1. TIẾP NHẬN & XÁC THỰC THẺ"]
-        direction TB
-        A["Quẹt thẻ RFID"] --> B["Đọc & Chuẩn hóa UID"]
-        B --> C{"Chống đọc lặp<br/>(> 1,5s & Barie đóng)?"}
-        C -- "Không" --> C1["Bỏ qua lần quẹt lặp"]
-        C -- "Hợp lệ" --> D{"Thẻ đã đăng ký?"}
-        D -- "Chưa" --> D1["Từ chối, còi 3 tiếng<br/>LCD: THE CHUA DKY"]
-        D -- "Đã có" --> E{"Thẻ có bị khóa?"}
-        E -- "Bị khóa" --> E1["Từ chối, còi 3 tiếng<br/>LCD: THE BI KHOA"]
-    end
-
-    subgraph S2["2. PHÂN LUỒNG NGHIỆP VỤ TẠI CỔNG"]
-        direction TB
-        E -- "Bình thường" --> F{"Xe đang ở trong bãi?"}
-        
-        %% Nhánh Vào
-        F -- "Chưa (Lượt vào)" --> G{"Còn ô trống<br/>(Slot 1 hoặc 2)?"}
-        G -- "Bãi đầy (2/2)" --> G1["Từ chối, giữ đóng barie<br/>LCD: BAI DA DAY"]
-        G -- "Còn chỗ" --> H["Gán ô trống đầu tiên<br/>Lưu mốc giờ vào xe"]
-        
-        %% Nhánh Ra
-        F -- "Đang đỗ (Lượt ra)" --> I["Tính thời gian gửi & cước phí<br/>(Vé tháng 0đ · Vé lượt block)"]
-        I --> J["Giải phóng ô đỗ<br/>LCD: Hiển thị cước phí"]
-    end
-
-    subgraph S3["3. MỞ BARIE & CHỐNG KẸP XE (HC-SR04)"]
-        direction TB
-        K["Mở barie 90° & Bật LED Xanh<br/>Còi báo · Phát MQTT Uplink"]
-        K --> L["Đếm thời gian giữ mở 3 giây"]
-        L --> M{"Cảm biến siêu âm<br/>Khoảng cách d < 15 cm?"}
-        M -- "Có vật cản" --> N["TẠM HOÃN ĐÓNG, GIỮ 90°<br/>LCD cảnh báo · Đo lại sau 0,3s"]
-        N --> M
-        M -- "Thông thoáng" --> P["Hạ barie về 0° & Bật LED Đỏ<br/>Cập nhật barie/status (closed)"]
-    end
-
-    H ==> K
-    J ==> K
-
-    classDef reject fill:#fee2e2,stroke:#ef4444,stroke-width:1.5px,color:#991b1b;
-    classDef success fill:#dcfce7,stroke:#22c55e,stroke-width:1.5px,color:#166534;
-    classDef process fill:#e0f2fe,stroke:#0284c7,stroke-width:1.5px,color:#0369a1;
-    classDef warning fill:#fef3c7,stroke:#f59e0b,stroke-width:1.5px,color:#92400e;
-
-    class C1,D1,E1,G1 reject;
-    class H,J,K,P success;
-    class A,B,I process;
-    class N warning;
-```
-
+![Hình 3.2: Lưu đồ xử lý thẻ RFID và kiểm tra chống kẹp barie tại cổng](figures/fig_3_2_flow_rfid.png)
 *Hình 3.2: Lưu đồ xử lý thẻ RFID và kiểm tra chống kẹp barie tại cổng.*
 
 *Nguyên tắc xử lý quẹt thẻ tại cổng:*
@@ -462,51 +362,7 @@ Sau khi kết nối mạng thành công, ESP32 tự động đăng ký 2 topic n
 
 Tầng xử lý trung gian trên Node-RED tiếp nhận 4 nhóm dữ liệu từ MQTT: snapshot, giao dịch quẹt thẻ, trạng thái barie và cảnh báo. Các hàm function node xử lý logic, đồng bộ trạng thái bãi xe, quản lý danh sách thẻ, biểu phí và chạy 4 luật tự động. Toàn bộ thông tin được gom về biến trạng thái dùng chung `flow.get('park')` để các thành phần trên Dashboard luôn hiển thị nhất quán với nhau.
 
-```mermaid
-flowchart LR
-    subgraph IN["CÁC LUỒNG ĐẦU VÀO (INPUT)"]
-        direction TB
-        I1["📡 Snapshot & LWT<br/>(parking_n4/status)"]
-        I2["💳 Sự kiện quẹt thẻ<br/>(parking_n4/rfid/scan)"]
-        I3["🚧 Trạng thái barie<br/>(parking_n4/barie/status)"]
-        I4["⚠️ Cảnh báo tại cổng<br/>(parking_n4/alert)"]
-        I5["⏱️ Bộ đếm nhịp 1s<br/>(Kiểm tra Rule định kỳ)"]
-        I6["🖱️ Thao tác quản trị<br/>(Từ Web Dashboard)"]
-    end
-
-    subgraph CORE["BỘ NÃO ĐIỀU PHỐI TRUNG TÂM (NODE-RED)"]
-        direction TB
-        D1["ĐỒNG BỘ TRẠNG THÁI TẬP TRUNG<br/>flow.get('park') duy nhất"]
-        D2["THỰC THI 4 QUY TẮC TỰ ĐỘNG HÓA:<br/>• Rule 1: Xe quá giờ (> 30s demo / 4-12h thật)<br/>• Rule 2: Cảnh báo bãi đầy (2/2 xe)<br/>• Rule 3: Dò thẻ lạ liên tục (>= 3 lần/60s)<br/>• Rule 4: Kẹt barie mở lâu (> 10s)"]
-        D1 <--> D2
-    end
-
-    subgraph OUT["CÁC ĐẦU RA (OUTPUT)"]
-        direction TB
-        O1["🖥️ Giao diện 3 Tab Dashboard & Toast nổi"]
-        O2["💾 Lưu trữ tệp bền vững (log.txt & JSON)"]
-        O3["📤 Phát lệnh đóng barie (barie/cmd Downlink)"]
-        O4["⚙️ Đồng bộ thẻ & giá (config Downlink retained)"]
-    end
-
-    I1 & I2 & I3 & I4 ==> D1
-    I5 ==> D2
-    I6 ==> D1 & D2
-
-    D1 ==> O1
-    D1 ==> O2
-    D2 -.->|"Rule 4 kích hoạt"| O3
-    D1 -.->|"Quản trị đổi thẻ/giá"| O4
-
-    classDef inStyle fill:#eff6ff,stroke:#3b82f6,stroke-width:1.5px,color:#1e40af;
-    classDef coreStyle fill:#fdf4ff,stroke:#a855f7,stroke-width:2px,color:#6b21a8;
-    classDef outStyle fill:#f0fdf4,stroke:#22c55e,stroke-width:1.5px,color:#14532d;
-
-    class IN,I1,I2,I3,I4,I5,I6 inStyle;
-    class CORE,D1,D2 coreStyle;
-    class OUT,O1,O2,O3,O4 outStyle;
-```
-
+![Hình 3.3: Luồng xử lý dữ liệu và 4 quy tắc tự động trong Node-RED](figures/fig_3_3_flow_nodered.png)
 *Hình 3.3: Luồng xử lý dữ liệu và 4 quy tắc tự động trong Node-RED.*
 
 Bốn quy tắc tự động hóa được thiết kế gồm:
