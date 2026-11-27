@@ -66,8 +66,8 @@
 * **Bảng 3.1:** Bảng đặc tả yêu cầu chức năng và phi chức năng
 * **Bảng 3.2:** Sơ đồ đấu nối chân linh kiện phần cứng trên ESP32
 * **Bảng 3.3:** Danh mục 6 topic MQTT nghiệp vụ và cấu trúc thông điệp
-* **Bảng 3.4:** Bộ 4 quy tắc tự động hóa trên Node-RED (ngưỡng demo và ngưỡng thực tế)
-* **Bảng 3.5:** Bố cục các thành phần hiển thị trên Web Dashboard
+* **Bảng 3.4:** Đặc tả các trường dữ liệu trong mô hình trạng thái tập trung của bãi xe
+* **Bảng 3.5:** Bộ 4 quy tắc tự động hóa trên Node-RED (ngưỡng demo và ngưỡng thực tế)
 * **Bảng 4.1:** Môi trường công cụ và phiên bản sử dụng khi triển khai
 * **Bảng 5.1:** Bộ dữ liệu 4 thẻ RFID mẫu sử dụng trong kiểm thử
 * **Bảng 5.2:** Kết quả kiểm thử Tầng 1 (Firmware và mạch mô phỏng Wokwi)
@@ -358,23 +358,23 @@ Quy trình nghiệp vụ tại cổng được tổ chức thành một chuỗi 
 * **Giai đoạn 1 – Tiếp nhận và Xác thực thẻ:**
   1. *Đọc và Chuẩn hóa UID:* Khi khách đưa thẻ vào phạm vi quét của đầu đọc RC522, vi điều khiển thu nhận 4 byte định danh và chuẩn hóa thành chuỗi ký tự lục phân viết hoa cách nhau bằng khoảng trắng (ví dụ: `01 02 03 04`). Việc chuẩn hóa giúp việc tìm kiếm trong danh sách không bị nhầm lẫn giữa chữ hoa và chữ thường.
   2. *Cơ chế chống đọc lặp (Card Debounce 1.500 ms):* Trong thực tế, người gửi xe thường có thói quen cầm giữ thẻ trước đầu đọc vài giây hoặc tay bị run. Nếu không xử lý, đầu đọc sẽ quét liên tục 5–10 lần trong một giây, làm hệ thống hiểu nhầm khách vừa vào xong lập tức quẹt ra ngay. Nhóm thiết lập cơ chế so sánh mốc thời gian: nếu cùng một mã UID được quẹt liên tiếp trong khoảng thời gian dưới 1,5 giây (khi thanh chắn đang đóng), lần quét đó sẽ bị bỏ qua hoàn toàn.
-  3. *Kiểm tra tính hợp lệ:* Hệ thống đối chiếu UID với danh sách 16 thẻ nội bộ. Nếu thẻ chưa được đăng ký trong hệ thống, cổng lập tức từ chối, còi kêu 3 tiếng bíp ngắn, LCD hiển thị `THE CHUA DKY` và gửi cảnh báo thẻ lạ lên mạng. Nếu thẻ có trong danh sách nhưng cờ trạng thái `active = false` (thẻ đã bị quản trị viên khóa trên web), cổng từ chối mở và LCD báo `THE BI KHOA`.
+  3. *Kiểm tra tính hợp lệ:* Hệ thống đối chiếu UID với danh sách 16 thẻ nội bộ. Nếu thẻ chưa được đăng ký trong hệ thống, cổng lập tức từ chối, còi kêu 3 tiếng bíp ngắn, LCD hiển thị thông báo từ chối (`THE CHUA DKY`) và gửi cảnh báo thẻ lạ lên mạng. Nếu thẻ có trong danh sách nhưng đang ở trạng thái bị khóa (do quản trị viên khóa thẻ trên web), cổng từ chối mở và LCD báo `THE BI KHOA`.
 
 * **Giai đoạn 2 – Phân luồng Vào / Ra và Quản lý vị trí đỗ:**
-  1. *Phân biệt lượt Vào hay Ra:* Hệ thống kiểm tra trường thông tin `slot` (vị trí ô đỗ) của thẻ. Nếu `slot == 0` (thẻ chưa gửi xe trong bãi), hệ thống xác định đây là **Lượt vào**. Nếu `slot > 0` (xe đang nằm ở Ô 1 hoặc Ô 2), hệ thống xác định đây là **Lượt ra**.
-  2. *Xử lý Lượt vào và Kiểm soát sức chứa:* Khi là lượt vào, hệ thống quét tìm ô trống đầu tiên (ưu tiên Ô 1 rồi tới Ô 2). Nếu cả hai ô đều đã có xe (`2/2`), cổng từ chối mở barie, giữ nguyên đèn đỏ, còi bíp cảnh báo và LCD thông báo `BAI DA DAY`. Nếu còn ô trống, hệ thống gán ô đỗ cho thẻ, lưu lại mốc thời gian vào bằng hàm `millis()`, chuyển sang bước mở barie.
-  3. *Xử lý Lượt ra và Tính cước phí:* Khi là lượt ra, hệ thống lấy thời điểm hiện tại trừ đi thời điểm vào xe để tính ra tổng số thời gian lưu bãi. Thẻ được xóa vị trí ô đỗ (`slot = 0`) để giải phóng ô cho xe khác.
+  1. *Phân biệt lượt Vào hay Ra:* Hệ thống kiểm tra trạng thái lưu trú hiện tại của thẻ: nếu thẻ chưa được gán vị trí ô đỗ trong bãi (trạng thái ô bằng 0), hệ thống xác định đây là **Lượt vào**. Nếu thẻ đang được ghi nhận nằm tại Ô 1 hoặc Ô 2, hệ thống xác định đây là **Lượt ra**.
+  2. *Xử lý Lượt vào và Kiểm soát sức chứa:* Khi là lượt vào, hệ thống quét tìm ô trống đầu tiên (ưu tiên Ô 1 rồi tới Ô 2). Nếu cả hai ô đều đã có xe (`2/2`), cổng từ chối mở barie, giữ nguyên đèn đỏ, còi bíp cảnh báo và LCD thông báo `BAI DA DAY`. Nếu còn ô trống, hệ thống gán ô đỗ cho thẻ, lưu lại mốc thời gian vào bãi theo bộ đếm thời gian hệ thống và chuyển sang bước mở barie.
+  3. *Xử lý Lượt ra và Tính cước phí:* Khi là lượt ra, hệ thống lấy thời điểm hiện tại trừ đi thời điểm vào xe để tính ra tổng số thời gian lưu bãi. Thẻ được xóa ghi nhận vị trí ô đỗ để giải phóng ô cho xe tiếp theo.
      - *Vé tháng:* Cước phí được tính cố định là `0 đồng`.
-     - *Vé lượt:* Áp dụng biểu phí bậc thang cấu hình. Để phục vụ kiểm thử và trình diễn trên mô hình mô phỏng, thang thời gian được rút gọn theo giây: đỗ dưới 10 giây tính 3.000đ; từ 10 đến 30 giây tính 5.000đ; trên 30 giây tính 9.000đ. Người quản trị có thể thay đổi các mức giá này từ xa bất kỳ lúc nào. LCD hiển thị số tiền thu để tài xế và bảo vệ cùng đối chiếu, còi phát 2 tiếng bíp xác nhận.
+     - *Vé lượt:* Áp dụng biểu phí bậc thang cấu hình. Để phục vụ kiểm thử và trình diễn trên mô hình mô phỏng, thang thời gian được rút gọn theo giây: đỗ dưới 10 giây tính 3.000đ; từ 10 đến 30 giây tính 5.000đ; trên 30 giây tính 9.000đ. Người quản trị có thể thay đổi các mức giá này từ xa bất kỳ lúc nào. Màn hình LCD hiển thị số tiền thu để tài xế và bảo vệ cùng đối chiếu, còi phát 2 tiếng bíp xác nhận.
 
 * **Giai đoạn 3 – Chấp hành mở cổng và Cơ chế chống kẹp xe an toàn:**
   - Sau khi xác thực vào hoặc ra thành công, Servo kích hoạt xoay cần gạt lên góc 90°, đèn LED chuyển sang Xanh và ESP32 gửi bản tin MQTT Uplink (`rfid/scan`) báo cáo lên hệ thống.
-  - Thanh chắn được giữ mở trong thời gian an toàn là **3 giây** (`GATE_HOLD_MS = 3000`) để xe bắt đầu di chuyển qua cổng.
+  - Thanh chắn được giữ mở trong khoảng thời gian an toàn thiết kế là **3 giây** để xe bắt đầu di chuyển qua cổng.
 
 #### 3.4.2. Phân tích nguyên lý cảm biến siêu âm chống kẹp xe
 Đây là tính năng an toàn cốt lõi giúp hệ thống vượt trội so với các loại barie hẹn giờ thông thường:
-* Khi hết thời gian giữ mở 3 giây, vi điều khiển **tuyệt đối không hạ cần ngay**. Hệ thống chuyển sang trạng thái chờ đóng và kích hoạt cảm biến siêu âm HC-SR04 đo khoảng cách vật thể phía dưới cần chắn theo chu kỳ mỗi **300 mili-giây** (`ANTI_PINCH_RECHECK = 300`).
-* **Trường hợp có vật cản (Khoảng cách đo được $d < 15\text{ cm}$):** Nghĩa là đuôi xe hoặc người vẫn chưa ra khỏi phạm vi thanh chắn. Firmware lập tức tạm hoãn thao tác đóng, tiếp tục giữ Servo ở góc mở 90°, màn hình LCD hiện thông báo hoãn đóng và phát bản tin cảnh báo `ANTI_PINCH` lên Dashboard để bảo vệ nắm tình hình. Quá trình kiểm tra lặp lại liên tục sau mỗi 300 ms.
+* Khi hết thời gian giữ mở 3 giây, vi điều khiển **tuyệt đối không hạ cần ngay**. Hệ thống chuyển sang trạng thái chờ đóng và kích hoạt cảm biến siêu âm HC-SR04 đo khoảng cách vật thể phía dưới cần chắn theo chu kỳ định kỳ mỗi **300 mili-giây**.
+* **Trường hợp có vật cản (Khoảng cách đo được $d < 15\text{ cm}$):** Nghĩa là đuôi xe hoặc người vẫn chưa ra khỏi phạm vi thanh chắn. Firmware lập tức tạm hoãn thao tác đóng, tiếp tục giữ Servo ở góc mở 90°, màn hình LCD hiện thông báo hoãn đóng và phát bản tin cảnh báo vật cản lên Dashboard để bảo vệ nắm tình hình. Quá trình kiểm tra lặp lại liên tục sau mỗi 300 ms.
 * **Trường hợp an toàn (Khoảng cách $d \ge 15\text{ cm}$):** Khi vùng dưới thanh chắn đã hoàn toàn thông thoáng, Servo mới thực hiện hạ cần từ từ về góc 0°, đèn LED chuyển sang Đỏ và cập nhật trạng thái cổng đã đóng hoàn tất (`barie/status`).
 
 #### 3.4.3. Thiết kế Máy trạng thái Barie (Finite State Machine)
@@ -433,29 +433,29 @@ Tầng trung gian Node-RED đóng vai trò làm cầu nối giữa luồng dữ 
 ![Hình 3.3: Luồng xử lý dữ liệu và 4 quy tắc tự động trong Node-RED](figures/fig_3_3_flow_nodered.png)
 *Hình 3.3: Luồng xử lý dữ liệu và 4 quy tắc tự động trong Node-RED.*
 
-#### 3.6.2. Thiết kế mô hình trạng thái tập trung: `flow.get('park')`
-Trong lập trình Node-RED, nếu mỗi node tự lưu biến cục bộ riêng thì khi có nhiều tab giao diện hoặc nhiều sự kiện gửi đến cùng lúc sẽ rất dễ xảy ra hiện tượng "lệch số liệu" (ví dụ: Tab 1 báo bãi có 1 xe nhưng Tab 2 lại báo còn đủ 2 chỗ trống).
+#### 3.6.2. Thiết kế mô hình dữ liệu và trạng thái tập trung của bãi xe
+Trong các hệ thống IoT thời gian thực, dữ liệu gửi đến máy chủ từ nhiều nguồn bất đồng bộ (sự kiện quẹt thẻ, snapshot định kỳ, cảnh báo an ninh, lệnh điều khiển từ người dùng, gói tin Last Will khi mất kết nối). Nếu hệ thống lưu trữ trạng thái phân tán ở từng khối xử lý giao diện riêng biệt sẽ dẫn đến hiện tượng bất đồng bộ dữ liệu (Data Inconsistency) — ví dụ một tab hiển thị còn chỗ nhưng tab khác lại hiển thị đã đầy.
 
-Để giải quyết triệt để vấn đề này, nhóm thiết kế một đối tượng dữ liệu duy nhất lưu trong ngữ cảnh luồng (`flow.get('park')`). Cấu trúc đối tượng này bao gồm:
-```javascript
-{
-    online: true,              // Trạng thái kết nối của ESP32
-    capacity: 2,               // Sức chứa tối đa của bãi
-    total: 1,                  // Số lượng xe hiện đang gửi
-    slots: {                   // Chi tiết thông tin từng ô đỗ
-        1: { occupied: true, plate: "29A-123.45", owner: "Nguyễn Văn A", entryTime: 1711000000 },
-        2: { occupied: false, plate: "", owner: "", entryTime: 0 }
-    },
-    gate: { state: "closed", angle: 0, since: 1711000050 }, // Trạng thái thanh chắn
-    pricing: { mode: "fee", t1: 10, t2: 30, f1: 3000, f2: 5000, f3: 9000 }, // Bảng giá
-    cards: [ ... ],            // Danh sách tối đa 16 thẻ xe
-    history: [ ... ]           // Danh sách 100 giao dịch ghép cặp gần nhất
-}
-```
-Mọi sự kiện từ MQTT đưa về hoặc thao tác bấm nút từ Dashboard đều phải đi qua hàm điều phối trung tâm (`DISPATCH`) để cập nhật vào đối tượng `park` này trước, sau đó từ đối tượng duy nhất này mới đẩy dữ liệu đồng loạt ra các widget trên giao diện và ghi xuống tệp lưu trữ. Nhờ đó, số liệu trên toàn hệ thống luôn đạt độ nhất quán 100%.
+Để giải quyết triệt để vấn đề này, kiến trúc Tầng 3 áp dụng nguyên lý **Kho dữ liệu trạng thái duy nhất (Single Source of Truth)** kết hợp mẫu thiết kế **Bộ điều phối tập trung (Centralized Dispatcher)**. Mọi luồng dữ liệu đi vào (từ MQTT Uplink) hoặc thao tác từ giao diện người dùng (Dashboard) đều được dẫn về một khối điều phối duy nhất. Khối này thực hiện chuẩn hóa, cập nhật vào một mô hình trạng thái bãi xe tập trung duy nhất, sau đó mới phân phối đồng bộ tới các thành phần hiển thị và module lưu trữ bền vững.
+
+Cấu trúc mô hình trạng thái bãi xe được chuẩn hóa gồm 7 nhóm trường dữ liệu cốt lõi (Bảng 3.4):
+
+| Nhóm dữ liệu | Tên thuộc tính | Kiểu dữ liệu logic | Ý nghĩa thiết kế và vai trò trong hệ thống |
+| :--- | :--- | :---: | :--- |
+| **Kết nối mạng** | `online` | Boolean | Ghi nhận trạng thái trực tuyến hoặc ngoại tuyến của vi điều khiển ESP32 tại cổng (cập nhật qua LWT và snapshot) |
+| **Sức chứa bãi** | `capacity`, `total` | Số nguyên (Integer) | Sức chứa tối đa của bãi xe (thiết kế 2 ô) và tổng số phương tiện đang lưu bãi tại thời điểm hiện tại |
+| **Chi tiết ô đỗ** | `slots` | Đối tượng bản ghi | Trạng thái chiếm dụng (`occupied`), biển số xe, tên chủ xe và mốc thời gian vào bãi của từng vị trí ô (Ô 1 và Ô 2) |
+| **Trạng thái cổng** | `gate` | Đối tượng bản ghi | Trạng thái thanh chắn (`state`: đóng/mở), góc quay hiện tại của động cơ servo (0°–90°) và thời điểm chuyển trạng thái gần nhất |
+| **Biểu phí gửi xe** | `pricing` | Đối tượng cấu hình | Chế độ tính cước (tính phí hoặc miễn phí), các mốc thời gian bậc thang và định mức tiền thu tương ứng |
+| **Danh mục thẻ xe**| `cards` | Danh sách bản ghi | Quản lý danh sách tối đa 16 thẻ RFID (mã UID, tên chủ xe, biển số, phân loại vé lượt/vé tháng, cờ khóa thẻ) |
+| **Lịch sử giao dịch**| `history`| Danh sách bản ghi | Lưu trữ danh sách 100 giao dịch ghép cặp vào–ra gần nhất phục vụ việc tra cứu, đối soát doanh thu và xuất báo cáo CSV |
+
+*Bảng 3.4: Đặc tả các trường dữ liệu trong mô hình trạng thái tập trung của bãi xe.*
+
+Nguyên tắc thiết kế này giúp tách biệt hoàn toàn giữa **dữ liệu trạng thái (State)** và **giao diện hiển thị (Presentation)**: các khối giao diện chỉ đóng vai trò đọc dữ liệu và vẽ lại thành phần trực quan, không được tự ý sửa đổi biến trạng thái độc lập. Khi có bất kỳ thay đổi nào, toàn bộ giao diện của cả 3 tab đều được cập nhật tức thời và đồng nhất.
 
 #### 3.6.3. Thiết kế Bộ 4 quy tắc tự động hóa (Automated Rules Engine)
-Hệ thống thiết lập một nhịp quét định kỳ mỗi giây một lần (kích hoạt bằng node Inject) để kiểm tra 4 quy tắc tự động hóa vận hành liên tục (Bảng 3.4):
+Hệ thống thiết lập một nhịp quét định kỳ mỗi giây một lần (kích hoạt bằng node Inject) để kiểm tra 4 quy tắc tự động hóa vận hành liên tục (Bảng 3.5):
 
 | Quy tắc | Điều kiện kích hoạt | Ngưỡng demo | Ngưỡng thực tế đề xuất | Hành động xử lý của hệ thống |
 | :--- | :--- | :---: | :---: | :--- |
@@ -464,7 +464,7 @@ Hệ thống thiết lập một nhịp quét định kỳ mỗi giây một l�
 | **Rule 3: Dò thẻ lạ liên tục** | Phát hiện quẹt thẻ không hợp lệ nhiều lần trong cửa sổ thời gian | $\ge$ 3 lần / 60s | $\ge$ 5 lần / 120s | Nâng cấp mức an ninh lên cảnh báo đỏ (`Rule 3 · Nghi vấn dò thẻ`), phát chuông báo động |
 | **Rule 4: Kẹt barie mở quá lâu** | Thanh chắn giữ mở liên tục vượt quá thời gian khi ESP32 trực tuyến | 10 giây | 30–60 giây | Node-RED tự động phát lệnh `close` qua MQTT (cổng vẫn kích hoạt siêu âm chống kẹp) |
 
-*Bảng 3.4: Bộ 4 quy tắc tự động hóa trên Node-RED.*
+*Bảng 3.5: Bộ 4 quy tắc tự động hóa trên Node-RED.*
 
 ---
 
@@ -506,7 +506,7 @@ Trong quá trình thiết kế hệ thống, nhóm cân nhắc giữa hai phươ
 Để đảm bảo dữ liệu không bị biến mất khi tắt máy hoặc cập nhật container Docker, nhóm cấu hình cơ chế liên kết thư mục (bind mount):
 * Thư mục vật lý `data/` trên máy tính chủ được ánh xạ thẳng vào đường dẫn `/data/storage` bên trong container Node-RED thông qua biến môi trường `PARKING_DATA_DIR` trong tệp `docker-compose.yml`. Mọi thao tác ghi tệp của Node-RED đều được lưu trực tiếp xuống ổ cứng của máy tính chủ.
 * **Cơ chế khôi phục trạng thái tức thì sau sự cố (`docker restart`):**
-  - Khi dịch vụ Node-RED bị khởi động lại hoặc container bị tắt đột ngột, trong sự kiện khởi động ban đầu (On Start), hệ thống tự động đọc lại tệp `parking_database.json` từ đĩa cứng và nạp ngược trở lại biến toàn cục `flow.get('park')`. Toàn bộ danh sách thẻ, bảng giá và lịch sử giao dịch trước đó được khôi phục 100%.
+  - Khi dịch vụ Node-RED bị khởi động lại hoặc container bị tắt đột ngột, trong sự kiện khởi động ban đầu (On Start), hệ thống tự động đọc lại tệp `parking_database.json` từ đĩa cứng và nạp ngược trở lại vào mô hình trạng thái bãi xe trong bộ nhớ. Toàn bộ danh sách thẻ, bảng giá và lịch sử giao dịch trước đó được khôi phục 100%.
   - Đồng thời, Node-RED kết nối lại Broker và nhận ngay bản tin snapshot (retained) do ESP32 ngoài cổng phát ra trên topic `parking_n4/status`. Dữ liệu snapshot này được đối chiếu với thông tin trong tệp JSON để tái lập chính xác tình trạng 2 ô đỗ ngoài cổng mà không làm mất mát hay sai lệch số liệu.
 
 ---
