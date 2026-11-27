@@ -247,89 +247,43 @@ Chuẩn MQTT quy định ba mức chất lượng truyền tin: `QoS 0` (*At mos
 
 ### 3.1. Phân tích yêu cầu
 
-#### 3.1.1. Tác nhân tương tác và sơ đồ Use Case
-Hệ thống gồm ba nhóm tác nhân tương tác chính (Hình 3.1):
-1. **Người gửi xe:** Quẹt thẻ RFID khi vào/ra cổng, quan sát màn hình LCD và đèn báo LED Đỏ/Xanh để di chuyển xe qua barie an toàn.
-2. **Người quản lý:** Đăng nhập Dashboard để giám sát số chỗ trống, trạng thái hai ô đỗ, cảnh báo an ninh và điều khiển đóng/mở barie từ xa; sử dụng thêm các công cụ mở rộng như quản lý thẻ, chỉnh bảng giá và tra cứu giao dịch.
-3. **Tác nhân tự động:** Bộ xử lý tại cổng tự động kiểm tra vật cản bên dưới barie theo chu kỳ mỗi `0,3 giây` trước khi hạ thanh chắn; tầng xử lý trung gian định kỳ mỗi `1 giây` quét 4 quy tắc cảnh báo và đồng bộ nhật ký.
+## CHƯƠNG 3. PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG
 
-```mermaid
-flowchart LR
-    U1(["👤 Người gửi xe"])
-    U2(["👮 Người quản lý"])
-    U3(["🤖 Tác nhân tự động<br/>(ESP32 & Node-RED)"])
+### 3.1. Phân tích yêu cầu
 
-    subgraph SYS["HỆ THỐNG QUẢN LÝ BÃI GIỮ XE MÁY RFID"]
-        direction TB
-        
-        subgraph G1["Nghiệp vụ trực tiếp tại cổng"]
-            UC1(["Quẹt thẻ RFID gửi / lấy xe"])
-            UC2(["Quan sát LCD & Đèn LED chỉ dẫn"])
-            UC5(["Chống kẹp xe tự động (< 15 cm)"])
-        end
+Về chức năng tại cổng, hệ thống phải đọc và chuẩn hóa UID thẻ RFID; kiểm tra thẻ đã đăng ký, còn hoạt động và xác định xe đang ở trong bãi hay chưa để quyết định cho vào hay cho ra. Khi xe vào, ESP32 tự cấp ô trống đầu tiên trong sức chứa 2 xe và từ chối nếu bãi đã đầy. Khi xe ra, hệ thống tự trả ô, tính thời gian gửi và áp dụng biểu phí cấu hình (vé tháng hoặc chế độ miễn phí tính 0 đồng). Thanh chắn barie chỉ mở sau khi quẹt thẻ hợp lệ, giữ mở khoảng 3 giây và tự động hoãn đóng khi cảm biến siêu âm HC-SR04 phát hiện có vật cản dưới 15 cm. Phía người vận hành cần theo dõi trạng thái thiết bị, quản lý danh sách thẻ, chỉnh bảng giá, tra cứu lịch sử gửi xe và nhận các cảnh báo bất thường.
 
-        subgraph G2["Giám sát & Điều hành Web"]
-            UC3(["Giám sát 2 ô đỗ & Nhật ký trực tiếp"])
-            UC4(["Mở / Đóng barie thủ công từ xa"])
-            UC6(["Chạy 4 rule cảnh báo & Ghi log/JSON"])
-        end
+Yêu cầu phi chức năng gồm khả năng vận hành độc lập tại cổng khi mạng Wi-Fi/MQTT bị gián đoạn, tự động đồng bộ lại trạng thái sau khi kết nối phục hồi, lưu cấu hình và dữ liệu giao dịch bền vững, đồng thời cung cấp giao diện dashboard trực quan, dễ theo dõi.
 
-        subgraph G3["Chức năng quản trị mở rộng"]
-            UC7(["Quản lý 16 thẻ RFID & Bảng giá động"])
-            UC8(["Đối soát giao dịch & Xuất file CSV"])
-        end
-    end
-
-    U1 --- UC1
-    U1 --- UC2
-    UC3 --- U2
-    UC4 --- U2
-    UC7 --- U2
-    UC8 --- U2
-    UC5 --- U3
-    UC6 --- U3
-
-    classDef actorStyle fill:#f1f5f9,stroke:#475569,stroke-width:2px,color:#0f172a;
-    classDef gateStyle fill:#e0f2fe,stroke:#0284c7,stroke-width:1.5px,color:#0369a1;
-    classDef webStyle fill:#dcfce7,stroke:#16a34a,stroke-width:1.5px,color:#14532d;
-    classDef extStyle fill:#fef3c7,stroke:#d97706,stroke-width:1.5px,stroke-dasharray: 4 4,color:#78350f;
-
-    class U1,U2,U3 actorStyle;
-    class UC1,UC2,UC5 gateStyle;
-    class UC3,UC4,UC6 webStyle;
-    class UC7,UC8 extStyle;
-```
-
-*Hình 3.1: Sơ đồ Use Case tổng quát của hệ thống bãi giữ xe RFID.*
-
-#### 3.1.2. Đặc tả yêu cầu chức năng và phi chức năng
+Phạm vi mô phỏng của đồ án gồm: bãi xe 2 ô đỗ, quản lý tối đa 16 thẻ RFID và 1 cổng barie điều khiển bằng động cơ Servo.
 
 | Nhóm | Mã | Yêu cầu chi tiết |
-| :--- | :--- | :--- |
-| **Chức năng cốt lõi** | FR1 | Đọc UID thẻ RFID 13,56 MHz, phân biệt lượt vào/ra, tự gán ô trống (1 hoặc 2) và từ chối khi bãi đầy (`2/2`) hoặc thẻ không hợp lệ |
-| | FR2 | Tính thời gian đỗ xe và cước phí khi xe ra, hiển thị biển số và cước phí lên LCD 1602, phát còi phản hồi và điều khiển Servo/LED |
-| | FR3 | Hoãn đóng barie khi cảm biến siêu âm đo khoảng cách vật cản dưới $15\text{ cm}$ (áp dụng cho cả tự đóng và lệnh đóng từ xa) |
-| | FR4 | Truyền dữ liệu Uplink lên MQTT, hiển thị trên Dashboard có xác thực đăng nhập và gửi lệnh Downlink mở/đóng barie từ xa |
-| | FR5 | Thực thi 4 rule tự động trên Node-RED (quá giờ $>30\text{s}$, bãi đầy $2/2$, dò thẻ lạ $\ge 3$ lần/60s, barie mở $>10\text{s}$) và lưu tệp nhật ký/JSON |
-| **Chức năng mở rộng** | ER1 | Quản lý danh sách thẻ động (tối đa 16 thẻ: thêm, sửa, khóa/mở, xóa, vé tháng) và bảng giá động đồng bộ xuống cổng |
-| | ER2 | Tra cứu danh sách giao dịch ghép cặp vào–ra và tải xuống tệp CSV phục vụ đối soát trên bảng tính |
-| **Phi chức năng** | NFR1 | Cổng vào/ra vẫn vận hành độc lập tại chỗ khi mất kết nối Wi-Fi/MQTT và tự kết nối lại mỗi 5 giây khi có mạng |
-| | NFR2 | Không dùng thao tác chờ chặn kéo dài làm gián đoạn khả năng quét RFID, đo cảm biến hoặc tiếp nhận lệnh từ xa |
+| :--- | :---: | :--- |
+| **Chức năng tại cổng** | FR1 | Đọc và chuẩn hóa UID thẻ RFID 13,56 MHz; phân biệt lượt vào/ra; tự cấp ô trống (1 hoặc 2) và từ chối khi bãi đầy (2/2) hoặc thẻ lỗi |
+| | FR2 | Tính thời gian đỗ và cước phí khi xe ra, hiển thị thông tin lên LCD 1602, phát âm còi báo và điều khiển Servo, LED |
+| | FR3 | Hoãn đóng barie khi cảm biến siêu âm HC-SR04 phát hiện vật cản dưới 15 cm (áp dụng cho cả tự đóng và lệnh từ xa) |
+| **Chức năng quản trị** | FR4 | Truyền dữ liệu lên MQTT, hiển thị lên Dashboard có mật khẩu bảo vệ và gửi lệnh đóng/mở barie từ xa |
+| | FR5 | Chạy 4 luật tự động trên Node-RED (quá giờ > 30s, bãi đầy 2/2, dò thẻ lạ $\ge$ 3 lần/60s, kẹt barie mở > 10s) và ghi tệp nhật ký/JSON |
+| **Chức năng mở rộng** | ER1 | Quản lý danh sách tối đa 16 thẻ động (thêm, sửa, khóa/mở, xóa, vé tháng) và chỉnh bảng giá từ xa |
+| | ER2 | Tra cứu giao dịch ghép cặp vào–ra và xuất tệp CSV phục vụ đối soát trên Excel |
+| **Phi chức năng** | NFR1 | Cổng vào/ra vẫn hoạt động độc lập tại chỗ khi mất mạng Wi-Fi/MQTT và tự động kết nối lại mỗi 5 giây |
+| | NFR2 | Viết code không dùng hàm delay chặn vòng quét chính để không làm gián đoạn việc đọc thẻ, đo cảm biến và nhận lệnh |
 
-*Bảng 3.1: Bảng đặc tả yêu cầu chức năng và phi chức năng.*
+*Bảng 3.1: Bảng tổng hợp yêu cầu chức năng và phi chức năng của hệ thống.*
 
 ### 3.2. Kiến trúc tổng thể
-Hệ thống được thiết kế theo kiến trúc IoT gồm bốn tầng liên kết hai chiều từ thiết bị mô phỏng tới giao diện web như minh họa ở Hình 3.2:
-* **Tầng 1 – Thiết bị (Cảm biến và Chấp hành):** Vi điều khiển ESP32 tiếp nhận UID từ đầu đọc thẻ, đo khoảng cách vùng barie bằng cảm biến siêu âm và điều khiển Servo, LCD, LED, còi ngay tại cổng.
-* **Tầng 2 – Truyền thông:** Mạng Wi-Fi và giao thức MQTT làm trung gian trao đổi bản tin giữa thiết bị cổng và tầng xử lý trung gian.
-* **Tầng 3 – Xử lý trung gian:** Node-RED tiếp nhận sự kiện, duy trì mô hình trạng thái thống nhất, kiểm tra 4 quy tắc tự động và lưu trữ dữ liệu bền vững.
-* **Tầng 4 – Ứng dụng:** Web Dashboard cung cấp giao diện giám sát thời gian thực, điều khiển barie từ xa cùng các công cụ quản lý mở rộng.
 
-Dữ liệu luân chuyển theo hai hướng tách biệt: **luồng Uplink** đưa sự kiện quẹt thẻ, trạng thái barie, cảnh báo và snapshot bãi xe từ cổng lên Dashboard; **luồng Downlink** đưa lệnh mở/đóng barie và cấu hình thẻ/bảng giá từ Dashboard hoặc luật tự động xuống cổng. Trong kiến trúc này, ESP32 đóng vai trò nguồn dữ liệu gốc (source of truth) về hiện trạng hai ô đỗ và thanh chắn tại cổng; mỗi khi kết nối lại, thiết bị gửi bản tin snapshot giúp giao diện web tự đồng bộ khớp với thực tế tại cổng.
+Hệ thống được chia thành bốn tầng liên kết hai chiều từ thiết bị mô phỏng tới giao diện web:
+1. **Tầng 1 (Thiết bị):** Cảm nhận và chấp hành tại cổng do vi điều khiển ESP32 đảm nhận.
+2. **Tầng 2 (Truyền thông):** Kết nối mạng Wi-Fi và giao thức MQTT qua broker trung gian.
+3. **Tầng 3 (Xử lý trung gian):** Node-RED làm nhiệm vụ tổng hợp dữ liệu, chạy các luật tự động và lưu trữ tệp.
+4. **Tầng 4 (Ứng dụng):** Giao diện Web Dashboard phục vụ người quản trị theo dõi và vận hành.
+
+Trong kiến trúc này, việc điều khiển thời gian thực tại cổng được tách bạch hoàn toàn khỏi phần giám sát và quản lý: ESP32 tự quyết định cho phép hoặc từ chối xe ngay tại chỗ mà không cần phụ thuộc vào máy chủ, còn Node-RED làm nhiệm vụ thu thập sự kiện, cảnh báo và cung cấp công cụ quản trị từ xa.
 
 ```mermaid
 flowchart TB
-    subgraph L4["TẦNG 4: ỨNG DỤNG (Web Dashboard 3 Tab & Xác thực Bảo mật)"]
+    subgraph L4["TẦNG 4: ỨNG DỤNG (Web Dashboard 3 Tab & Xác thực Mật khẩu)"]
         direction LR
         T1["Tab 1: Giám sát Trực tiếp<br/>(2 ô đỗ · Điều khiển barie · KPI)"]
         T2["Tab 2: Quản lý Thẻ & Giá<br/>(CRUD 16 thẻ · Vé tháng · Giá động)"]
@@ -349,14 +303,13 @@ flowchart TB
         DN["Luồng Downlink (2 topic)<br/>barie/cmd · config (retained)"]
     end
 
-    subgraph L1["TẦNG 1: CẢM BIẾN & CHẤP HÀNH TẠI CỔNG (ESP32 Edge Computing)"]
+    subgraph L1["TẦNG 1: CẢM BIẾN & CHẤP HÀNH TẠI CỔNG (ESP32)"]
         direction LR
         E1["Khối Cảm biến<br/>(RFID-RC522 · Siêu âm HC-SR04)"]
-        E2["Xử lý biên độc lập<br/>(Cấp ô · Tính cước · Chống lặp 1.5s)"]
+        E2["Xử lý độc lập tại cổng<br/>(Cấp ô · Tính cước · Chống lặp 1.5s)"]
         E3["Khối Chấp hành<br/>(Servo SG90 · LCD 1602 · LED · Còi)"]
     end
 
-    %% Luồng liên kết hai chiều mạch lạc
     E1 --> E2 --> E3
     E3 ==>|"Uplink: sự kiện thẻ, barie, cảnh báo, snapshot"| UP
     UP ==>|"Đẩy dữ liệu vào"| M1
@@ -379,34 +332,48 @@ flowchart TB
     class L1,E1,E2,E3 l1Style;
 ```
 
-*Hình 3.2: Sơ đồ kiến trúc 4 tầng IoT và luồng dữ liệu hai chiều.*
+*Hình 3.1: Sơ đồ kiến trúc tổng thể 4 tầng và luồng dữ liệu hai chiều.*
+
+Luồng dữ liệu trao đổi giữa hai chiều:
+* **Luồng đi lên (Uplink):** Bắt đầu khi đầu đọc RC522 quét được UID và ParkingSystem cập nhật trạng thái ô đỗ. ESP32 phát sự kiện qua MQTT (gồm sự kiện quẹt thẻ, snapshot hiện trạng bãi xe, trạng thái barie và các cảnh báo). Node-RED nhận thông điệp, cập nhật vào biến trạng thái dùng chung để hiển thị số xe, nhật ký và giao dịch.
+* **Luồng đi xuống (Downlink):** Dùng để người vận hành gửi lệnh đóng/mở barie từ xa qua topic `barie/cmd` và cập nhật cấu hình thẻ/bảng giá qua topic `config` dạng retained. Nhờ cơ chế retained, thiết bị sau khi kết nối lại sẽ nhận ngay cấu hình mới nhất từ máy chủ mà không cần thao tác lại thủ công.
 
 ### 3.3. Thiết kế Tầng 1 – Thiết bị phần cứng
-Tầng 1 sử dụng vi điều khiển ESP32 DevKit V1 làm bộ điều khiển trung tâm, đấu nối 7 thành phần ngoại vi theo chuẩn giao tiếp tương ứng (SPI cho đầu đọc thẻ tốc độ cao, I2C hai dây cho màn hình LCD để tiết kiệm chân tín hiệu, PWM cho servo/còi và GPIO số cho cảm biến/LED) như tổng hợp tại Bảng 3.2.
 
-| Thiết bị ngoại vi | Chân linh kiện | Chân ESP32 (GPIO) | Nguồn cấp | Vai trò trong hệ thống |
-| :--- | :--- | :--- | :---: | :--- |
-| **RFID-RC522** | `SDA`, `SCK`, `MOSI`, `MISO`, `RST` | `5`, `18`, `23`, `19`, `4` | 3,3V | Đọc mã UID thẻ từ 13,56 MHz qua bus SPI |
-| **HC-SR04** | `TRIG`, `ECHO` | `27`, `32` | 5V | Đo khoảng cách phát hiện vật cản dưới barie |
-| **Servo SG90** | `PWM` | `13` | 5V | Nâng/hạ thanh chắn barie ($0^\circ$ đóng, $90^\circ$ mở) |
-| **LED Đỏ** | `Anode (+)` | `25` | 3,3V | Báo hiệu dừng (cổng đóng, bãi đầy hoặc thẻ lỗi) |
-| **LED Xanh** | `Anode (+)` | `26` | 3,3V | Báo hiệu cho phép đi qua khi barie mở |
-| **Buzzer** | `Signal` | `14` | 3,3V | Phát âm thanh phản hồi theo trạng thái vào/ra/cảnh báo |
-| **LCD 1602 I2C** | `SDA`, `SCL` | `21`, `22` | 5V | Hiển thị trạng thái bãi, biển số, ô đỗ và cước phí |
+Bộ điều khiển trung tâm là ESP32 DevKit V1, đấu nối với 7 linh kiện ngoại vi qua các chân GPIO cụ thể:
+* **Đầu đọc thẻ RFID-RC522:** Giao tiếp qua bus SPI tốc độ cao (chân SS: GPIO 5, SCK: GPIO 18, MOSI: GPIO 23, MISO: GPIO 19, RST: GPIO 4) dùng đọc mã thẻ 13,56 MHz.
+* **Cảm biến siêu âm HC-SR04:** Theo dõi vùng di chuyển dưới barie (TRIG: GPIO 27, ECHO: GPIO 32). Nếu khoảng cách đo được nhỏ hơn 15 cm, firmware tạm hoãn đóng cần và kiểm tra lại sau mỗi 300 ms.
+* **Động cơ Servo SG90:** Điều khiển nâng/hạ thanh chắn barie bằng xung PWM qua chân GPIO 13 (góc 0° khi đóng, 90° khi mở). Barie tự đóng sau khoảng 3 giây trừ khi đang ở chế độ giữ mở từ xa.
+* **Đèn LED Đỏ / Xanh:** LED Đỏ (GPIO 25) báo dừng; LED Xanh (GPIO 26) báo cho phép đi qua khi barie mở.
+* **Còi Buzzer:** Phát tín hiệu âm thanh phản hồi qua chân GPIO 14. Còi được cấu hình chạy trên kênh LEDC 15 riêng để không bị xung đột bộ định thời (timer) với Servo SG90.
+* **Màn hình LCD 1602:** Hiển thị trạng thái bãi xe, số ô đỗ, biển số xe, cước phí và lý do từ chối. Giao tiếp qua bus I2C (SDA: GPIO 21, SCL: GPIO 22, địa chỉ `0x27`) giúp tiết kiệm tối đa số chân của ESP32.
+
+| Linh kiện ngoại vi | Chân linh kiện | Chân ESP32 (GPIO) | Chuẩn giao tiếp | Nguồn cấp | Vai trò trong hệ thống |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **RFID-RC522** | `SDA`, `SCK`, `MOSI`, `MISO`, `RST` | `5`, `18`, `23`, `19`, `4` | SPI | 3,3V | Đọc mã thẻ UID từ thẻ từ 13,56 MHz |
+| **HC-SR04** | `TRIG`, `ECHO` | `27`, `32` | Digital I/O | 5V | Đo khoảng cách phát hiện vật cản dưới barie |
+| **Servo SG90** | `PWM` | `13` | PWM (50 Hz) | 5V | Nâng/hạ thanh chắn barie (0° đóng, 90° mở) |
+| **LED Đỏ / Xanh** | `Anode (+)` | `25` / `26` | Digital Output | 3,3V | Đèn tín hiệu giao thông (Đỏ dừng, Xanh đi) |
+| **Active Buzzer** | `Signal` | `14` | LEDC Channel 15 | 3,3V | Phát âm thanh phản hồi quẹt thẻ và cảnh báo |
+| **LCD 1602 I2C** | `SDA`, `SCL` | `21`, `22` | I2C (địa chỉ `0x27`) | 5V | Hiển thị thông tin biển số, ô đỗ và cước phí |
 
 *Bảng 3.2: Sơ đồ đấu nối chân linh kiện phần cứng trên ESP32.*
 
-### 3.4. Thiết kế thuật toán xử lý tại cổng
+*Lưu ý khi triển khai mạch thật:* Mạch hiện được mô phỏng và kiểm chứng trên Wokwi. Khi chuyển sang lắp ráp thực tế, cần lưu ý:
+1. Nối chung đường mass (GND) giữa tất cả các linh kiện.
+2. Cấp nguồn 5V ngoài riêng cho động cơ Servo SG90 (dòng tải khi xoay cần gạt có thể gây sụt áp làm ESP32 khởi động lại nếu lấy nguồn từ chân 5V của board).
+3. Sử dụng cầu phân áp (ví dụ trở 1kΩ và 2kΩ) để hạ mức điện áp chân ECHO từ 5V xuống 3,3V an toàn cho chân GPIO của ESP32.
 
-#### 3.4.1. Nguyên lý xử lý thẻ RFID, cấp ô và tính cước
-Luồng xử lý nghiệp vụ tại cổng hoạt động theo các bước độc lập với kết nối Internet (Hình 3.3):
-1. **Chống đọc lặp (Debounce) và chuẩn hóa UID:** Khi barie đang đóng và khoảng thời gian giữa hai lần đọc cùng một UID vượt quá `1,5 giây`, hệ thống mới xử lý lượt quẹt để tránh một lần giữ thẻ bị tính thành nhiều lượt liên tiếp.
-2. **Kiểm tra hợp lệ và phân luồng vào/ra:** Thẻ chưa đăng ký bị từ chối kèm cảnh báo thẻ lạ; thẻ đã khóa bị từ chối vào/ra; thẻ hợp lệ chưa có xe trong bãi sẽ thực hiện lượt vào (cấp ô trống đầu tiên trong `2` ô, từ chối nếu đã đầy `2/2`); thẻ đang có xe trong bãi sẽ thực hiện lượt ra (trả ô, tính thời lượng gửi và cước phí).
-3. **Thang phí mô phỏng:** Vé tháng tính phí `0 đồng`; vé lượt áp dụng 3 mức cước mô phỏng `3.000`, `5.000` hoặc `9.000 đồng` tương ứng với thời lượng dưới `10 giây`, từ `10` đến `30 giây`, và trên `30 giây` (là thang thời gian rút gọn phục vụ trình diễn, có thể thay đổi từ bảng giá quản trị).
+### 3.4. Thiết kế Firmware tại cổng
+
+Firmware trên ESP32 được tổ chức thành các mô-đun riêng biệt theo đúng trách nhiệm:
+* **`ParkingSystem`:** Quản lý danh sách tối đa 16 thẻ. Mỗi bản ghi gồm mã UID, biển số xe, chủ xe, trạng thái khóa, loại vé (vé lượt hoặc vé tháng), ô đang đỗ và thời điểm vào. Hàm `processCard()` tự động phân biệt lượt vào hay ra dựa vào trạng thái ô đỗ của thẻ, cấp ô trống hoặc trả ô, tính thời lượng gửi và cước phí. Các trường hợp thẻ lạ, thẻ khóa và bãi đầy được trả về mã kết quả riêng để hiển thị LCD, phát còi và phát cảnh báo phù hợp.
+* **`GateController`:** Quản lý 3 trạng thái của thanh chắn (Đóng `0°`, Mở tự đóng sau 3 giây, và Giữ mở khi điều khiển từ xa). Khi có yêu cầu đóng, cảm biến HC-SR04 được kích hoạt đo lại mỗi 300 ms; nếu phát hiện khoảng cách dưới 15 cm thì barie tiếp tục giữ mở.
+* **`MqttService`:** Phụ trách kết nối Wi-Fi, MQTT, đăng ký các topic nhận lệnh/cấu hình, phân tích chuỗi JSON và tự động thử kết nối lại theo chu kỳ 5 giây khi rớt mạng.
+* **`main.cpp`:** Trong hàm `loop()`, hệ thống lần lượt cập nhật MQTT, LCD, còi báo, thanh chắn barie, đầu đọc RFID và cổng Serial mà không dùng lệnh `delay()` chặn vòng quét chính. Nhờ đó, nghiệp vụ tại cổng vẫn diễn ra thông suốt kể cả khi mạng bị gián đoạn.
 
 ```mermaid
 flowchart LR
-    %% Khối 1: Tiếp nhận và xác thực
     subgraph S1["1. TIẾP NHẬN & XÁC THỰC THẺ"]
         direction TB
         A["Quẹt thẻ RFID"] --> B["Đọc & Chuẩn hóa UID"]
@@ -418,7 +385,6 @@ flowchart LR
         E -- "Bị khóa" --> E1["Từ chối, còi 3 tiếng<br/>LCD: THE BI KHOA"]
     end
 
-    %% Khối 2: Phân luồng Vào / Ra
     subgraph S2["2. PHÂN LUỒNG NGHIỆP VỤ TẠI CỔNG"]
         direction TB
         E -- "Bình thường" --> F{"Xe đang ở trong bãi?"}
@@ -433,7 +399,6 @@ flowchart LR
         I --> J["Giải phóng ô đỗ<br/>LCD: Hiển thị cước phí"]
     end
 
-    %% Khối 3: Chấp hành & Chống kẹp
     subgraph S3["3. MỞ BARIE & CHỐNG KẸP XE (HC-SR04)"]
         direction TB
         K["Mở barie 90° & Bật LED Xanh<br/>Còi báo · Phát MQTT Uplink"]
@@ -447,7 +412,6 @@ flowchart LR
     H ==> K
     J ==> K
 
-    %% Phối màu trực quan
     classDef reject fill:#fee2e2,stroke:#ef4444,stroke-width:1.5px,color:#991b1b;
     classDef success fill:#dcfce7,stroke:#22c55e,stroke-width:1.5px,color:#166534;
     classDef process fill:#e0f2fe,stroke:#0284c7,stroke-width:1.5px,color:#0369a1;
@@ -459,68 +423,44 @@ flowchart LR
     class N warning;
 ```
 
-*Hình 3.3: Lưu đồ thuật toán xử lý quẹt thẻ RFID tại cổng ESP32.*
+*Hình 3.2: Lưu đồ xử lý thẻ RFID và kiểm tra chống kẹp barie tại cổng.*
 
-#### 3.4.2. Cơ chế chống kẹp xe và máy trạng thái barie
-Cơ chế an toàn dưới thanh chắn kết hợp hai thành phần (Hình 3.4):
-* **Giám sát vật cản khi đóng:** Bất kỳ yêu cầu đóng barie nào (hết 3 giây tự động đóng, lệnh đóng thủ công từ Dashboard hay lệnh đóng tự động từ Tầng 3) đều chuyển sang trạng thái chờ đóng và đo khoảng cách siêu âm mỗi `0,3 giây`. Nếu khoảng cách đo được nhỏ hơn `15 cm`, thanh chắn giữ nguyên vị trí mở `90°` và phát cảnh báo vật cản đến khi khu vực thông thoáng mới hạ xuống `0°`.
-* **Máy trạng thái barie 3 trạng thái:** Thanh chắn luân chuyển giữa ba trạng thái *Đóng* ($0^\circ$, LED Đỏ), *Mở có thời hạn* ($90^\circ$, tự đóng sau 3 giây khi quẹt thẻ) và *Mở giữ* (duy trì $90^\circ$ khi mở thủ công từ xa đến khi có lệnh đóng).
-
-```mermaid
-flowchart LR
-    subgraph SAFE["(a) LƯU ĐỒ CHỐNG KẸP XE BẰNG SIÊU ÂM (HC-SR04)"]
-        direction TB
-        P1["Phát sinh yêu cầu đóng barie<br/>(Hết 3s / Lệnh web / Rule 4)"] --> P2["Kích hoạt cảm biến siêu âm<br/>Đo khoảng cách d (cm) mỗi 0,3s"]
-        P2 --> P3{"d < 15 cm<br/>(Có xe hoặc người)?"}
-        P3 -- "Có vật cản" --> P4["TẠM HOÃN ĐÓNG, GIỮ 90°<br/>Phát cảnh báo vật cản<br/>Chờ 0,3s rồi đo lại"]
-        P4 --> P2
-        P3 -- "Khu vực an toàn" --> P5["HẠ CẦN VỀ 0° & BẬT LED ĐỎ<br/>Cập nhật trạng thái cổng đã đóng"]
-    end
-
-    subgraph FSM["(b) MÁY TRẠNG THÁI ĐIỀU KHIỂN BARIE"]
-        direction TB
-        CLOSED["Trạng thái 1: ĐÓNG<br/>(Servo 0° · LED Đỏ)"]
-        OPEN_TIMED["Trạng thái 2: MỞ CÓ THỜI HẠN<br/>(Servo 90° · Tự đóng sau 3s)"]
-        OPEN_HOLD["Trạng thái 3: GIỮ MỞ THỦ CÔNG<br/>(Servo 90° · Chờ lệnh đóng từ Web)"]
-
-        CLOSED -->|"Quẹt thẻ hợp lệ tại cổng"| OPEN_TIMED
-        OPEN_TIMED -->|"Hết 3s & Không có vật cản"| CLOSED
-        CLOSED -->|"Bấm 'Mở Barie' trên Dashboard"| OPEN_HOLD
-        OPEN_TIMED -->|"Bấm 'Mở Barie' trên Dashboard"| OPEN_HOLD
-        OPEN_HOLD -->|"Lệnh đóng web / Rule 4 (an toàn)"| CLOSED
-    end
-
-    classDef warnStyle fill:#fef3c7,stroke:#f59e0b,stroke-width:1.5px,color:#92400e;
-    classDef safeStyle fill:#dcfce7,stroke:#22c55e,stroke-width:1.5px,color:#166534;
-    classDef procStyle fill:#e0f2fe,stroke:#0284c7,stroke-width:1.5px,color:#0369a1;
-
-    class P4 warnStyle;
-    class P5,OPEN_TIMED,OPEN_HOLD safeStyle;
-    class P1,P2,CLOSED procStyle;
-```
-
-*Hình 3.4: Lưu đồ chống kẹp xe (HC-SR04) và máy trạng thái điều khiển Barie.*
+*Nguyên tắc xử lý quẹt thẻ tại cổng:*
+* **Chuẩn hóa UID:** Mã thẻ được chuẩn hóa thành các cặp ký tự hệ 16 viết hoa (ví dụ `01 02 03 04`) trước khi đối chiếu để tránh sai lệch định dạng.
+* **Chống đọc lặp (Debounce 1.500 ms):** Nếu cùng một thẻ được quét lại trong vòng 1,5 giây, hệ thống sẽ bỏ qua để tránh trường hợp người dùng run tay hoặc giữ thẻ trước đầu đọc bị tính thành hai lượt quẹt liên tiếp.
+* **Từ chối hợp lệ:** Thẻ chưa đăng ký, thẻ bị khóa hoặc quét khi bãi đã đủ 2 xe sẽ bị từ chối mở barie, kèm âm báo 3 tiếng còi và thông báo hiển thị trên LCD.
+* **Tính cước khi xe ra:** Thời lượng gửi xe được đo bằng hàm `millis()`. Vé tháng có mức phí 0 đồng. Vé lượt áp dụng biểu phí mô phỏng: dưới 10 giây tính 3.000đ; từ 10 đến 30 giây tính 5.000đ; trên 30 giây tính 9.000đ. Đây là thang thời gian rút gọn phục vụ trình diễn và kiểm thử, người quản lý có thể cập nhật lại bảng giá này bất kỳ lúc nào từ giao diện web.
 
 ### 3.5. Thiết kế Tầng 2 – Truyền thông MQTT
-Hệ thống sử dụng **HiveMQ Public Broker** tại địa chỉ `broker.hivemq.com`, cổng `1883`, gom nhóm theo tiền tố topic `parking_n4/` (trong cấu hình đóng gói có khai báo thêm broker cục bộ dự phòng, còn luồng vận hành mặc định kết nối tới HiveMQ để dễ chạy mô phỏng đa máy). Hai cơ chế đặc thù của MQTT được khai thác gồm:
-* **Retained Message:** Broker lưu giữ bản tin mới nhất cho trạng thái barie, snapshot toàn bãi xe và cấu hình thẻ/bảng giá giúp thiết bị hay giao diện web đồng bộ tức thì ngay sau khi kết nối lại.
-* **Last Will and Testament (LWT):** Khi kết nối tới broker, thiết bị cổng đăng ký sẵn bản tin di chúc báo ngoại tuyến trên topic trạng thái chung để hệ thống giám sát phát hiện kịp thời khi ESP32 mất nguồn hoặc đứt mạng đột ngột.
 
-| Topic | Chiều | Retained / LWT | Dữ liệu trao đổi chính | Mục đích |
+ESP32 kết nối Wi-Fi (`Wokwi-GUEST`) và truyền thông MQTT tới địa chỉ `broker.hivemq.com` cổng 1883, sử dụng tiền tố chung là `parking_n4/`.
+
+Hệ thống phân định rõ 6 topic trao đổi:
+* `parking_n4/rfid/scan` (Uplink, không retained): Gửi sự kiện `check_in` hoặc `check_out` cùng mã UID, biển số xe, chủ xe, ô đỗ, thời lượng và cước phí.
+* `parking_n4/barie/status` (Uplink, retained): Báo trạng thái barie (`open` hoặc `closed`), góc servo, chế độ mở và nguồn lệnh phát ra.
+* `parking_n4/alert` (Uplink, không retained): Truyền tức thời các cảnh báo bất thường như thẻ lạ, thẻ bị khóa, bãi đầy và phát hiện vật cản chống kẹp xe.
+* `parking_n4/status` (Uplink, retained + LWT): Báo snapshot tình trạng thiết bị gồm trạng thái `online`, số xe đang gửi, thông tin từng ô đỗ, thời gian uptime và RSSI. Topic này đồng thời đăng ký cơ chế di chúc Last Will and Testament (LWT) với nội dung `{"online":false}` có cờ retained, giúp máy chủ phát hiện ngay lập tức khi ESP32 bị mất nguồn hoặc đứt mạng đột ngột.
+* `parking_n4/barie/cmd` (Downlink, không retained): Tiếp nhận các lệnh điều khiển barie (`open`, `open_hold`, `close`, `sync`) từ giao diện web hoặc từ luật tự động.
+* `parking_n4/config` (Downlink, retained): Đồng bộ danh sách 16 thẻ và bảng giá từ web xuống ESP32 mà không cần nạp lại firmware.
+
+| Topic MQTT | Chiều truyền | Cơ chế đặc thù | Dữ liệu trao đổi chính | Mục đích sử dụng |
 | :--- | :---: | :---: | :--- | :--- |
-| `parking_n4/rfid/scan` | Uplink | Không | Loại lượt (`check_in`/`check_out`), UID, biển số, ô đỗ, cước phí | Ghi nhận sự kiện xe vào/ra hợp lệ tại cổng |
-| `parking_n4/barie/status` | Uplink | Retained | Trạng thái (`open`/`closed`), chế độ, nguồn lệnh, góc servo | Đồng bộ trạng thái thanh chắn barie |
-| `parking_n4/alert` | Uplink | Không | Loại cảnh báo (`INVALID_CARD`, `LOCKED_CARD`, `LOT_FULL`, `ANTI_PINCH`) | Truyền tức thời các cảnh báo bất thường và vật cản |
-| `parking_n4/status` | Uplink | Retained + LWT | Trạng thái `online`, số xe đang gửi, thông tin 2 ô đỗ, độ mạnh Wi-Fi | Snapshot đồng bộ toàn bãi; LWT báo `online=false` khi mất kết nối |
-| `parking_n4/barie/cmd` | Downlink | Không | Lệnh điều khiển (`open`, `open_hold`, `close`, `sync`) và nguồn phát | Điều khiển đóng/mở barie từ Dashboard hoặc Rule 4 |
-| `parking_n4/config` *(Mở rộng)* | Downlink | Retained | Tham số bảng giá, ngưỡng quá giờ và danh sách tối đa 16 thẻ | Cập nhật thẻ và biểu phí từ xa xuống ESP32 không cần nạp lại code |
+| `parking_n4/rfid/scan` | Uplink | Không | `check_in` / `check_out`, UID, biển số, ô đỗ, cước phí | Ghi nhận sự kiện xe vào/ra thực tế tại cổng |
+| `parking_n4/barie/status` | Uplink | Retained | Trạng thái (`open`/`closed`), góc servo, chế độ | Đồng bộ trạng thái cần barie lên giao diện |
+| `parking_n4/alert` | Uplink | Không | Mã cảnh báo (`INVALID_CARD`, `LOT_FULL`, `ANTI_PINCH`...) | Báo động tức thời các sự cố tại cổng |
+| `parking_n4/status` | Uplink | Retained + LWT | Trạng thái `online`, 2 ô đỗ, số xe, uptime, RSSI | Snapshot toàn bãi; báo ngoại tuyến khi mất mạng |
+| `parking_n4/barie/cmd` | Downlink | Không | Lệnh (`open`, `open_hold`, `close`, `sync`) | Điều khiển đóng/mở barie từ xa |
+| `parking_n4/config` | Downlink | Retained | Tham số bảng giá và danh sách tối đa 16 thẻ | Cập nhật cấu hình xuống cổng không cần nạp code |
 
 *Bảng 3.3: Danh mục 6 topic MQTT nghiệp vụ và thông tin trao đổi.*
 
-### 3.6. Thiết kế Tầng 3 – Xử lý trung gian và 4 quy tắc tự động
+Sau khi kết nối mạng thành công, ESP32 tự động đăng ký 2 topic nhận lệnh (`barie/cmd` và `config`), sau đó gửi bản tin trạng thái barie cùng snapshot toàn bãi. Wi-Fi và MQTT đều có cơ chế tự động thử kết nối lại mỗi 5 giây. Nếu mạng bị mất, việc quẹt thẻ và đóng mở barie tại cổng vẫn diễn ra bình thường, chỉ có giao diện trên web là tạm thời chưa nhận được sự kiện mới trong lúc mất mạng.
 
-#### 3.6.1. Mô hình xử lý tập trung trên Node-RED
-Để bảo đảm số liệu hiển thị thống nhất giữa các thẻ KPI, sơ đồ 2 ô đỗ, bảng nhật ký và biểu đồ, tầng xử lý trung gian tổ chức thành một luồng tập trung (Hình 3.5): các nhánh nhận 4 topic Uplink từ MQTT, nhánh định kỳ mỗi `1 giây` và nhánh lệnh quản trị từ Dashboard cùng hội tụ vào khối điều phối trung tâm để cập nhật trạng thái dùng chung, ghi ra tệp lưu trữ và chỉ đẩy dữ liệu cập nhật tới những thành phần giao diện có thay đổi.
+*Về hạ tầng broker:* Trong mô hình thử nghiệm, cả ESP32 và Node-RED đều kết nối tới broker công cộng HiveMQ để tiện chạy mô phỏng từ nhiều máy khác nhau mà không cần cài đặt. Tệp `docker-compose.yml` của nhóm cũng đã cấu hình sẵn một broker Mosquitto chạy cục bộ trong container; khi chuyển sang triển khai thực tế chỉ cần trỏ địa chỉ về broker nội bộ này, kèm theo tài khoản xác thực và mã hóa TLS để đảm bảo an toàn đường truyền.
+
+### 3.6. Thiết kế Tầng 3 – Xử lý trung gian trên Node-RED
+
+Tầng xử lý trung gian trên Node-RED tiếp nhận 4 nhóm dữ liệu từ MQTT: snapshot, giao dịch quẹt thẻ, trạng thái barie và cảnh báo. Các hàm function node xử lý logic, đồng bộ trạng thái bãi xe, quản lý danh sách thẻ, biểu phí và chạy 4 luật tự động. Toàn bộ thông tin được gom về biến trạng thái dùng chung `flow.get('park')` để các thành phần trên Dashboard luôn hiển thị nhất quán với nhau.
 
 ```mermaid
 flowchart LR
@@ -567,49 +507,41 @@ flowchart LR
     class OUT,O1,O2,O3,O4 outStyle;
 ```
 
-*Hình 3.5: Lưu đồ xử lý sự kiện, đồng bộ và 4 quy tắc tự động trên Node-RED.*
+*Hình 3.3: Luồng xử lý dữ liệu và 4 quy tắc tự động trong Node-RED.*
 
-#### 3.6.2. Bộ 4 quy tắc tự động hóa (ngưỡng demo và thực tế)
-Hệ thống thiết kế 4 quy tắc tự động hóa vận hành liên tục, phân biệt rõ mốc thời gian rút gọn phục vụ trình diễn và ngưỡng khuyến nghị khi triển khai thực tế (Bảng 3.4).
+Bốn quy tắc tự động hóa được thiết kế gồm:
+* **Rule 1 (Xe gửi quá giờ):** Cảnh báo khi thời gian xe đỗ trong ô vượt quá ngưỡng cho phép (mặc định thử nghiệm là 30 giây, thực tế từ 4 đến 12 giờ tùy ca gửi). Hệ thống gắn nhãn `QUÁ GIỜ`, đổi màu viền ô đỗ sang vàng và hiện thông báo trên giao diện.
+* **Rule 2 (Bãi đầy):** Báo bãi đạt đủ sức chứa 2/2 xe. Lưu ý: việc từ chối xe vào là do chính ESP32 ngoài cổng tự quyết định, Node-RED chỉ nhận tín hiệu để đổi trạng thái tổng quan sang màu đỏ nhằm thông báo cho bảo vệ.
+* **Rule 3 (Dò thẻ lạ liên tiếp):** Cảnh báo khi phát hiện từ 3 lần quẹt thẻ chưa đăng ký trong cùng khoảng thời gian 60 giây, giúp người quản lý phát hiện các dấu hiệu quét thử thẻ bất thường.
+* **Rule 4 (Barie mở quá lâu):** Nếu barie bị giữ mở liên tục vượt quá 10 giây khi ESP32 vẫn trực tuyến, Node-RED tự động phát lệnh `close` xuống cổng qua topic `barie/cmd`. Lệnh đóng này khi xuống ESP32 vẫn phải qua kiểm tra cảm biến siêu âm chống kẹp xe trước khi hạ thanh chắn.
 
 | Quy tắc | Điều kiện kích hoạt | Ngưỡng demo | Ngưỡng thực tế đề xuất | Hành động của hệ thống |
-| :--- | :--- | :--- | :--- | :--- |
-| **Rule 1: Xe gửi quá giờ** | Thời gian xe lưu trong ô đỗ vượt quá giới hạn | $30\text{ giây}$ (chỉnh được trên web) | $4\text{–}12\text{ giờ}$ tùy ca gửi | Gắn nhãn `QUÁ GIỜ` trên ô đỗ, đổi viền cảnh báo vàng, hiện banner và toast |
-| **Rule 2: Bãi đầy** | Số xe đạt sức chứa tối đa hoặc nhận cảnh báo đầy bãi từ cổng | $2/2\text{ xe}$ | $50\text{–}500\text{ xe}$ tùy quy mô | Đổi trạng thái Tổng quan sang đỏ (`Bãi đã đầy`); cổng thực hiện từ chối xe kế tiếp |
-| **Rule 3: Dò thẻ lạ liên tiếp** | Nhận nhiều lượt quẹt thẻ không hợp lệ trong cùng cửa sổ thời gian | $\ge 3\text{ lần}$ trong $60\text{ giây}$ | $\ge 5\text{ lần}$ trong $120\text{ giây}$ | Nâng cấp mức cảnh báo an ninh trên Dashboard (`Rule 3 · Nghi vấn dò thẻ`) |
-| **Rule 4: Barie mở quá lâu** | Trạng thái barie giữ mở liên tục vượt quá giới hạn khi ESP32 trực tuyến | $10\text{ giây}$ | $30\text{–}60\text{ giây}$ | Tự động phát lệnh đóng barie xuống ESP32 (vẫn qua cảm biến chống kẹp $< 15\text{ cm}$) |
+| :--- | :--- | :---: | :---: | :--- |
+| **Rule 1: Xe gửi quá giờ** | Thời gian xe lưu trong ô đỗ vượt quá giới hạn | 30 giây | 4–12 giờ tùy ca | Gắn nhãn `QUÁ GIỜ` trên ô, đổi viền vàng, hiện cảnh báo |
+| **Rule 2: Bãi đầy** | Số xe đạt sức chứa tối đa hoặc nhận cảnh báo từ cổng | 2/2 xe | 50–500 xe | Đổi trạng thái bãi sang màu đỏ; việc từ chối xe do ESP32 làm |
+| **Rule 3: Dò thẻ lạ** | Quẹt thẻ không hợp lệ nhiều lần trong khoảng thời gian | $\ge$ 3 lần / 60 giây | $\ge$ 5 lần / 120 giây | Phát cảnh báo an ninh nghi vấn dò thẻ trên Dashboard |
+| **Rule 4: Barie mở lâu** | Trạng thái barie giữ mở liên tục vượt quá giới hạn | 10 giây | 30–60 giây | Node-RED phát lệnh đóng tự động (ESP32 vẫn đo chống kẹp) |
 
-*Bảng 3.4: Bộ 4 quy tắc tự động hóa trên Node-RED (ngưỡng demo và ngưỡng thực tế).*
+*Bảng 3.4: Bộ 4 quy tắc tự động hóa trên Node-RED.*
 
-### 3.7. Thiết kế Tầng 4 – Giao diện ứng dụng và xác thực
+### 3.7. Thiết kế Tầng 4 – Giao diện Web Dashboard và Bảo mật
 
-#### 3.7.1. Bố cục Web Dashboard 3 tab
-Giao diện người dùng thiết kế trên nền tối thống nhất, bố cục chia thành **3 tab** tách biệt rõ phần giám sát vận hành cốt lõi và phần mở rộng quản trị/đối soát (Bảng 3.5).
+Dashboard được xây dựng trên `node-red-dashboard` với giao diện nền tối, bố cục chia thành 3 tab chức năng:
+* **Tab 1 – Giám sát trực tiếp:** Hiển thị 4 thẻ KPI tổng quan (số xe, sức chứa, trạng thái barie, trạng thái kết nối ESP32 và doanh thu), sơ đồ 2 ô đỗ, nút bấm điều khiển barie từ xa (Mở/Đóng), bảng 12 sự kiện gần nhất và biểu đồ thời gian gửi xe.
+* **Tab 2 – Quản lý Thẻ và Bảng giá:** Cho phép khai báo mã UID, biển số, chủ xe, chọn vé lượt/vé tháng, khóa hoặc mở khóa thẻ. Có nút tiện ích `Lấy UID này` để tự điền nhanh mã thẻ lạ vừa quét vào biểu mẫu. Cho phép chỉnh 3 bậc giá và ngưỡng cảnh báo quá giờ. Mọi thay đổi ở tab này được phát qua MQTT `config` retained để ESP32 cập nhật ngay mà không cần nạp lại code.
+* **Tab 3 – Lịch sử Giao dịch:** Ghép cặp lượt vào và lượt ra thành một giao dịch hoàn chỉnh, hỗ trợ tìm kiếm theo biển số, UID, chủ xe, lọc giao dịch đang gửi hoặc đã hoàn tất và hỗ trợ xuất tệp CSV để đối soát trên Excel.
 
-| Tab | Nhóm giao diện | Vai trò chính |
-| :--- | :--- | :--- |
-| **1. Giám sát bãi xe** *(Cốt lõi)* | Tổng quan (4 thẻ KPI) | Hiển thị số xe đang gửi (`x/2`), thanh lấp đầy, trạng thái barie, tình trạng online ESP32 và doanh thu |
-| | Sơ đồ ô đỗ (Ô 1 & Ô 2) | Hiển thị ô trống hoặc biển số, chủ xe, giờ vào, bộ đếm giây lưu bãi, nhãn quá giờ / vé tháng |
-| | Điều khiển barie & cảnh báo | Hiện banner cảnh báo an ninh, mô phỏng góc thanh chắn kèm đèn Đỏ/Xanh và 2 nút `MỞ BARIE`, `ĐÓNG BARIE` |
-| | Nhật ký & Thống kê | Bảng 12 sự kiện gần nhất, thời gian gửi/phí trung bình, 2 biểu đồ step theo thời gian và nút đặt lại thống kê |
-| **2. Quản lý Thẻ & Bảng giá** *(Mở rộng)* | Biểu mẫu thẻ & bảng giá | Chuyển chế độ Thu phí/Miễn phí, chỉnh 3 khung giá, chỉnh ngưỡng Rule 1, nút `Lấy UID này` khi vừa quẹt thẻ lạ |
-| | Danh sách thẻ (tối đa 16) | Thêm/sửa thông tin, chuyển Vé lượt/Vé tháng, Khóa/Mở thẻ và xóa thẻ (khóa nút xóa nếu xe đang nằm trong bãi) |
-| **3. Lịch sử Giao dịch** *(Mở rộng)* | Đối soát & Xuất CSV | Ghép cặp lượt vào–ra thành 1 giao dịch hoàn chỉnh, tìm kiếm/lọc và xuất tệp CSV dùng cho bảng tính Excel |
+*Cơ chế bảo mật:* Để tránh việc truy cập trái phép qua mạng nội bộ, hệ thống thiết lập xác thực mật khẩu:
+* Xác thực Dashboard (`/ui`): Sử dụng phương thức HTTP Basic Auth (`httpNodeAuth`), mật khẩu được băm một chiều bằng thuật toán `bcrypt` (tài khoản `admin:Nhom4@2026`).
+* Xác thực trình soạn thảo luồng (`/`): Cấu hình `adminAuth` mã hóa bcrypt để khóa giao diện lập trình Node-RED, ngăn chặn can thiệp vào luồng xử lý.
 
-*Bảng 3.5: Bố cục các thành phần chức năng trên Web Dashboard.*
+### 3.8. Thiết kế Lưu trữ dữ liệu
 
-#### 3.7.2. Cơ chế xác thực truy cập hai lớp
-Để tránh thao tác đóng/mở barie trái phép qua mạng nội bộ, thiết kế bảo mật chia làm hai bề mặt truy cập riêng: giao diện vận hành Dashboard (`/ui`) được bảo vệ bằng **HTTP Basic Auth**, còn giao diện soạn thảo luồng xử lý (`/`) được bảo vệ bằng **tài khoản quản trị**. Mật khẩu đều được băm một chiều theo chuẩn `bcrypt` thay vì lưu dạng văn bản thuần; các truy cập chưa đăng nhập hoặc sai mật khẩu bị chặn với mã `401 Unauthorized`.
+Node-RED nạp dữ liệu lúc khởi động từ tệp `parking_database.json` và lưu trữ bền vững vào thư mục `data/` của dự án (được ánh xạ vào container Docker qua đường dẫn `/data/storage` bằng biến `PARKING_DATA_DIR`):
+* **Tệp nhật ký nối tiếp (`parking_log.txt`):** Ghi bổ sung từng dòng theo thời gian thực mọi sự kiện quan trọng (xe vào, xe ra, cảnh báo vật cản, thẻ lạ, bãi đầy, lệnh barie và kích hoạt 4 quy tắc).
+* **Tệp cơ sở dữ liệu cấu trúc (`parking_database.json`):** Lưu trữ cấu hình bảng giá, danh sách tối đa 16 thẻ, thông tin xe đang gửi trong 2 ô, doanh thu và tối đa 100 giao dịch ghép cặp gần nhất.
 
-### 3.8. Thiết kế lưu trữ dữ liệu
-
-#### 3.8.1. Phân tách tệp nhật ký văn bản và cơ sở dữ liệu cấu trúc
-Dữ liệu vận hành được tổ chức thành hai tệp lưu bền vững để vừa phục vụ kiểm tra trực tiếp bằng mắt, vừa hỗ trợ khôi phục trạng thái hệ thống qua khởi động lại:
-1. **Tệp nhật ký nối tiếp (`parking_log.txt`):** Ghi bổ sung từng dòng theo thời gian thực mọi sự kiện quan trọng (xe vào, xe ra, cảnh báo chống kẹp, thẻ lạ, bãi đầy, lệnh barie và kích hoạt 4 quy tắc).
-2. **Tệp cơ sở dữ liệu cấu trúc (`parking_database.json`):** Lưu giữ ảnh chụp cấu hình và nghiệp vụ gồm mốc cập nhật, sức chứa, cấu hình bảng giá, danh sách tối đa 16 thẻ, thông tin xe đang đỗ trong hai ô, thống kê doanh thu/lượt xe, tối đa 12 sự kiện hiển thị và tối đa 100 giao dịch ghép cặp gần nhất.
-
-#### 3.8.2. Lý do chọn tệp JSON có cấu trúc thay cho hệ quản trị CSDL rời
-Với quy mô bài toán điều khiển nhúng chạy gọn trong một dịch vụ Node-RED, phương án tệp JSON phẳng kết hợp tệp log văn bản giúp loại bỏ việc phải cài đặt thêm máy chủ cơ sở dữ liệu độc lập (như MongoDB hay MySQL) hoặc biên dịch thư viện liên kết native (như SQLite C++ trên ảnh container tối giản), giảm đáng kể bộ nhớ RAM tiêu thụ và rút ngắn thời gian khởi động hệ thống, trong khi vẫn đáp ứng đầy đủ nhu cầu quản trị thẻ, bảng giá động, lưu tới 100 giao dịch đối soát và khôi phục trạng thái tức thì sau khởi động lại.
+*Lý do chọn lưu trữ dạng tệp thay vì hệ quản trị CSDL rời:* Với quy mô bãi xe mô phỏng chạy trên dịch vụ Node-RED, việc dùng tệp JSON phẳng kết hợp tệp log văn bản giúp hệ thống cực kỳ nhẹ nhàng, không cần tốn thêm tài nguyên RAM để chạy các máy chủ CSDL cồng kềnh như MySQL hay MongoDB, thời gian khởi động container rất nhanh. Khi Node-RED khởi động lại (`docker restart`), hệ thống tự động đọc lại tệp JSON và kết hợp cùng bản tin snapshot (retained) từ ESP32 để khôi phục chính xác 100% hiện trạng bãi xe mà không làm mất mát dữ liệu.
 
 ---
 
